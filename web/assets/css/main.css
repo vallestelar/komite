@@ -61,9 +61,7 @@ a {
   display: grid;
   place-items: center;
   padding: 24px;
-  background:
-    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.16), transparent 28%),
-    linear-gradient(105deg, #eef3f8 0%, #c7d8ea 32%, #8fb0d2 62%, #4b81ba 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #e9eef4 100%);
 }
 
 .login-panel {
@@ -79,7 +77,16 @@ a {
   display: block;
   width: 220px;
   max-width: 80%;
-  margin: 0 auto 28px;
+  margin: 0 auto 8px;
+}
+
+.login-context {
+  margin: 0 0 28px;
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .login-form {

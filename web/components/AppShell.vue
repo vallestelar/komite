@@ -117,7 +117,7 @@ onMounted(() => {
       <span class="sidebar-logo-crop">
         <img class="sidebar-logo" src="/assets/komite-logo.png" alt="Komite" />
       </span>
-      <span class="sidebar-context">Portal administradora</span>
+      <span class="sidebar-context">Portal administrador</span>
 
       <nav class="side-nav" aria-label="Menu principal">
         <section

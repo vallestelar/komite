@@ -33,6 +33,7 @@ const submit = async () => {
   <main class="login-shell">
     <section class="login-panel">
       <img class="login-logo" src="/assets/komite-logo.png" alt="Komite" />
+      <p class="login-context">Portal administrador</p>
       <form class="login-form" @submit.prevent="submit">
         <label>
           Email

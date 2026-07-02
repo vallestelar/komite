@@ -58,6 +58,39 @@ class CompanyPage(BaseModel):
     meta: PageMeta
 
 
+class BankCreate(BaseModel):
+    name: str = Field(..., max_length=120)
+    code: Optional[str] = Field(default=None, max_length=40)
+    country: str = Field(default="Chile", max_length=80)
+    website: Optional[str] = Field(default=None, max_length=255)
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class BankUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=120)
+    code: Optional[str] = Field(default=None, max_length=40)
+    country: Optional[str] = Field(default=None, max_length=80)
+    website: Optional[str] = Field(default=None, max_length=255)
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class BankOut(AuditOut):
+    id: UUID
+    name: str
+    code: Optional[str] = None
+    country: str
+    website: Optional[str] = None
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class BankPage(BaseModel):
+    items: list[BankOut]
+    meta: PageMeta
+
+
 class CondominiumCreate(BaseModel):
     company_id: UUID
     name: str = Field(..., max_length=150)
@@ -370,6 +403,60 @@ class TaskOut(AuditOut):
 
 class TaskPage(BaseModel):
     items: list[TaskOut]
+    meta: PageMeta
+
+
+class SupportTicketCreate(BaseModel):
+    company_id: UUID
+    created_by_user_id: Optional[UUID] = None
+    assigned_to_id: Optional[UUID] = None
+    requester_name: Optional[str] = Field(default=None, max_length=150)
+    requester_email: Optional[str] = Field(default=None, max_length=255)
+    subject: str = Field(..., max_length=180)
+    description: Optional[str] = None
+    category: str = Field(default="general", max_length=80)
+    priority: str = Field(default="medium", max_length=30)
+    status: str = Field(default="open", max_length=40)
+    due_date: Optional[date] = None
+    resolved_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SupportTicketUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    created_by_user_id: Optional[UUID] = None
+    assigned_to_id: Optional[UUID] = None
+    requester_name: Optional[str] = Field(default=None, max_length=150)
+    requester_email: Optional[str] = Field(default=None, max_length=255)
+    subject: Optional[str] = Field(default=None, max_length=180)
+    description: Optional[str] = None
+    category: Optional[str] = Field(default=None, max_length=80)
+    priority: Optional[str] = Field(default=None, max_length=30)
+    status: Optional[str] = Field(default=None, max_length=40)
+    due_date: Optional[date] = None
+    resolved_at: Optional[datetime] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class SupportTicketOut(AuditOut):
+    id: UUID
+    company_id: UUID
+    created_by_user_id: Optional[UUID] = None
+    assigned_to_id: Optional[UUID] = None
+    requester_name: Optional[str] = None
+    requester_email: Optional[str] = None
+    subject: str
+    description: Optional[str] = None
+    category: str
+    priority: str
+    status: str
+    due_date: Optional[date] = None
+    resolved_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SupportTicketPage(BaseModel):
+    items: list[SupportTicketOut]
     meta: PageMeta
 
 
@@ -911,4 +998,3 @@ class NotificationLogOut(AuditOut):
 class NotificationLogPage(BaseModel):
     items: list[NotificationLogOut]
     meta: PageMeta
-

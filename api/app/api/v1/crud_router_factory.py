@@ -5,13 +5,13 @@ from decimal import Decimal
 from typing import Any, Sequence, Type
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from tortoise.exceptions import IntegrityError
 from tortoise.expressions import Q
 from tortoise.models import Model
 from pydantic import BaseModel
 
-from app.core.auth.dependencies import require_komite_employee
+from app.core.auth.dependencies import require_access_token, require_komite_employee, user_is_komite_employee
 from app.services.service_factory import service_factory
 
 
@@ -50,6 +50,36 @@ def _search_query(search: str | None, search_fields: Sequence[str]) -> Q | None:
     return query
 
 
+async def _read_filters(model: Type[Model], request: Request) -> dict[str, Any]:
+    if await user_is_komite_employee(request.state.user):
+        return {}
+
+    db_fields = set(model._meta.db_fields)
+    company_id = request.state.company_id
+    active_condominium_id = request.state.condominium_id
+    allowed_condominium_ids = [
+        str(item.get("id"))
+        for item in getattr(request.state, "condominiums", [])
+        if isinstance(item, dict) and item.get("id")
+    ]
+
+    if model.__name__ == "Company":
+        return {"id": company_id} if company_id else {"id__isnull": True}
+
+    if model.__name__ == "Condominium":
+        return {"id__in": allowed_condominium_ids}
+
+    if "condominium_id" in db_fields:
+        if active_condominium_id:
+            return {"condominium_id": active_condominium_id}
+        return {"condominium_id__in": allowed_condominium_ids}
+
+    if "company_id" in db_fields:
+        return {"company_id": company_id} if company_id else {"company_id__isnull": True}
+
+    return {}
+
+
 def create_crud_router(
     *,
     model: Type[Model],
@@ -61,11 +91,7 @@ def create_crud_router(
     page_schema: Type[BaseModel],
     search_fields: Sequence[str] = (),
 ) -> APIRouter:
-    router = APIRouter(
-        prefix=prefix,
-        tags=[tag],
-        dependencies=[Depends(require_komite_employee())],
-    )
+    router = APIRouter(prefix=prefix, tags=[tag])
 
     async def get_service():
         return service_factory.get(model)
@@ -84,6 +110,7 @@ def create_crud_router(
             )
 
     async def list_items(
+        request: Request,
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=200),
         q: str | None = Query(None),
@@ -92,11 +119,13 @@ def create_crud_router(
     ):
         search_q = _search_query(q, search_fields)
         q_args = [search_q] if search_q is not None else []
+        filters = await _read_filters(model, request)
         result = await svc.list_paginated(
             page,
             page_size,
             *q_args,
             order_by=order_by,
+            **filters,
         )
         return {
             "items": [response_schema(**serialize_model(item)) for item in result.items],
@@ -108,8 +137,15 @@ def create_crud_router(
             },
         }
 
-    async def get_item(obj_id: UUID, svc=Depends(get_service)):
-        obj = await svc.get(obj_id)
+    async def get_item(request: Request, obj_id: UUID, svc=Depends(get_service)):
+        filters = await _read_filters(model, request)
+        pk_name = model._meta.pk_attr
+        if pk_name in filters and str(filters[pk_name]) != str(obj_id):
+            obj = None
+        else:
+            query_filters = {**filters, pk_name: obj_id}
+            items = await svc.list(limit=1, **query_filters)
+            obj = items[0] if items else None
         if not obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -153,10 +189,13 @@ def create_crud_router(
     update_item.__annotations__["payload"] = update_schema
     update_item.__annotations__["return"] = response_schema
 
-    router.add_api_route("/", create_item, methods=["POST"], response_model=response_schema, status_code=status.HTTP_201_CREATED)
-    router.add_api_route("/", list_items, methods=["GET"], response_model=page_schema)
-    router.add_api_route("/{obj_id}", get_item, methods=["GET"], response_model=response_schema)
-    router.add_api_route("/{obj_id}", update_item, methods=["PATCH"], response_model=response_schema)
-    router.add_api_route("/{obj_id}", delete_item, methods=["DELETE"])
+    write_dependencies = [Depends(require_komite_employee())]
+    read_dependencies = [Depends(require_access_token())]
+
+    router.add_api_route("/", create_item, methods=["POST"], response_model=response_schema, status_code=status.HTTP_201_CREATED, dependencies=write_dependencies)
+    router.add_api_route("/", list_items, methods=["GET"], response_model=page_schema, dependencies=read_dependencies)
+    router.add_api_route("/{obj_id}", get_item, methods=["GET"], response_model=response_schema, dependencies=read_dependencies)
+    router.add_api_route("/{obj_id}", update_item, methods=["PATCH"], response_model=response_schema, dependencies=write_dependencies)
+    router.add_api_route("/{obj_id}", delete_item, methods=["DELETE"], dependencies=write_dependencies)
 
     return router

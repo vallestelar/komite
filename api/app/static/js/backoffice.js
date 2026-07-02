@@ -14,6 +14,7 @@ const state = {
   condominiums: [],
   units: [],
   roles: [],
+  usersLookup: [],
   companyReturnContext: null,
   confirmResolver: null,
 };
@@ -24,6 +25,21 @@ const resources = {
     endpoint: "/api/v1/companies/",
     columns: ["id", "name", "rut", "email", "status"],
   },
+  banks: {
+    title: "Bancos",
+    endpoint: "/api/v1/banks/",
+    columns: ["name", "code", "country", "website", "status"],
+    createLabel: "Nuevo banco",
+    singular: "banco",
+    fields: [
+      { name: "name", label: "Nombre", required: true, maxLength: 120 },
+      { name: "code", label: "Codigo", maxLength: 40 },
+      { name: "country", label: "Pais", defaultValue: "Chile", maxLength: 80 },
+      { name: "website", label: "Web", maxLength: 255 },
+      { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
   condominiums: {
     title: "Condominios",
     endpoint: "/api/v1/condominiums/",
@@ -33,6 +49,27 @@ const resources = {
     title: "Incidencias",
     endpoint: "/api/v1/incidents/",
     columns: ["id", "category", "priority", "status", "created_at"],
+  },
+  supportTickets: {
+    title: "Tickets",
+    endpoint: "/api/v1/support-tickets/",
+    columns: ["company_id", "subject", "category", "priority", "status", "due_date"],
+    createLabel: "Nuevo ticket",
+    singular: "ticket",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company", required: true },
+      { name: "subject", label: "Asunto", required: true, maxLength: 180 },
+      { name: "description", label: "Descripcion", type: "textarea" },
+      { name: "requester_name", label: "Solicitante", maxLength: 150 },
+      { name: "requester_email", label: "Email solicitante", type: "email", maxLength: 255 },
+      { name: "category", label: "Categoria", defaultValue: "general", maxLength: 80 },
+      { name: "priority", label: "Prioridad", type: "select", options: [["low", "Baja"], ["medium", "Media"], ["high", "Alta"], ["urgent", "Urgente"]], defaultValue: "medium" },
+      { name: "status", label: "Estado", type: "select", options: [["open", "Abierto"], ["pending", "Pendiente"], ["in_progress", "En curso"], ["resolved", "Resuelto"], ["closed", "Cerrado"]], defaultValue: "open" },
+      { name: "assigned_to_id", label: "Asignado a", type: "user" },
+      { name: "due_date", label: "Vencimiento", type: "date" },
+      { name: "resolved_at", label: "Resuelto el", type: "datetime" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
   },
   tasks: {
     title: "Tareas",
@@ -88,6 +125,10 @@ const columnLabels = {
   email: "Email",
   status: "Estado",
   address: "Direccion",
+  company_id: "Empresa",
+  code: "Codigo",
+  country: "Pais",
+  website: "Web",
   units_count: "Unidades",
   category: "Categoria",
   priority: "Prioridad",
@@ -104,7 +145,6 @@ const columnLabels = {
   full_name: "Nombre completo",
   global_role: "Rol global",
   role_code: "Rol",
-  code: "Codigo",
   scope: "Ambito",
   is_system: "Sistema",
   file_name: "Archivo",
@@ -116,6 +156,12 @@ const columnLabels = {
   provider: "Proveedor",
   model: "Modelo",
   purpose: "Uso",
+  subject: "Asunto",
+  description: "Descripcion",
+  requester_name: "Solicitante",
+  requester_email: "Email solicitante",
+  assigned_to_id: "Asignado a",
+  resolved_at: "Resuelto el",
 };
 
 const statusLabels = {
@@ -123,6 +169,8 @@ const statusLabels = {
   inactive: "Inactivo",
   draft: "Borrador",
   pending: "Pendiente",
+  in_progress: "En curso",
+  resolved: "Resuelto",
   completed: "Completado",
   failed: "Fallido",
   partial: "Parcial",
@@ -310,9 +358,10 @@ async function login(event) {
 }
 
 async function loadDashboard() {
-  const [companies, condominiums, incidents, tasks, reports, communications, aiRequests] = await Promise.all([
+  const [companies, condominiums, tickets, incidents, tasks, reports, communications, aiRequests] = await Promise.all([
     fetchAllPages("/api/v1/companies/"),
     fetchAllPages("/api/v1/condominiums/"),
+    fetchAllPages("/api/v1/support-tickets/"),
     fetchPage("/api/v1/incidents/?page=1&page_size=5"),
     fetchPage("/api/v1/tasks/?page=1&page_size=5"),
     fetchPage("/api/v1/reports/?page=1&page_size=5"),
@@ -322,7 +371,11 @@ async function loadDashboard() {
 
   $("#metricCompanies").textContent = countActive(companies);
   $("#metricCondominiums").textContent = countActive(condominiums);
-  $("#metricIncidents").textContent = incidents.meta?.total || 0;
+  const openTickets = countByStatus(tickets, "open");
+  const pendingTickets = countByStatus(tickets, "pending");
+  const inProgressTickets = countByStatus(tickets, "in_progress");
+  $("#metricTickets").textContent = openTickets;
+  $("#metricTicketsBreakdown").textContent = `Pendientes: ${pendingTickets} | En curso: ${inProgressTickets}`;
   $("#metricTasks").textContent = tasks.meta?.total || 0;
   $("#metricReports").textContent = reports.meta?.total || 0;
   renderList("#recentIncidents", incidents.items, "category", "status");
@@ -333,6 +386,10 @@ async function loadDashboard() {
 
 function countActive(items) {
   return (items || []).filter((item) => item.status === "active").length;
+}
+
+function countByStatus(items, status) {
+  return (items || []).filter((item) => item.status === status).length;
 }
 
 async function fetchAllPages(basePath, pageSize = 200) {
@@ -381,6 +438,7 @@ function showPanel(panel) {
   $("#condominiumFormPanel").hidden = panel !== "condominiumForm";
   $("#companyFormPanel").hidden = panel !== "companyForm";
   $("#userFormPanel").hidden = panel !== "userForm";
+  $("#genericFormPanel").hidden = panel !== "genericForm";
   $("#audioPanel").hidden = panel !== "audio";
   $("#placeholderPanel").hidden = panel !== "placeholder";
 }
@@ -423,6 +481,13 @@ async function openView(view) {
   $("#newCompanyButton").hidden = view !== "companies";
   $("#newCondominiumButton").hidden = view !== "condominiums";
   $("#newUserButton").hidden = view !== "users";
+  $("#newGenericButton").hidden = !resources[view].fields;
+  if (resources[view].fields) {
+    $("#newGenericButtonLabel").textContent = resources[view].createLabel || "Nuevo";
+  }
+  if (view === "supportTickets") {
+    await ensureCompaniesLoaded();
+  }
   showPanel("table");
   await loadTable();
 }
@@ -436,7 +501,7 @@ async function loadTable() {
 }
 
 function renderTable(columns, items) {
-  const actionColumn = ["condominiums", "companies", "users"].includes(state.currentView);
+  const actionColumn = ["condominiums", "companies", "users"].includes(state.currentView) || Boolean(resources[state.currentView]?.fields);
   $("#tableHead").innerHTML = `<tr>${columns.map((column) => `<th>${escapeHtml(labelForColumn(column))}</th>`).join("")}${actionColumn ? "<th>Acciones</th>" : ""}</tr>`;
   $("#tableBody").innerHTML = items
     .map((item) => {
@@ -449,6 +514,7 @@ function renderTable(columns, items) {
   bindCondominiumRowActions();
   bindCompanyRowActions();
   bindUserRowActions();
+  bindGenericRowActions();
 }
 
 function labelForColumn(column) {
@@ -458,7 +524,13 @@ function labelForColumn(column) {
 function formatTableCell(column, value) {
   if (column === "status") return renderStatusBadge(value);
   if (column === "is_system") return renderBooleanBadge(value);
+  if (column === "company_id") return escapeHtml(companyName(value));
   return escapeHtml(formatCell(value));
+}
+
+function companyName(companyId) {
+  const company = state.companies.find((item) => item.id === companyId);
+  return company?.name || formatCell(companyId);
 }
 
 function renderStatusBadge(status) {
@@ -476,7 +548,33 @@ function renderBooleanBadge(value) {
 function renderRowActions(view, id) {
   if (view === "companies") return renderCompanyActions(id);
   if (view === "users") return renderUserActions(id);
+  if (resources[view]?.fields) return renderGenericActions(id);
   return renderCondominiumActions(id);
+}
+
+function renderGenericActions(id) {
+  const safeId = escapeHtml(id);
+  return `
+    <div class="table-actions">
+      <button class="edit-row icon-button" type="button" data-edit-generic="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
+        <span>Editar</span>
+      </button>
+      <button class="delete-row icon-button" type="button" data-delete-generic="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
+        <span>Borrar</span>
+      </button>
+    </div>
+  `;
+}
+
+function bindGenericRowActions() {
+  $$("[data-edit-generic]").forEach((button) => {
+    button.addEventListener("click", () => openGenericForm(button.dataset.editGeneric));
+  });
+  $$("[data-delete-generic]").forEach((button) => {
+    button.addEventListener("click", () => deleteGenericEntity(button.dataset.deleteGeneric));
+  });
 }
 
 function renderCondominiumActions(id) {
@@ -566,16 +664,154 @@ async function ensureCompaniesLoaded() {
 }
 
 async function ensureUserLookupsLoaded() {
-  const [companies, condominiums, roles, units] = await Promise.all([
+  const [companies, condominiums, roles, units, users] = await Promise.all([
     apiFetch("/api/v1/companies/?page=1&page_size=200"),
     apiFetch("/api/v1/condominiums/?page=1&page_size=200"),
     apiFetch("/api/v1/roles/?page=1&page_size=200"),
     apiFetch("/api/v1/units/?page=1&page_size=200"),
+    apiFetch("/api/v1/users/?page=1&page_size=200"),
   ]);
   state.companies = companies.items || [];
   state.condominiums = condominiums.items || [];
   state.roles = roles.items || [];
   state.units = units.items || [];
+  state.usersLookup = users.items || [];
+}
+
+async function openGenericForm(id = null) {
+  const resource = resources[state.currentView];
+  if (!resource?.fields) return;
+
+  $("#genericFormError").hidden = true;
+  if (resource.fields.some((field) => ["company", "user"].includes(field.type))) {
+    await ensureUserLookupsLoaded();
+  }
+
+  const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`${resource.endpoint}${id}`)) : null;
+  $("#genericId").value = item?.id || "";
+  $("#viewTitle").textContent = item ? `Editar ${resource.singular}` : resource.createLabel;
+  $("#genericFormEyebrow").textContent = resource.title;
+  $("#genericFormTitle").textContent = item ? `Editar ${resource.singular}` : resource.createLabel;
+  $("#saveGenericButton span").textContent = `Guardar ${resource.singular}`;
+  $("#deleteGenericButton").hidden = !item;
+  renderGenericFormFields(resource, item);
+  showPanel("genericForm");
+}
+
+function renderGenericFormFields(resource, item) {
+  $("#genericFormFields").innerHTML = resource.fields.map((field) => renderGenericField(field, item)).join("");
+}
+
+function renderGenericField(field, item) {
+  const value = item?.[field.name] ?? field.defaultValue ?? "";
+  const required = field.required ? " required" : "";
+  const maxlength = field.maxLength ? ` maxlength="${field.maxLength}"` : "";
+  const label = escapeHtml(field.label);
+  const name = escapeHtml(field.name);
+
+  if (field.type === "select") {
+    return `<label>${label}<select data-generic-field="${name}"${required}>${field.options
+      .map(([optionValue, optionLabel]) => `<option value="${escapeHtml(optionValue)}"${value === optionValue ? " selected" : ""}>${escapeHtml(optionLabel)}</option>`)
+      .join("")}</select></label>`;
+  }
+
+  if (field.type === "company") {
+    return `<label>${label}<select data-generic-field="${name}"${required}><option value="">Selecciona empresa</option>${state.companies
+      .map((company) => `<option value="${escapeHtml(company.id)}"${value === company.id ? " selected" : ""}>${escapeHtml(company.name)}</option>`)
+      .join("")}</select></label>`;
+  }
+
+  if (field.type === "user") {
+    return `<label>${label}<select data-generic-field="${name}"><option value="">Sin asignar</option>${state.usersLookup
+      .map((user) => `<option value="${escapeHtml(user.id)}"${value === user.id ? " selected" : ""}>${escapeHtml(user.full_name || user.email)}</option>`)
+      .join("")}</select></label>`;
+  }
+
+  if (field.type === "textarea" || field.type === "json") {
+    const textareaValue = field.type === "json" ? JSON.stringify(value || {}, null, 2) : value || "";
+    return `<label class="span-2">${label}<textarea data-generic-field="${name}" data-field-type="${field.type}" rows="4"${required}>${escapeHtml(textareaValue)}</textarea></label>`;
+  }
+
+  const inputType = field.type === "datetime" ? "datetime-local" : field.type || "text";
+  const inputValue = field.type === "datetime" && value ? String(value).slice(0, 16) : value;
+  return `<label>${label}<input data-generic-field="${name}" type="${inputType}" value="${escapeHtml(inputValue || "")}"${required}${maxlength} /></label>`;
+}
+
+function buildGenericPayload(resource) {
+  const payload = {};
+  resource.fields.forEach((field) => {
+    const element = $(`[data-generic-field="${field.name}"]`);
+    if (!element) return;
+    if (field.type === "json") {
+      payload[field.name] = parseJsonText(element.value, {});
+      return;
+    }
+    payload[field.name] = emptyToNull(element.value);
+  });
+  return payload;
+}
+
+function parseJsonText(value, fallback) {
+  const clean = value.trim();
+  if (!clean) return fallback;
+  return JSON.parse(clean);
+}
+
+async function saveGenericEntity(event) {
+  event.preventDefault();
+  const resource = resources[state.currentView];
+  if (!resource?.fields) return;
+  $("#genericFormError").hidden = true;
+
+  try {
+    const id = $("#genericId").value;
+    await apiFetch(id ? `${resource.endpoint}${id}` : resource.endpoint, {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildGenericPayload(resource)),
+    });
+    await returnToGenericList();
+    showToast({
+      title: id ? `${capitalize(resource.singular)} actualizado` : `${capitalize(resource.singular)} creado`,
+      message: "Los cambios se guardaron correctamente.",
+    });
+  } catch (error) {
+    $("#genericFormError").textContent = readableError(error);
+    $("#genericFormError").hidden = false;
+  }
+}
+
+async function deleteGenericEntity(id = $("#genericId").value) {
+  const resource = resources[state.currentView];
+  if (!resource?.fields || !id) return;
+  const confirmed = await confirmAction({
+    title: `Borrar ${resource.singular}`,
+    message: `Esta accion eliminara el ${resource.singular} seleccionado.`,
+    acceptLabel: `Borrar ${resource.singular}`,
+  });
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(`${resource.endpoint}${id}`, { method: "DELETE" });
+    await returnToGenericList();
+    showToast({
+      title: `${capitalize(resource.singular)} borrado`,
+      message: "El registro se elimino correctamente.",
+    });
+  } catch (error) {
+    window.alert(readableError(error));
+  }
+}
+
+async function returnToGenericList() {
+  const resource = resources[state.currentView];
+  $("#viewTitle").textContent = resource.title;
+  showPanel("table");
+  await loadTable();
+}
+
+function capitalize(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 async function openCondominiumForm(id = null) {
@@ -1108,6 +1344,10 @@ $("#refreshButton").addEventListener("click", loadTable);
 $("#newCompanyButton").addEventListener("click", () => openCompanyForm());
 $("#newCondominiumButton").addEventListener("click", () => openCondominiumForm());
 $("#newUserButton").addEventListener("click", () => openUserForm());
+$("#newGenericButton").addEventListener("click", () => openGenericForm());
+$("#cancelGenericButton").addEventListener("click", returnToGenericList);
+$("#genericForm").addEventListener("submit", saveGenericEntity);
+$("#deleteGenericButton").addEventListener("click", () => deleteGenericEntity());
 $("#quickCompanyButton").addEventListener("click", () => openCompanyForm(null, "condominiumForm"));
 $("#cancelCompanyButton").addEventListener("click", returnFromCompanyForm);
 $("#companyForm").addEventListener("submit", saveCompany);

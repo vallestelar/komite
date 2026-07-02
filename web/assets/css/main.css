@@ -4,6 +4,7 @@
   --orange: #f7941d;
   --bg: #f5f7fa;
   --line: #dbe3eb;
+  --sidebar-active: #34536a;
   --text: #172536;
   --muted: #667789;
   --white: #ffffff;
@@ -159,6 +160,11 @@ textarea:focus {
   background: var(--navy-2);
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .button.orange {
   background: var(--orange);
 }
@@ -292,6 +298,7 @@ textarea:focus {
 .nav-item.active {
   color: var(--white);
   background: var(--navy);
+  box-shadow: inset 3px 0 0 var(--orange);
 }
 
 .nav-label {
@@ -560,10 +567,148 @@ h3 {
   font-weight: 800;
 }
 
+.edifito-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.edifito-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.edifito-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.result-message {
+  margin: 0;
+}
+
+.edifito-results {
+  display: grid;
+  gap: 14px;
+}
+
+.edifito-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edifito-summary article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfcfe;
+}
+
+.edifito-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.edifito-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--navy);
+  font-size: 22px;
+}
+
+.edifito-toolbar {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) minmax(170px, 220px) max-content;
+  align-items: end;
+  justify-content: end;
+  gap: 10px;
+}
+
+.edifito-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.edifito-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+}
+
+.edifito-table th,
+.edifito-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.edifito-table th.bank-col {
+  color: #000;
+  background: #d1d1d1;
+}
+
+.edifito-table th.analysis-col {
+  color: #34108a;
+  background: #eee8f7;
+}
+
+.center-cell {
+  text-align: center;
+}
+
+.status-action {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.status-action {
+  color: #8a8f98;
+}
+
+.status-action.analizar {
+  color: var(--orange);
+}
+
+.status-action.procesar-pago {
+  color: var(--success);
+}
+
+.status-action.ya-procesado {
+  color: #111827;
+}
+
+.empty-row {
+  color: var(--muted);
+  text-align: center;
+}
+
 @media (max-width: 1100px) {
   .metrics-grid,
   .tool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edifito-form,
+  .edifito-toolbar,
+  .edifito-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .edifito-toolbar {
+    justify-content: stretch;
   }
 }
 
@@ -628,12 +773,16 @@ h3 {
   }
 
   .dashboard-hero,
+  .edifito-header,
   .topbar {
     align-items: flex-start;
     flex-direction: column;
   }
 
   .dashboard-grid,
+  .edifito-form,
+  .edifito-toolbar,
+  .edifito-summary,
   .metrics-grid,
   .tool-grid {
     grid-template-columns: 1fr;

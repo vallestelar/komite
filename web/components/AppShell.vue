@@ -60,6 +60,7 @@ const menuGroups: MenuGroup[] = [
     label: "Herramientas",
     items: [
       { id: "tools", label: "Centro de herramientas", icon: "tool", view: "tools" },
+      { id: "edifito", label: "Edifito", icon: "table", view: "edifito" },
       { id: "audio", label: "Procesar audio", icon: "mic", view: "audio" },
       { id: "spreadsheet-tools", label: "Importar planillas", icon: "table", view: "spreadsheet-tools" },
       { id: "monthly-summary", label: "Resumen mensual", icon: "spark", view: "monthly-summary" },
@@ -101,6 +102,9 @@ const isGroupCollapsed = (groupId: string) => collapsedGroups.value.includes(gro
 
 const selectView = (view: string) => {
   currentView.value = view;
+  nextTick(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  });
 };
 
 onMounted(() => {
@@ -172,7 +176,7 @@ onMounted(() => {
       </header>
 
       <DashboardView v-if="currentView === 'dashboard'" @open-view="selectView" />
-      <ToolsView v-else-if="['tools', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" />
+      <ToolsView v-else-if="['tools', 'edifito', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" />
       <PlaceholderView v-else :title="currentTitle" :view="currentView" />
     </section>
 

@@ -3,6 +3,7 @@ from app.models.entities.condominium import Condominium
 from app.models.entities.building import Building
 from app.models.entities.unit import Unit
 from app.models.entities.role import Role
+from app.models.entities.bank import Bank
 from app.models.entities.user import User
 from app.models.entities.user_condominium import UserCondominium
 from app.models.entities.incident import Incident
@@ -20,6 +21,7 @@ from app.models.entities.attachment import Attachment
 from app.models.entities.audit_log import AuditLog
 from app.models.entities.ai_request import AIRequest
 from app.models.entities.notification_log import NotificationLog
+from app.models.entities.support_ticket import SupportTicket
 
 __all__ = [
     "Company",
@@ -27,6 +29,7 @@ __all__ = [
     "Building",
     "Unit",
     "Role",
+    "Bank",
     "User",
     "UserCondominium",
     "Incident",
@@ -44,5 +47,5 @@ __all__ = [
     "AuditLog",
     "AIRequest",
     "NotificationLog",
+    "SupportTicket",
 ]
-

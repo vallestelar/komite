@@ -1,0 +1,10 @@
+node_modules/
+.nuxt/
+.output/
+.cache/
+dist/
+.env
+*.log
+server.out.log
+server.err.log
+--port/

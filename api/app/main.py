@@ -41,6 +41,8 @@ app.add_middleware(
         "http://127.0.0.1:3001",
         "http://192.168.10.192:3000",
         "http://192.168.10.192:3001",
+        "https://komite.vallestelar.cl",
+        "https://api-komite.vallestelar.cl",
         "https://app.komite.cl",
         "https://admin.komite.cl",
     ],

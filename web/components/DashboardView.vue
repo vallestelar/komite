@@ -65,8 +65,8 @@ const textValue = (item: Record<string, unknown>, key: string, fallback = "") =>
     <div class="dashboard-hero">
       <div>
         <p class="eyebrow">Resumen operativo</p>
-        <h2>Estado general de comunidades</h2>
-        <p class="hero-copy">Vista inicial para controlar pendientes, actividad reciente y flujo de informacion hacia comite y vecinos.</p>
+        <h2>Estado general de la cartera</h2>
+        <p class="hero-copy">Vista de trabajo para administradores y project managers de la empresa administradora: pendientes, actividad reciente, informes y comunicaciones por condominio.</p>
       </div>
       <div class="hero-actions">
         <button class="button orange" type="button" @click="emit('openView', 'incidents')">
@@ -83,7 +83,7 @@ const textValue = (item: Record<string, unknown>, key: string, fallback = "") =>
     <div class="metrics-grid" aria-busy="loading">
       <article class="metric"><span>Condominios activos</span><strong>{{ metrics.condominiums }}</strong><small>Comunidades gestionadas</small></article>
       <article class="metric"><span>Incidencias</span><strong>{{ metrics.incidents }}</strong><small>Registros operativos</small></article>
-      <article class="metric"><span>Tareas</span><strong>{{ metrics.tasks }}</strong><small>Seguimiento interno</small></article>
+      <article class="metric"><span>Tareas</span><strong>{{ metrics.tasks }}</strong><small>Trabajo del equipo</small></article>
       <article class="metric"><span>Informes</span><strong>{{ metrics.reports }}</strong><small>Borradores y publicados</small></article>
     </div>
 
@@ -119,7 +119,7 @@ const textValue = (item: Record<string, unknown>, key: string, fallback = "") =>
         </div>
       </section>
       <section>
-        <h2>Audio e IA</h2>
+        <h2>Procesos IA recientes</h2>
         <div class="list">
           <div v-if="!lists.ai.length" class="list-item"><span>Sin registros.</span></div>
           <div v-for="item in lists.ai" :key="String(item.id)" class="list-item">

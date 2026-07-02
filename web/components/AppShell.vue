@@ -24,27 +24,35 @@ const menuGroups: MenuGroup[] = [
   {
     id: "inicio",
     label: "Inicio",
-    items: [{ id: "dashboard", label: "Dashboard", icon: "dashboard", view: "dashboard" }],
+    items: [{ id: "dashboard", label: "Panel operativo", icon: "dashboard", view: "dashboard" }],
+  },
+  {
+    id: "cartera",
+    label: "Cartera",
+    items: [
+      { id: "condominiums", label: "Condominios", icon: "building", view: "condominiums" },
+      { id: "maintenance", label: "Mantenciones", icon: "checks", view: "maintenance" },
+      { id: "history", label: "Historial", icon: "file-text", view: "history" },
+    ],
   },
   {
     id: "operacion",
-    label: "Operacion",
+    label: "Operacion diaria",
     items: [
-      { id: "condominiums", label: "Condominios", icon: "building", view: "condominiums" },
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
-      { id: "audio", label: "Audio IA", icon: "mic", view: "audio" },
+      { id: "evidence", label: "Evidencias", icon: "file-text", view: "evidence" },
     ],
   },
   {
     id: "comunicacion",
-    label: "Comunicacion",
+    label: "Informes y comunicacion",
     items: [
       { id: "reports", label: "Informes", icon: "file-text", view: "reports" },
-      { id: "communications", label: "Comunicaciones", icon: "message", view: "communications" },
-      { id: "committee", label: "Comite", icon: "users", view: "committee" },
-      { id: "neighbors", label: "Vecinos", icon: "home", view: "neighbors" },
+      { id: "communications", label: "Comunicados", icon: "message", view: "communications" },
+      { id: "recipients", label: "Destinatarios", icon: "users", view: "recipients" },
+      { id: "publication-rules", label: "Reglas de publicacion", icon: "shield", view: "publication-rules" },
     ],
   },
   {
@@ -52,18 +60,18 @@ const menuGroups: MenuGroup[] = [
     label: "Herramientas",
     items: [
       { id: "tools", label: "Centro de herramientas", icon: "tool", view: "tools" },
-      { id: "data-processing", label: "Procesamiento de datos", icon: "spark", view: "data-processing" },
-      { id: "spreadsheet-tools", label: "Planillas", icon: "table", view: "spreadsheet-tools" },
+      { id: "audio", label: "Procesar audio", icon: "mic", view: "audio" },
+      { id: "spreadsheet-tools", label: "Importar planillas", icon: "table", view: "spreadsheet-tools" },
+      { id: "monthly-summary", label: "Resumen mensual", icon: "spark", view: "monthly-summary" },
     ],
   },
   {
-    id: "administracion",
-    label: "Administracion",
+    id: "gestion",
+    label: "Gestion interna",
     items: [
-      { id: "companies", label: "Empresas", icon: "briefcase", view: "companies" },
-      { id: "users", label: "Usuarios", icon: "user", view: "users" },
-      { id: "roles", label: "Roles", icon: "shield", view: "roles" },
-      { id: "settings", label: "Configuracion", icon: "settings", view: "settings" },
+      { id: "team", label: "Equipo", icon: "user", view: "team" },
+      { id: "accesses", label: "Accesos operativos", icon: "shield", view: "accesses" },
+      { id: "settings", label: "Preferencias", icon: "settings", view: "settings" },
     ],
   },
 ];
@@ -109,7 +117,7 @@ onMounted(() => {
       <span class="sidebar-logo-crop">
         <img class="sidebar-logo" src="/assets/komite-logo.png" alt="Komite" />
       </span>
-      <span class="sidebar-context">Backoffice</span>
+      <span class="sidebar-context">Portal administradora</span>
 
       <nav class="side-nav" aria-label="Menu principal">
         <section
@@ -158,7 +166,7 @@ onMounted(() => {
       </header>
 
       <DashboardView v-if="currentView === 'dashboard'" @open-view="selectView" />
-      <ToolsView v-else-if="['tools', 'data-processing', 'spreadsheet-tools'].includes(currentView)" :view="currentView" />
+      <ToolsView v-else-if="['tools', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" />
       <PlaceholderView v-else :title="currentTitle" :view="currentView" />
     </section>
 

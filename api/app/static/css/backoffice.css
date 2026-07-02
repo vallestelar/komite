@@ -57,7 +57,18 @@ button {
   display: block;
   width: 220px;
   max-width: 80%;
-  margin: 0 auto 28px;
+  margin: 0 auto 8px;
+}
+
+.login-context {
+  display: block;
+  margin: 0 auto 24px;
+  color: var(--orange);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .login-form,

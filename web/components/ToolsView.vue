@@ -5,22 +5,22 @@ defineProps<{
 
 const tools = [
   {
-    title: "Procesamiento de datos",
-    icon: "spark",
+    title: "Procesar audio",
+    icon: "mic",
     status: "Preparado",
-    copy: "Base para automatizar limpieza, clasificacion y transformacion de datos operativos.",
+    copy: "Transcribir audios de terreno y convertirlos en borradores de incidencia, tarea, informe o comunicado.",
   },
   {
-    title: "Planillas",
+    title: "Importar planillas",
     icon: "table",
     status: "Preparado",
-    copy: "Espacio reservado para cargar, validar y normalizar archivos de trabajo de las ejecutivas.",
+    copy: "Cargar planillas de novedades, unidades, mantenciones o pendientes para normalizarlas antes de trabajarlas.",
   },
   {
-    title: "Audio IA",
-    icon: "mic",
-    status: "Conectable",
-    copy: "Acceso futuro a transcripcion y generacion de borradores desde audios de terreno.",
+    title: "Resumen mensual",
+    icon: "spark",
+    status: "Preparado",
+    copy: "Agrupar incidencias, tareas, mantenciones e inspecciones para preparar informes de gestion revisables.",
   },
 ];
 </script>
@@ -28,9 +28,9 @@ const tools = [
 <template>
   <section class="panel placeholder-panel">
     <p class="eyebrow">Herramientas</p>
-    <h2>Centro de apoyo operativo</h2>
+    <h2>Centro de apoyo para la administradora</h2>
     <p class="placeholder-copy">
-      Este apartado queda listo para sumar funcionalidades que faciliten procesamiento de datos, revision de archivos y tareas repetitivas.
+      Funciones pensadas para reducir trabajo repetitivo del equipo del cliente: procesar informacion, ordenar evidencias y preparar borradores antes de publicar o enviar.
     </p>
 
     <div class="tool-grid" style="margin-top: 18px">

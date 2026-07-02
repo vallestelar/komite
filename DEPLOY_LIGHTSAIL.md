@@ -16,9 +16,9 @@ Cloudflare DNS + SSL
 ## URLs propuestas
 
 ```text
-Web Nuxt:        https://komite.vallestelar.cl
-API Swagger:     https://api-komite.vallestelar.cl/docs
-Backoffice:      https://api-komite.vallestelar.cl/login
+Web Nuxt:        https://komite.cl
+API Swagger:     https://api.komite.cl/docs
+Backoffice:      https://api.komite.cl/login
 ```
 
 ## 1. Subir el repo a GitHub
@@ -40,8 +40,9 @@ git push -u origin main
 Crea estos registros `A`, apuntando a la IP publica de Lightsail:
 
 ```text
-komite       -> IP_PUBLICA_LIGHTSAIL
-api-komite   -> IP_PUBLICA_LIGHTSAIL
+@     -> IP_PUBLICA_LIGHTSAIL
+www   -> IP_PUBLICA_LIGHTSAIL
+api   -> IP_PUBLICA_LIGHTSAIL
 ```
 
 En Cloudflare:
@@ -98,7 +99,7 @@ Cambia como minimo:
 POSTGRES_PASSWORD=una_password_fuerte
 JWT_SECRET_KEY=un_secreto_largo_y_aleatorio
 SEED_ADMIN_PASSWORD=una_password_admin_fuerte
-NUXT_PUBLIC_API_BASE=https://api-komite.vallestelar.cl
+NUXT_PUBLIC_API_BASE=https://api.komite.cl
 ```
 
 El `.env` real no se sube a GitHub.
@@ -133,7 +134,7 @@ sudo nano /etc/nginx/sites-available/komite
 ```nginx
 server {
     listen 80;
-    server_name komite.vallestelar.cl;
+    server_name komite.cl www.komite.cl;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -155,7 +156,7 @@ sudo nano /etc/nginx/sites-available/api-komite
 ```nginx
 server {
     listen 80;
-    server_name api-komite.vallestelar.cl;
+    server_name api.komite.cl;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -181,7 +182,7 @@ sudo systemctl reload nginx
 ## 9. Certificados HTTPS
 
 ```bash
-sudo certbot --nginx -d komite.vallestelar.cl -d api-komite.vallestelar.cl
+sudo certbot --nginx -d komite.cl -d www.komite.cl -d api.komite.cl
 sudo certbot certificates
 sudo systemctl status certbot.timer
 ```
@@ -196,9 +197,9 @@ curl http://127.0.0.1:3000
 En navegador:
 
 ```text
-https://komite.vallestelar.cl
-https://api-komite.vallestelar.cl/docs
-https://api-komite.vallestelar.cl/login
+https://komite.cl
+https://api.komite.cl/docs
+https://api.komite.cl/login
 ```
 
 ## 11. Deploy diario

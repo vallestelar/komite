@@ -608,6 +608,14 @@ th {
   background: #f8fafc;
 }
 
+tbody tr {
+  transition: background-color 120ms ease;
+}
+
+tbody tr:hover {
+  background: #eef3f7;
+}
+
 .table-actions {
   display: flex;
   gap: 8px;
@@ -625,6 +633,40 @@ th {
 
 .table-actions .delete-row {
   background: #b42318;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-badge span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.status-badge.is-active {
+  color: #067647;
+  background: #ecfdf3;
+}
+
+.status-badge.is-inactive {
+  color: #b42318;
+  background: #fff4f2;
+}
+
+.status-badge.is-neutral {
+  color: #475467;
+  background: #f2f4f7;
 }
 
 .form-header {
@@ -815,6 +857,33 @@ pre {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 6px;
+}
+
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 60;
+  display: grid;
+  gap: 4px;
+  width: min(360px, calc(100vw - 44px));
+  border: 1px solid rgba(16, 36, 55, 0.14);
+  border-left: 4px solid var(--orange);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--navy);
+  background: var(--white);
+  box-shadow: 0 18px 48px rgba(16, 36, 55, 0.18);
+}
+
+.toast strong {
+  font-size: 14px;
+}
+
+.toast span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 900px) {

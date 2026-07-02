@@ -81,6 +81,57 @@ const resources = {
   },
 };
 
+const columnLabels = {
+  id: "ID",
+  name: "Nombre",
+  rut: "RUT",
+  email: "Email",
+  status: "Estado",
+  address: "Direccion",
+  units_count: "Unidades",
+  category: "Categoria",
+  priority: "Prioridad",
+  created_at: "Creado",
+  title: "Titulo",
+  due_date: "Vencimiento",
+  report_type: "Tipo de informe",
+  published_at: "Publicado",
+  communication_type: "Tipo de comunicacion",
+  audience: "Audiencia",
+  inspection_type: "Tipo de inspeccion",
+  started_at: "Inicio",
+  finished_at: "Fin",
+  full_name: "Nombre completo",
+  global_role: "Rol global",
+  role_code: "Rol",
+  code: "Codigo",
+  scope: "Ambito",
+  is_system: "Sistema",
+  file_name: "Archivo",
+  file_type: "Tipo",
+  mime_type: "MIME",
+  action: "Accion",
+  entity_type: "Entidad",
+  entity_id: "ID entidad",
+  provider: "Proveedor",
+  model: "Modelo",
+  purpose: "Uso",
+};
+
+const statusLabels = {
+  active: "Activo",
+  inactive: "Inactivo",
+  draft: "Borrador",
+  pending: "Pendiente",
+  completed: "Completado",
+  failed: "Fallido",
+  partial: "Parcial",
+  new: "Nuevo",
+  open: "Abierto",
+  closed: "Cerrado",
+  published: "Publicado",
+};
+
 const placeholders = {
   committee: {
     title: "Comite",
@@ -242,7 +293,7 @@ async function login(event) {
   $("#loginError").hidden = true;
 
   try {
-    const data = await apiFetch("/api/v1/auth/login", {
+    const data = await apiFetch("/api/v1/auth/backoffice-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -253,7 +304,7 @@ async function login(event) {
     setSession(data);
     window.location.assign(BACKOFFICE_PATH);
   } catch (error) {
-    $("#loginError").textContent = "No se pudo iniciar sesion.";
+    $("#loginError").textContent = readableError(error);
     $("#loginError").hidden = false;
   }
 }
@@ -386,10 +437,10 @@ async function loadTable() {
 
 function renderTable(columns, items) {
   const actionColumn = ["condominiums", "companies", "users"].includes(state.currentView);
-  $("#tableHead").innerHTML = `<tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}${actionColumn ? "<th>Acciones</th>" : ""}</tr>`;
+  $("#tableHead").innerHTML = `<tr>${columns.map((column) => `<th>${escapeHtml(labelForColumn(column))}</th>`).join("")}${actionColumn ? "<th>Acciones</th>" : ""}</tr>`;
   $("#tableBody").innerHTML = items
     .map((item) => {
-      const cells = columns.map((column) => `<td>${escapeHtml(formatCell(item[column]))}</td>`).join("");
+      const cells = columns.map((column) => `<td>${formatTableCell(column, item[column])}</td>`).join("");
       if (!actionColumn) return `<tr>${cells}</tr>`;
       const actions = renderRowActions(state.currentView, item.id);
       return `<tr>${cells}<td>${actions}</td></tr>`;
@@ -398,6 +449,28 @@ function renderTable(columns, items) {
   bindCondominiumRowActions();
   bindCompanyRowActions();
   bindUserRowActions();
+}
+
+function labelForColumn(column) {
+  return columnLabels[column] || column.replaceAll("_", " ");
+}
+
+function formatTableCell(column, value) {
+  if (column === "status") return renderStatusBadge(value);
+  if (column === "is_system") return renderBooleanBadge(value);
+  return escapeHtml(formatCell(value));
+}
+
+function renderStatusBadge(status) {
+  const normalized = String(status || "").toLowerCase();
+  const label = statusLabels[normalized] || formatCell(status);
+  const className = normalized === "active" ? "is-active" : normalized === "inactive" ? "is-inactive" : "is-neutral";
+  return `<span class="status-badge ${className}"><span aria-hidden="true"></span>${escapeHtml(label)}</span>`;
+}
+
+function renderBooleanBadge(value) {
+  const active = Boolean(value);
+  return `<span class="status-badge ${active ? "is-active" : "is-inactive"}"><span aria-hidden="true"></span>${active ? "Si" : "No"}</span>`;
 }
 
 function renderRowActions(view, id) {
@@ -563,6 +636,10 @@ async function saveCompany(event) {
     });
     state.companies = [];
     await returnFromCompanyForm(saved);
+    showToast({
+      title: id ? "Empresa actualizada" : "Empresa creada",
+      message: "Los cambios se guardaron correctamente.",
+    });
   } catch (error) {
     $("#companyFormError").textContent = readableError(error);
     $("#companyFormError").hidden = false;
@@ -599,6 +676,10 @@ async function deleteCompany(id) {
     await apiFetch(`/api/v1/companies/${id}`, { method: "DELETE" });
     state.companies = [];
     await returnToCompanyList();
+    showToast({
+      title: "Empresa borrada",
+      message: "La empresa se elimino correctamente.",
+    });
   } catch (error) {
     window.alert(readableError(error));
   }
@@ -753,6 +834,10 @@ async function saveUser(event) {
       body: JSON.stringify(payload),
     });
     await returnToUserList();
+    showToast({
+      title: id ? "Usuario actualizado" : "Usuario creado",
+      message: "Los cambios se guardaron correctamente.",
+    });
   } catch (error) {
     $("#userFormError").textContent = readableError(error);
     $("#userFormError").hidden = false;
@@ -810,6 +895,10 @@ async function deleteUser(id) {
   try {
     await apiFetch(`/api/v1/users/${id}`, { method: "DELETE" });
     await returnToUserList();
+    showToast({
+      title: "Usuario borrado",
+      message: "El usuario se elimino correctamente.",
+    });
   } catch (error) {
     window.alert(readableError(error));
   }
@@ -861,6 +950,10 @@ async function saveCondominium(event) {
       body: JSON.stringify(payload),
     });
     await returnToCondominiumList();
+    showToast({
+      title: id ? "Condominio actualizado" : "Condominio creado",
+      message: "Los cambios se guardaron correctamente.",
+    });
   } catch (error) {
     $("#condominiumFormError").textContent = readableError(error);
     $("#condominiumFormError").hidden = false;
@@ -912,6 +1005,10 @@ async function deleteCondominium(id) {
   try {
     await apiFetch(`/api/v1/condominiums/${id}`, { method: "DELETE" });
     await returnToCondominiumList();
+    showToast({
+      title: "Condominio borrado",
+      message: "El condominio se elimino correctamente.",
+    });
   } catch (error) {
     window.alert(readableError(error));
   }
@@ -955,6 +1052,19 @@ function closeConfirmModal(confirmed) {
     state.confirmResolver(confirmed);
     state.confirmResolver = null;
   }
+}
+
+let toastTimer = null;
+
+function showToast({ title, message }) {
+  $("#toastTitle").textContent = title;
+  $("#toastMessage").textContent = message;
+  $("#toast").hidden = false;
+
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    $("#toast").hidden = true;
+  }, 3200);
 }
 
 async function uploadAudio(event) {

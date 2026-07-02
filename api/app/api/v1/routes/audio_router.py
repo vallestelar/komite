@@ -3,14 +3,14 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 
-from app.core.auth.dependencies import require_access_token
+from app.core.auth.dependencies import require_komite_employee
 from app.schemas.audio_schema import AudioProcessingResponse
 from app.services.audio_processing_service import AudioProcessingService
 
 router = APIRouter(
     prefix="/api/v1/audio",
     tags=["Audio"],
-    dependencies=[Depends(require_access_token())],
+    dependencies=[Depends(require_komite_employee())],
 )
 
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from app.core.auth.dependencies import require_access_token
+from app.core.auth.dependencies import require_access_token, user_is_komite_employee
 from app.core.security.passwords import verify_password
 from app.models.entities import Company
 from app.repositories.user_repository import get_user_by_email, get_user_memberships
@@ -93,7 +93,36 @@ async def login(payload: LoginRequest) -> TokenResponse:
     return await _build_token_response(user)
 
 
+@router.post("/backoffice-login", response_model=TokenResponse)
+async def backoffice_login(payload: LoginRequest) -> TokenResponse:
+    invalid_exc = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciales invalidas",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    user = await get_user_by_email(payload.email)
+    if not user:
+        raise invalid_exc
+
+    if user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario inactivo",
+        )
+
+    if not verify_password(payload.password, user.password_hash):
+        raise invalid_exc
+
+    if not await user_is_komite_employee(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido a empleados de Komite",
+        )
+
+    return await _build_token_response(user)
+
+
 @router.get("/me", response_model=MeResponse, dependencies=[Depends(require_access_token())])
 async def me(request: Request) -> MeResponse:
     return await _build_token_response(request.state.user)
-

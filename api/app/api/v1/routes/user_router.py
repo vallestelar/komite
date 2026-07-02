@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from tortoise.exceptions import IntegrityError
 from tortoise.expressions import Q
 
-from app.core.auth.dependencies import require_access_token
+from app.core.auth.dependencies import require_komite_employee
 from app.core.security.passwords import hash_password
 from app.models.entities import Company, Condominium, Role, Unit, User, UserCondominium
 from app.schemas.user_schema import (
@@ -21,7 +21,7 @@ from app.schemas.user_schema import (
 router = APIRouter(
     prefix="/api/v1/users",
     tags=["Users"],
-    dependencies=[Depends(require_access_token())],
+    dependencies=[Depends(require_komite_employee())],
 )
 
 

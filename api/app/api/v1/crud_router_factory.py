@@ -11,7 +11,7 @@ from tortoise.expressions import Q
 from tortoise.models import Model
 from pydantic import BaseModel
 
-from app.core.auth.dependencies import require_access_token
+from app.core.auth.dependencies import require_komite_employee
 from app.services.service_factory import service_factory
 
 
@@ -64,7 +64,7 @@ def create_crud_router(
     router = APIRouter(
         prefix=prefix,
         tags=[tag],
-        dependencies=[Depends(require_access_token())],
+        dependencies=[Depends(require_komite_employee())],
     )
 
     async def get_service():

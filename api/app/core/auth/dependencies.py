@@ -7,8 +7,21 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.repositories.user_repository import get_user_by_id, user_has_condominium
 from app.services.auth_service import AuthService
+from app.models.entities import Company
 
 bearer_scheme = HTTPBearer(auto_error=False)
+KOMITE_COMPANY_NAME = "komite"
+
+
+async def user_is_komite_employee(user) -> bool:
+    if not user or not user.company_id:
+        return False
+
+    company = await Company.get_or_none(id=user.company_id)
+    if not company:
+        return False
+
+    return company.status == "active" and company.name.strip().casefold() == KOMITE_COMPANY_NAME
 
 
 def require_access_token(require_condominium: bool = False) -> Callable:
@@ -112,3 +125,16 @@ def require_access_token(require_condominium: bool = False) -> Callable:
 
     return _dependency
 
+
+def require_komite_employee() -> Callable:
+    async def _dependency(
+        request: Request,
+        _: None = Depends(require_access_token()),
+    ) -> None:
+        if not await user_is_komite_employee(request.state.user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acceso restringido a empleados de Komite",
+            )
+
+    return _dependency

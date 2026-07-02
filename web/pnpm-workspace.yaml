@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - esbuild
+
+confirmModulesPurge: false
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true

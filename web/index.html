@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Komite Backoffice</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <main id="app">
+      <section id="loginView" class="login-shell">
+        <div class="login-panel">
+          <img class="login-logo" src="./assets/komite-logo.png" alt="Komite" />
+          <form id="loginForm" class="login-form">
+            <label>
+              Email
+              <input id="email" name="email" type="email" autocomplete="email" value="admin@komite.cl" required />
+            </label>
+            <label>
+              Password
+              <input id="password" name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button type="submit">Entrar</button>
+            <p id="loginError" class="form-error" hidden></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="officeView" class="office-shell" hidden>
+        <aside class="sidebar">
+          <img class="sidebar-logo" src="./assets/komite-logo.png" alt="Komite" />
+          <nav class="side-nav">
+            <button class="nav-item active" data-view="dashboard">Dashboard</button>
+            <button class="nav-item" data-view="condominiums">Condominios</button>
+            <button class="nav-item" data-view="incidents">Incidencias</button>
+            <button class="nav-item" data-view="tasks">Tareas</button>
+            <button class="nav-item" data-view="reports">Informes</button>
+            <button class="nav-item" data-view="communications">Comunicaciones</button>
+            <button class="nav-item" data-view="audio">Audio IA</button>
+          </nav>
+        </aside>
+
+        <section class="workspace">
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">Backoffice</p>
+              <h1 id="viewTitle">Dashboard</h1>
+            </div>
+            <div class="user-chip">
+              <span id="userName">Usuario</span>
+              <button id="logoutButton" type="button">Salir</button>
+            </div>
+          </header>
+
+          <section id="dashboardPanel" class="panel">
+            <div class="metrics-grid">
+              <article class="metric">
+                <span>Condominios</span>
+                <strong id="metricCondominiums">0</strong>
+              </article>
+              <article class="metric">
+                <span>Incidencias</span>
+                <strong id="metricIncidents">0</strong>
+              </article>
+              <article class="metric">
+                <span>Tareas</span>
+                <strong id="metricTasks">0</strong>
+              </article>
+              <article class="metric">
+                <span>Informes</span>
+                <strong id="metricReports">0</strong>
+              </article>
+            </div>
+            <div class="split-grid">
+              <section>
+                <h2>Incidencias recientes</h2>
+                <div id="recentIncidents" class="list"></div>
+              </section>
+              <section>
+                <h2>Tareas recientes</h2>
+                <div id="recentTasks" class="list"></div>
+              </section>
+            </div>
+          </section>
+
+          <section id="tablePanel" class="panel" hidden>
+            <div class="table-toolbar">
+              <input id="searchInput" type="search" placeholder="Buscar" />
+              <button id="refreshButton" type="button">Actualizar</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="audioPanel" class="panel" hidden>
+            <form id="audioForm" class="audio-form">
+              <label>
+                Audio
+                <input id="audioFile" name="file" type="file" accept=".mp3,.mp4,.mpeg,.mpga,.m4a,.wav,.webm,.ogg,.oga,audio/*" required />
+              </label>
+              <label>
+                Idioma
+                <input id="audioLanguage" name="language" value="es" />
+              </label>
+              <label class="checkbox-row">
+                <input id="generateDraft" name="generateDraft" type="checkbox" />
+                Generar borrador con IA
+              </label>
+              <button type="submit">Procesar audio</button>
+            </form>
+            <div class="result-box">
+              <h2>Transcripcion</h2>
+              <pre id="audioResult">Sin audio procesado.</pre>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
+

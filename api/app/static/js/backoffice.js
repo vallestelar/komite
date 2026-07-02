@@ -1,0 +1,1025 @@
+const API_BASE = localStorage.getItem("komite_api_base") || window.location.origin;
+const BACKOFFICE_PATH = "/backoffice";
+const TOKEN_KEY = "komite_token";
+const USER_KEY = "komite_user";
+const SIDEBAR_KEY = "komite_sidebar_collapsed";
+const NAV_GROUPS_KEY = "komite_nav_groups_collapsed";
+
+const state = {
+  token: readToken(),
+  user: readUser(),
+  currentView: "dashboard",
+  currentItems: [],
+  companies: [],
+  condominiums: [],
+  units: [],
+  roles: [],
+  companyReturnContext: null,
+  confirmResolver: null,
+};
+
+const resources = {
+  companies: {
+    title: "Empresas",
+    endpoint: "/api/v1/companies/",
+    columns: ["id", "name", "rut", "email", "status"],
+  },
+  condominiums: {
+    title: "Condominios",
+    endpoint: "/api/v1/condominiums/",
+    columns: ["id", "name", "address", "status", "units_count"],
+  },
+  incidents: {
+    title: "Incidencias",
+    endpoint: "/api/v1/incidents/",
+    columns: ["id", "category", "priority", "status", "created_at"],
+  },
+  tasks: {
+    title: "Tareas",
+    endpoint: "/api/v1/tasks/",
+    columns: ["id", "title", "priority", "status", "due_date"],
+  },
+  reports: {
+    title: "Informes",
+    endpoint: "/api/v1/reports/",
+    columns: ["id", "title", "report_type", "status", "published_at"],
+  },
+  communications: {
+    title: "Comunicaciones",
+    endpoint: "/api/v1/communications/",
+    columns: ["id", "title", "communication_type", "audience", "status"],
+  },
+  inspections: {
+    title: "Inspecciones",
+    endpoint: "/api/v1/inspections/",
+    columns: ["id", "inspection_type", "status", "started_at", "finished_at"],
+  },
+  users: {
+    title: "Usuarios",
+    endpoint: "/api/v1/users/",
+    columns: ["id", "email", "full_name", "global_role", "role_code", "status"],
+  },
+  roles: {
+    title: "Roles",
+    endpoint: "/api/v1/roles/",
+    columns: ["id", "code", "name", "scope", "is_system"],
+  },
+  attachments: {
+    title: "Archivos",
+    endpoint: "/api/v1/attachments/",
+    columns: ["id", "file_name", "file_type", "mime_type", "created_at"],
+  },
+  audit: {
+    title: "Auditoria",
+    endpoint: "/api/v1/audit-logs/",
+    columns: ["id", "action", "entity_type", "entity_id", "created_at"],
+  },
+  ai: {
+    title: "IA",
+    endpoint: "/api/v1/ai-requests/",
+    columns: ["id", "provider", "model", "purpose", "status"],
+  },
+};
+
+const placeholders = {
+  committee: {
+    title: "Comite",
+    text: "Aqui quedara la gestion de miembros del comite, cargos, vigencias y relaciones con condominios.",
+  },
+  neighbors: {
+    title: "Vecinos",
+    text: "Aqui se preparara la administracion de vecinos, unidades, datos de contacto y preferencias de comunicacion.",
+  },
+  settings: {
+    title: "Configuracion",
+    text: "Aqui se centralizaran parametros del sistema, integraciones, proveedores de IA y reglas operativas.",
+  },
+};
+
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+async function apiFetch(path, options = {}) {
+  const headers = options.headers || {};
+  if (state.token) {
+    headers.Authorization = `Bearer ${state.token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function setSession(data) {
+  state.token = data.access_token;
+  state.user = data.user;
+  persistSession(state.token, state.user);
+}
+
+function clearSession() {
+  state.token = null;
+  state.user = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
+  document.cookie = `${USER_KEY}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+function persistSession(token, user) {
+  const userPayload = JSON.stringify(user || null);
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, userPayload);
+  sessionStorage.setItem(TOKEN_KEY, token);
+  sessionStorage.setItem(USER_KEY, userPayload);
+  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=28800; SameSite=Lax`;
+  document.cookie = `${USER_KEY}=${encodeURIComponent(userPayload)}; path=/; max-age=28800; SameSite=Lax`;
+}
+
+function readToken() {
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || readCookie(TOKEN_KEY);
+}
+
+function readUser() {
+  const value = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY) || readCookie(USER_KEY);
+  if (!value) return null;
+
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return null;
+  }
+}
+
+function readCookie(name) {
+  const prefix = `${name}=`;
+  const match = document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : null;
+}
+
+function showLogin() {
+  $("#loginView").hidden = false;
+  $("#officeView").hidden = true;
+}
+
+function showOffice() {
+  $("#loginView").hidden = true;
+  $("#officeView").hidden = false;
+  applySidebarState();
+  applyNavGroupState();
+  $("#userName").textContent = state.user?.full_name || state.user?.email || "Usuario";
+  openView("dashboard").catch(() => {
+    $("#viewTitle").textContent = "Dashboard";
+    showPanel("dashboard");
+  });
+}
+
+function applySidebarState() {
+  const collapsed = localStorage.getItem(SIDEBAR_KEY) === "true";
+  $("#officeView").classList.toggle("sidebar-collapsed", collapsed);
+  updateSidebarToggle(collapsed);
+}
+
+function toggleSidebar() {
+  const collapsed = !$("#officeView").classList.contains("sidebar-collapsed");
+  localStorage.setItem(SIDEBAR_KEY, String(collapsed));
+  $("#officeView").classList.toggle("sidebar-collapsed", collapsed);
+  updateSidebarToggle(collapsed);
+}
+
+function updateSidebarToggle(collapsed) {
+  const button = $("#sidebarToggle");
+  if (!button) return;
+  const label = collapsed ? "Expandir menu" : "Contraer menu";
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+}
+
+function readCollapsedNavGroups() {
+  try {
+    return JSON.parse(localStorage.getItem(NAV_GROUPS_KEY) || "[]");
+  } catch (error) {
+    return [];
+  }
+}
+
+function applyNavGroupState() {
+  const collapsedGroups = readCollapsedNavGroups();
+  $$("[data-nav-group-panel]").forEach((group) => {
+    const key = group.dataset.navGroupPanel;
+    const collapsed = collapsedGroups.includes(key);
+    group.classList.toggle("collapsed", collapsed);
+    const toggle = group.querySelector("[data-nav-group]");
+    if (toggle) toggle.setAttribute("aria-expanded", String(!collapsed));
+  });
+}
+
+function toggleNavGroup(groupKey) {
+  const collapsedGroups = new Set(readCollapsedNavGroups());
+  if (collapsedGroups.has(groupKey)) {
+    collapsedGroups.delete(groupKey);
+  } else {
+    collapsedGroups.add(groupKey);
+  }
+  localStorage.setItem(NAV_GROUPS_KEY, JSON.stringify(Array.from(collapsedGroups)));
+  applyNavGroupState();
+}
+
+async function login(event) {
+  event.preventDefault();
+  $("#loginError").hidden = true;
+
+  try {
+    const data = await apiFetch("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: $("#email").value,
+        password: $("#password").value,
+      }),
+    });
+    setSession(data);
+    window.location.assign(BACKOFFICE_PATH);
+  } catch (error) {
+    $("#loginError").textContent = "No se pudo iniciar sesion.";
+    $("#loginError").hidden = false;
+  }
+}
+
+async function loadDashboard() {
+  const [condominiums, incidents, tasks, reports, communications, aiRequests] = await Promise.all([
+    fetchPage("/api/v1/condominiums/?page=1&page_size=5"),
+    fetchPage("/api/v1/incidents/?page=1&page_size=5"),
+    fetchPage("/api/v1/tasks/?page=1&page_size=5"),
+    fetchPage("/api/v1/reports/?page=1&page_size=5"),
+    fetchPage("/api/v1/communications/?page=1&page_size=5"),
+    fetchPage("/api/v1/ai-requests/?page=1&page_size=5"),
+  ]);
+
+  $("#metricCondominiums").textContent = condominiums.meta?.total || 0;
+  $("#metricIncidents").textContent = incidents.meta?.total || 0;
+  $("#metricTasks").textContent = tasks.meta?.total || 0;
+  $("#metricReports").textContent = reports.meta?.total || 0;
+  renderList("#recentIncidents", incidents.items, "category", "status");
+  renderList("#recentTasks", tasks.items, "title", "status");
+  renderList("#recentCommunications", communications.items, "title", "status");
+  renderList("#recentAi", aiRequests.items, "purpose", "status");
+}
+
+async function fetchPage(path) {
+  try {
+    const data = await apiFetch(path);
+    return {
+      items: data.items || [],
+      meta: data.meta || { total: data.items?.length || 0 },
+    };
+  } catch (error) {
+    return { items: [], meta: { total: 0 } };
+  }
+}
+
+function renderList(selector, items, titleKey, subtitleKey) {
+  const target = $(selector);
+  target.innerHTML = "";
+
+  if (!items.length) {
+    target.innerHTML = `<div class="list-item"><span>Sin registros.</span></div>`;
+    return;
+  }
+
+  for (const item of items) {
+    const element = document.createElement("div");
+    element.className = "list-item";
+    element.innerHTML = `<strong>${escapeHtml(item[titleKey] || "Registro")}</strong><span>${escapeHtml(item[subtitleKey] || "")}</span>`;
+    target.appendChild(element);
+  }
+}
+
+function showPanel(panel) {
+  $("#dashboardPanel").hidden = panel !== "dashboard";
+  $("#tablePanel").hidden = panel !== "table";
+  $("#condominiumFormPanel").hidden = panel !== "condominiumForm";
+  $("#companyFormPanel").hidden = panel !== "companyForm";
+  $("#userFormPanel").hidden = panel !== "userForm";
+  $("#audioPanel").hidden = panel !== "audio";
+  $("#placeholderPanel").hidden = panel !== "placeholder";
+}
+
+async function openView(view) {
+  state.currentView = view;
+  $$(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+
+  if (view === "dashboard") {
+    $("#viewTitle").textContent = "Dashboard";
+    showPanel("dashboard");
+    await loadDashboard();
+    return;
+  }
+
+  if (view === "audio") {
+    $("#viewTitle").textContent = "Audio IA";
+    showPanel("audio");
+    return;
+  }
+
+  if (placeholders[view]) {
+    $("#viewTitle").textContent = placeholders[view].title;
+    $("#placeholderTitle").textContent = placeholders[view].title;
+    $("#placeholderText").textContent = placeholders[view].text;
+    showPanel("placeholder");
+    return;
+  }
+
+  if (!resources[view]) {
+    $("#viewTitle").textContent = "Modulo";
+    $("#placeholderTitle").textContent = "Modulo no disponible";
+    $("#placeholderText").textContent = "Esta opcion aun no tiene una ruta asociada en el backoffice.";
+    showPanel("placeholder");
+    return;
+  }
+
+  $("#viewTitle").textContent = resources[view].title;
+  $("#searchInput").value = "";
+  $("#newCompanyButton").hidden = view !== "companies";
+  $("#newCondominiumButton").hidden = view !== "condominiums";
+  $("#newUserButton").hidden = view !== "users";
+  showPanel("table");
+  await loadTable();
+}
+
+async function loadTable() {
+  const resource = resources[state.currentView];
+  const q = encodeURIComponent($("#searchInput").value.trim());
+  const data = await apiFetch(`${resource.endpoint}?page=1&page_size=50${q ? `&q=${q}` : ""}`);
+  state.currentItems = data.items || [];
+  renderTable(resource.columns, data.items);
+}
+
+function renderTable(columns, items) {
+  const actionColumn = ["condominiums", "companies", "users"].includes(state.currentView);
+  $("#tableHead").innerHTML = `<tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}${actionColumn ? "<th>Acciones</th>" : ""}</tr>`;
+  $("#tableBody").innerHTML = items
+    .map((item) => {
+      const cells = columns.map((column) => `<td>${escapeHtml(formatCell(item[column]))}</td>`).join("");
+      if (!actionColumn) return `<tr>${cells}</tr>`;
+      const actions = renderRowActions(state.currentView, item.id);
+      return `<tr>${cells}<td>${actions}</td></tr>`;
+    })
+    .join("");
+  bindCondominiumRowActions();
+  bindCompanyRowActions();
+  bindUserRowActions();
+}
+
+function renderRowActions(view, id) {
+  if (view === "companies") return renderCompanyActions(id);
+  if (view === "users") return renderUserActions(id);
+  return renderCondominiumActions(id);
+}
+
+function renderCondominiumActions(id) {
+  const safeId = escapeHtml(id);
+  return `
+    <div class="table-actions">
+      <button class="edit-row icon-button" type="button" data-edit-condominium="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
+        <span>Editar</span>
+      </button>
+      <button class="delete-row icon-button" type="button" data-delete-condominium="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
+        <span>Borrar</span>
+      </button>
+    </div>
+  `;
+}
+
+function bindCondominiumRowActions() {
+  $$("[data-edit-condominium]").forEach((button) => {
+    button.addEventListener("click", () => openCondominiumForm(button.dataset.editCondominium));
+  });
+  $$("[data-delete-condominium]").forEach((button) => {
+    button.addEventListener("click", () => deleteCondominium(button.dataset.deleteCondominium));
+  });
+}
+
+function renderCompanyActions(id) {
+  const safeId = escapeHtml(id);
+  return `
+    <div class="table-actions">
+      <button class="edit-row icon-button" type="button" data-edit-company="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
+        <span>Editar</span>
+      </button>
+      <button class="delete-row icon-button" type="button" data-delete-company="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
+        <span>Borrar</span>
+      </button>
+    </div>
+  `;
+}
+
+function bindCompanyRowActions() {
+  $$("[data-edit-company]").forEach((button) => {
+    button.addEventListener("click", () => openCompanyForm(button.dataset.editCompany));
+  });
+  $$("[data-delete-company]").forEach((button) => {
+    button.addEventListener("click", () => deleteCompany(button.dataset.deleteCompany));
+  });
+}
+
+function renderUserActions(id) {
+  const safeId = escapeHtml(id);
+  return `
+    <div class="table-actions">
+      <button class="edit-row icon-button" type="button" data-edit-user="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
+        <span>Editar</span>
+      </button>
+      <button class="delete-row icon-button" type="button" data-delete-user="${safeId}">
+        <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
+        <span>Borrar</span>
+      </button>
+    </div>
+  `;
+}
+
+function bindUserRowActions() {
+  $$("[data-edit-user]").forEach((button) => {
+    button.addEventListener("click", () => openUserForm(button.dataset.editUser));
+  });
+  $$("[data-delete-user]").forEach((button) => {
+    button.addEventListener("click", () => deleteUser(button.dataset.deleteUser));
+  });
+}
+
+function formatCell(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+async function ensureCompaniesLoaded() {
+  const data = await apiFetch("/api/v1/companies/?page=1&page_size=200");
+  state.companies = data.items || [];
+}
+
+async function ensureUserLookupsLoaded() {
+  const [companies, condominiums, roles, units] = await Promise.all([
+    apiFetch("/api/v1/companies/?page=1&page_size=200"),
+    apiFetch("/api/v1/condominiums/?page=1&page_size=200"),
+    apiFetch("/api/v1/roles/?page=1&page_size=200"),
+    apiFetch("/api/v1/units/?page=1&page_size=200"),
+  ]);
+  state.companies = companies.items || [];
+  state.condominiums = condominiums.items || [];
+  state.roles = roles.items || [];
+  state.units = units.items || [];
+}
+
+async function openCondominiumForm(id = null) {
+  try {
+    $("#condominiumFormError").hidden = true;
+    await ensureCompaniesLoaded();
+    if (!state.companies.length) {
+      throw new Error("Antes de crear un condominio debes crear al menos una empresa.");
+    }
+    fillCompanySelect();
+
+    const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/condominiums/${id}`)) : null;
+    $("#viewTitle").textContent = item ? "Editar condominio" : "Nuevo condominio";
+    $("#condominiumFormTitle").textContent = item ? "Editar condominio" : "Nuevo condominio";
+    $("#deleteCondominiumButton").hidden = !item;
+    fillCondominiumForm(item);
+    showPanel("condominiumForm");
+  } catch (error) {
+    window.alert(readableError(error));
+  }
+}
+
+async function openCompanyForm(id = null, returnContext = null) {
+  $("#companyFormError").hidden = true;
+  state.companyReturnContext = returnContext;
+  $("#companyReturnView").value = returnContext || "";
+
+  const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/companies/${id}`)) : null;
+  $("#viewTitle").textContent = item ? "Editar empresa" : "Nueva empresa";
+  $("#companyFormTitle").textContent = item ? "Editar empresa" : "Nueva empresa";
+  $("#deleteCompanyButton").hidden = !item;
+  fillCompanyForm(item);
+  showPanel("companyForm");
+}
+
+function fillCompanyForm(item) {
+  $("#companyId").value = item?.id || "";
+  $("#companyName").value = item?.name || "";
+  $("#companyRut").value = item?.rut || "";
+  $("#companyLegalName").value = item?.legal_name || "";
+  $("#companyEmail").value = item?.email || "";
+  $("#companyPhone").value = item?.phone || "";
+  $("#companyStatus").value = item?.status || "active";
+  $("#companyMetadata").value = JSON.stringify(item?.metadata || {}, null, 2);
+}
+
+async function saveCompany(event) {
+  event.preventDefault();
+  $("#companyFormError").hidden = true;
+
+  try {
+    const id = $("#companyId").value;
+    const payload = buildCompanyPayload();
+    const saved = await apiFetch(id ? `/api/v1/companies/${id}` : "/api/v1/companies/", {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    state.companies = [];
+    await returnFromCompanyForm(saved);
+  } catch (error) {
+    $("#companyFormError").textContent = readableError(error);
+    $("#companyFormError").hidden = false;
+  }
+}
+
+function buildCompanyPayload() {
+  return {
+    name: $("#companyName").value.trim(),
+    rut: emptyToNull($("#companyRut").value),
+    legal_name: emptyToNull($("#companyLegalName").value),
+    email: emptyToNull($("#companyEmail").value),
+    phone: emptyToNull($("#companyPhone").value),
+    status: $("#companyStatus").value,
+    metadata: parseJsonField("#companyMetadata", {}),
+  };
+}
+
+async function deleteCurrentCompany() {
+  const id = $("#companyId").value;
+  if (!id) return;
+  await deleteCompany(id);
+}
+
+async function deleteCompany(id) {
+  const confirmed = await confirmAction({
+    title: "Borrar empresa",
+    message: "Esta accion eliminara la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
+    acceptLabel: "Borrar empresa",
+  });
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(`/api/v1/companies/${id}`, { method: "DELETE" });
+    state.companies = [];
+    await returnToCompanyList();
+  } catch (error) {
+    window.alert(readableError(error));
+  }
+}
+
+async function returnFromCompanyForm(savedCompany = null) {
+  if ($("#companyReturnView").value === "condominiumForm") {
+    await ensureCompaniesLoaded();
+    fillCompanySelect();
+    if (savedCompany?.id) {
+      $("#condominiumCompany").value = savedCompany.id;
+    }
+    $("#viewTitle").textContent = $("#condominiumId").value ? "Editar condominio" : "Nuevo condominio";
+    showPanel("condominiumForm");
+    return;
+  }
+
+  await returnToCompanyList();
+}
+
+async function returnToCompanyList() {
+  state.currentView = "companies";
+  $("#viewTitle").textContent = resources.companies.title;
+  $("#newCompanyButton").hidden = false;
+  $("#newCondominiumButton").hidden = true;
+  $("#newUserButton").hidden = true;
+  showPanel("table");
+  await loadTable();
+}
+
+async function openUserForm(id = null) {
+  $("#userFormError").hidden = true;
+  await ensureUserLookupsLoaded();
+  fillUserSelects();
+
+  const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/users/${id}`)) : null;
+  $("#viewTitle").textContent = item ? "Editar usuario" : "Nuevo usuario";
+  $("#userFormTitle").textContent = item ? "Editar usuario" : "Nuevo usuario";
+  $("#deleteUserButton").hidden = !item;
+  $("#userPassword").required = !item;
+  fillUserForm(item);
+  showPanel("userForm");
+}
+
+function fillUserSelects() {
+  $("#userCompany").innerHTML = `<option value="">Sin empresa</option>${state.companies
+    .map((company) => `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name)}</option>`)
+    .join("")}`;
+}
+
+function fillUserForm(item) {
+  $("#userId").value = item?.id || "";
+  $("#userCompany").value = item?.company_id || "";
+  $("#userFullName").value = item?.full_name || "";
+  $("#userEmail").value = item?.email || "";
+  $("#userPhone").value = item?.phone || "";
+  $("#userPassword").value = "";
+  $("#userStatus").value = item?.status || "active";
+  $("#userGlobalRole").value = item?.global_role || "";
+  renderMembershipRows(item);
+}
+
+function renderMembershipRows(item) {
+  const list = $("#userMembershipRows");
+  list.innerHTML = "";
+
+  const memberships = item?.memberships?.length
+    ? item.memberships
+    : item?.condominium_id
+      ? [{ condominium_id: item.condominium_id, role_code: item.role_code || "vecino", unit_id: item.unit_id || "" }]
+      : [];
+
+  if (!memberships.length) {
+    addMembershipRow();
+    return;
+  }
+
+  memberships.forEach((membership) => addMembershipRow(membership));
+}
+
+function addMembershipRow(membership = {}) {
+  const row = document.createElement("div");
+  row.className = "membership-row";
+  row.innerHTML = `
+    <label>
+      Condominio
+      <select class="membership-condominium" required>
+        <option value="">Selecciona condominio</option>
+        ${state.condominiums.map((condominium) => `<option value="${escapeHtml(condominium.id)}">${escapeHtml(condominium.name)}</option>`).join("")}
+      </select>
+    </label>
+    <label>
+      Rol
+      <select class="membership-role" required>
+        <option value="">Selecciona rol</option>
+        ${state.roles.map((role) => `<option value="${escapeHtml(role.code)}">${escapeHtml(role.name || role.code)}</option>`).join("")}
+      </select>
+    </label>
+    <label>
+      Unidad
+      <select class="membership-unit"></select>
+    </label>
+    <button class="membership-remove icon-button" type="button">
+      <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
+      <span>Quitar</span>
+    </button>
+  `;
+
+  const condominiumSelect = row.querySelector(".membership-condominium");
+  const roleSelect = row.querySelector(".membership-role");
+  const unitSelect = row.querySelector(".membership-unit");
+
+  condominiumSelect.value = membership.condominium_id || "";
+  roleSelect.value = membership.role_code || membership.role || "";
+  updateMembershipUnitOptions(unitSelect, condominiumSelect.value, membership.unit_id || "");
+
+  condominiumSelect.addEventListener("change", () => {
+    updateMembershipUnitOptions(unitSelect, condominiumSelect.value, "");
+  });
+
+  row.querySelector(".membership-remove").addEventListener("click", () => {
+    row.remove();
+    if (!$$("#userMembershipRows .membership-row").length) {
+      addMembershipRow();
+    }
+  });
+
+  $("#userMembershipRows").appendChild(row);
+}
+
+function updateMembershipUnitOptions(select, condominiumId, selectedUnitId) {
+  const units = condominiumId
+    ? state.units.filter((unit) => unit.condominium_id === condominiumId)
+    : [];
+
+  select.innerHTML = `<option value="">Sin unidad</option>${units
+    .map((unit) => `<option value="${escapeHtml(unit.id)}">${escapeHtml(unit.identifier)}</option>`)
+    .join("")}`;
+  select.value = selectedUnitId || "";
+}
+
+async function saveUser(event) {
+  event.preventDefault();
+  $("#userFormError").hidden = true;
+
+  try {
+    const id = $("#userId").value;
+    const payload = buildUserPayload(Boolean(id));
+    await apiFetch(id ? `/api/v1/users/${id}` : "/api/v1/users/", {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    await returnToUserList();
+  } catch (error) {
+    $("#userFormError").textContent = readableError(error);
+    $("#userFormError").hidden = false;
+  }
+}
+
+function buildUserPayload(isUpdate) {
+  const payload = {
+    email: $("#userEmail").value.trim(),
+    full_name: $("#userFullName").value.trim(),
+    phone: emptyToNull($("#userPhone").value),
+    company_id: emptyToNull($("#userCompany").value),
+    global_role: emptyToNull($("#userGlobalRole").value),
+    status: $("#userStatus").value,
+  };
+
+  const password = $("#userPassword").value;
+  if (password) {
+    payload.password = password;
+  } else if (!isUpdate) {
+    payload.password = "";
+  }
+
+  payload.memberships = buildUserMembershipPayload();
+
+  return payload;
+}
+
+function buildUserMembershipPayload() {
+  return $$("#userMembershipRows .membership-row")
+    .map((row) => ({
+      condominium_id: emptyToNull(row.querySelector(".membership-condominium").value),
+      role_code: emptyToNull(row.querySelector(".membership-role").value),
+      unit_id: emptyToNull(row.querySelector(".membership-unit").value),
+      status: "active",
+      receives_notifications: true,
+    }))
+    .filter((membership) => membership.condominium_id && membership.role_code);
+}
+
+async function deleteCurrentUser() {
+  const id = $("#userId").value;
+  if (!id) return;
+  await deleteUser(id);
+}
+
+async function deleteUser(id) {
+  const confirmed = await confirmAction({
+    title: "Borrar usuario",
+    message: "Esta accion eliminara el usuario seleccionado. No se puede deshacer desde el backoffice.",
+    acceptLabel: "Borrar usuario",
+  });
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(`/api/v1/users/${id}`, { method: "DELETE" });
+    await returnToUserList();
+  } catch (error) {
+    window.alert(readableError(error));
+  }
+}
+
+async function returnToUserList() {
+  state.currentView = "users";
+  $("#viewTitle").textContent = resources.users.title;
+  $("#newCompanyButton").hidden = true;
+  $("#newCondominiumButton").hidden = true;
+  $("#newUserButton").hidden = false;
+  showPanel("table");
+  await loadTable();
+}
+
+function fillCompanySelect() {
+  const select = $("#condominiumCompany");
+  select.innerHTML = state.companies
+    .map((company) => `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name)}</option>`)
+    .join("");
+}
+
+function fillCondominiumForm(item) {
+  $("#condominiumId").value = item?.id || "";
+  $("#condominiumCompany").value = item?.company_id || state.companies[0]?.id || "";
+  $("#condominiumName").value = item?.name || "";
+  $("#condominiumAddress").value = item?.address || "";
+  $("#condominiumCommune").value = item?.commune || "";
+  $("#condominiumCity").value = item?.city || "";
+  $("#condominiumRegion").value = item?.region || "";
+  $("#condominiumStatus").value = item?.status || "active";
+  $("#condominiumTowers").value = item?.towers_count ?? 0;
+  $("#condominiumUnits").value = item?.units_count ?? 0;
+  $("#condominiumIncidentCategories").value = JSON.stringify(item?.incident_categories || [], null, 2);
+  $("#condominiumCommunicationRules").value = JSON.stringify(item?.communication_rules || {}, null, 2);
+  $("#condominiumMetadata").value = JSON.stringify(item?.metadata || {}, null, 2);
+}
+
+async function saveCondominium(event) {
+  event.preventDefault();
+  $("#condominiumFormError").hidden = true;
+
+  try {
+    const id = $("#condominiumId").value;
+    const payload = buildCondominiumPayload();
+    await apiFetch(id ? `/api/v1/condominiums/${id}` : "/api/v1/condominiums/", {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    await returnToCondominiumList();
+  } catch (error) {
+    $("#condominiumFormError").textContent = readableError(error);
+    $("#condominiumFormError").hidden = false;
+  }
+}
+
+function buildCondominiumPayload() {
+  return {
+    company_id: $("#condominiumCompany").value,
+    name: $("#condominiumName").value.trim(),
+    address: emptyToNull($("#condominiumAddress").value),
+    commune: emptyToNull($("#condominiumCommune").value),
+    city: emptyToNull($("#condominiumCity").value),
+    region: emptyToNull($("#condominiumRegion").value),
+    towers_count: Number($("#condominiumTowers").value || 0),
+    units_count: Number($("#condominiumUnits").value || 0),
+    status: $("#condominiumStatus").value,
+    incident_categories: parseJsonField("#condominiumIncidentCategories", []),
+    communication_rules: parseJsonField("#condominiumCommunicationRules", {}),
+    metadata: parseJsonField("#condominiumMetadata", {}),
+  };
+}
+
+function parseJsonField(selector, fallback) {
+  const value = $(selector).value.trim();
+  if (!value) return fallback;
+  return JSON.parse(value);
+}
+
+function emptyToNull(value) {
+  const normalized = value.trim();
+  return normalized || null;
+}
+
+async function deleteCurrentCondominium() {
+  const id = $("#condominiumId").value;
+  if (!id) return;
+  await deleteCondominium(id);
+}
+
+async function deleteCondominium(id) {
+  const confirmed = await confirmAction({
+    title: "Borrar condominio",
+    message: "Esta accion eliminara el condominio seleccionado. No se puede deshacer desde el backoffice.",
+    acceptLabel: "Borrar condominio",
+  });
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(`/api/v1/condominiums/${id}`, { method: "DELETE" });
+    await returnToCondominiumList();
+  } catch (error) {
+    window.alert(readableError(error));
+  }
+}
+
+async function returnToCondominiumList() {
+  state.currentView = "condominiums";
+  $("#viewTitle").textContent = resources.condominiums.title;
+  $("#newCompanyButton").hidden = true;
+  $("#newCondominiumButton").hidden = false;
+  $("#newUserButton").hidden = true;
+  showPanel("table");
+  await loadTable();
+}
+
+function readableError(error) {
+  try {
+    const parsed = JSON.parse(error.message);
+    if (typeof parsed.detail === "string") return parsed.detail;
+    return JSON.stringify(parsed.detail || parsed);
+  } catch (parseError) {
+    return error.message || "No se pudo completar la operacion.";
+  }
+}
+
+function confirmAction({ title, message, acceptLabel = "Aceptar" }) {
+  $("#confirmTitle").textContent = title;
+  $("#confirmMessage").textContent = message;
+  $("#confirmAcceptButton").textContent = acceptLabel;
+  $("#confirmModal").hidden = false;
+  $("#confirmCancelButton").focus();
+
+  return new Promise((resolve) => {
+    state.confirmResolver = resolve;
+  });
+}
+
+function closeConfirmModal(confirmed) {
+  $("#confirmModal").hidden = true;
+  if (state.confirmResolver) {
+    state.confirmResolver(confirmed);
+    state.confirmResolver = null;
+  }
+}
+
+async function uploadAudio(event) {
+  event.preventDefault();
+  const file = $("#audioFile").files[0];
+  if (!file) return;
+
+  const form = new FormData();
+  form.append("file", file);
+  form.append("language", $("#audioLanguage").value || "es");
+  form.append("generate_draft", $("#generateDraft").checked ? "true" : "false");
+
+  $("#audioResult").textContent = "Procesando audio...";
+
+  try {
+    const data = await apiFetch("/api/v1/audio/transcriptions", {
+      method: "POST",
+      body: form,
+    });
+    $("#audioResult").textContent = data.transcription_text || data.error_message || "Sin transcripcion.";
+  } catch (error) {
+    $("#audioResult").textContent = "No se pudo procesar el audio.";
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+$("#loginForm").addEventListener("submit", login);
+$("#logoutButton").addEventListener("click", () => {
+  clearSession();
+  showLogin();
+});
+$("#refreshButton").addEventListener("click", loadTable);
+$("#newCompanyButton").addEventListener("click", () => openCompanyForm());
+$("#newCondominiumButton").addEventListener("click", () => openCondominiumForm());
+$("#newUserButton").addEventListener("click", () => openUserForm());
+$("#quickCompanyButton").addEventListener("click", () => openCompanyForm(null, "condominiumForm"));
+$("#cancelCompanyButton").addEventListener("click", returnFromCompanyForm);
+$("#companyForm").addEventListener("submit", saveCompany);
+$("#deleteCompanyButton").addEventListener("click", deleteCurrentCompany);
+$("#cancelCondominiumButton").addEventListener("click", returnToCondominiumList);
+$("#condominiumForm").addEventListener("submit", saveCondominium);
+$("#deleteCondominiumButton").addEventListener("click", deleteCurrentCondominium);
+$("#cancelUserButton").addEventListener("click", returnToUserList);
+$("#userForm").addEventListener("submit", saveUser);
+$("#addMembershipButton").addEventListener("click", () => addMembershipRow());
+$("#deleteUserButton").addEventListener("click", deleteCurrentUser);
+$("#confirmCancelButton").addEventListener("click", () => closeConfirmModal(false));
+$("#confirmAcceptButton").addEventListener("click", () => closeConfirmModal(true));
+$("#confirmModal").addEventListener("click", (event) => {
+  if (event.target === $("#confirmModal")) closeConfirmModal(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#confirmModal").hidden) closeConfirmModal(false);
+});
+$("#searchInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") loadTable();
+});
+$("#audioForm").addEventListener("submit", uploadAudio);
+$("#sidebarToggle").addEventListener("click", toggleSidebar);
+document.addEventListener("click", (event) => {
+  const groupToggle = event.target.closest("[data-nav-group]");
+  if (!groupToggle) return;
+  event.preventDefault();
+  toggleNavGroup(groupToggle.dataset.navGroup);
+});
+$$(".nav-item").forEach((button) => button.addEventListener("click", () => openView(button.dataset.view)));
+$$("[data-view-target]").forEach((button) => button.addEventListener("click", () => openView(button.dataset.viewTarget)));
+
+if (state.token) {
+  if (window.location.pathname === "/login") {
+    window.location.replace(BACKOFFICE_PATH);
+  } else {
+    showOffice();
+  }
+} else {
+  showLogin();
+}

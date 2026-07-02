@@ -1,0 +1,95 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Instalar dependencias",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Ejecutar API",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Compilar Python",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m compileall app",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Probar conexion BBDD",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe scripts\\check_db.py",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Crear BBDD si no existe",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe scripts\\create_database.py",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Seed auth",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe scripts\\seed_auth.py",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Crear usuario demo",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe scripts\\create_user.py --email usuario@komite.cl --password demo1234 --full-name \"Usuario Demo\"",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Aerich init-db",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m aerich.cli init-db",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Aerich migrate",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m aerich.cli migrate --name cambio",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Aerich upgrade",
+      "type": "shell",
+      "command": ".\\.venv\\Scripts\\python.exe -m aerich.cli upgrade",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

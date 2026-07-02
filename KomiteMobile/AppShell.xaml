@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="KomiteMobile.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:KomiteMobile.Views"
+    xmlns:community="clr-namespace:KomiteMobile.Views.Community"
+    xmlns:operations="clr-namespace:KomiteMobile.Views.Operations"
+    Shell.FlyoutBehavior="Disabled"
+    Title="Komite">
+
+    <ShellContent
+        Title="Login"
+        ContentTemplate="{DataTemplate views:LoginPage}"
+        Route="login" />
+
+    <ShellContent
+        Title="Modo"
+        ContentTemplate="{DataTemplate views:ModeSelectorPage}"
+        Route="mode-selector" />
+
+    <ShellContent
+        Title="Comunidad"
+        ContentTemplate="{DataTemplate views:CommunityContextSelectorPage}"
+        Route="community-context-selector" />
+
+    <ShellContent
+        Title="Operacion"
+        ContentTemplate="{DataTemplate views:OperationsContextSelectorPage}"
+        Route="operations-context-selector" />
+
+    <TabBar Route="community" Title="Comunidad">
+        <ShellContent
+            Title="Inicio"
+            ContentTemplate="{DataTemplate community:CommunityHomePage}"
+            Route="community-home" />
+        <ShellContent
+            Title="Avisos"
+            ContentTemplate="{DataTemplate community:NoticesPage}"
+            Route="community-notices" />
+        <ShellContent
+            Title="Incidencias"
+            ContentTemplate="{DataTemplate community:CommunityIncidentsPage}"
+            Route="community-incidents" />
+        <ShellContent
+            Title="Documentos"
+            ContentTemplate="{DataTemplate community:DocumentsPage}"
+            Route="community-documents" />
+        <ShellContent
+            Title="Mas"
+            ContentTemplate="{DataTemplate community:CommunityMorePage}"
+            Route="community-more" />
+    </TabBar>
+
+    <TabBar Route="operations" Title="Operacion">
+        <ShellContent
+            Title="Panel"
+            ContentTemplate="{DataTemplate operations:OperationsDashboardPage}"
+            Route="operations-dashboard" />
+        <ShellContent
+            Title="Tareas"
+            ContentTemplate="{DataTemplate operations:TasksPage}"
+            Route="operations-tasks" />
+        <ShellContent
+            Title="Inspecciones"
+            ContentTemplate="{DataTemplate operations:InspectionsPage}"
+            Route="operations-inspections" />
+        <ShellContent
+            Title="Reportar"
+            ContentTemplate="{DataTemplate operations:ReportPage}"
+            Route="operations-report" />
+        <ShellContent
+            Title="Mas"
+            ContentTemplate="{DataTemplate operations:OperationsMorePage}"
+            Route="operations-more" />
+    </TabBar>
+
+</Shell>

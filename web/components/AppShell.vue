@@ -15,7 +15,7 @@ type MenuGroup = {
 const SIDEBAR_KEY = "komite_sidebar_collapsed";
 const NAV_GROUPS_KEY = "komite_nav_groups_collapsed";
 
-const { user, clearSession } = useAuth();
+const { activeCondominium, company, user, clearSession } = useAuth();
 const currentView = ref("dashboard");
 const sidebarCollapsed = ref(false);
 const collapsedGroups = ref<string[]>([]);
@@ -82,6 +82,8 @@ const currentTitle = computed(() => {
 });
 
 const userName = computed(() => user.value?.full_name || user.value?.email || "Usuario");
+const contextLabel = computed(() => activeCondominium.value?.name || "Sin condominio");
+const tenantLabel = computed(() => company.value?.name || "Empresa administradora");
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
@@ -157,6 +159,10 @@ onMounted(() => {
           <h1>{{ currentTitle }}</h1>
         </div>
         <div class="user-chip">
+          <span class="context-chip" :title="tenantLabel">
+            <svg class="icon" aria-hidden="true"><use href="#icon-building" /></svg>
+            <span>{{ contextLabel }}</span>
+          </span>
           <span>{{ userName }}</span>
           <button class="button orange" type="button" @click="clearSession">
             <svg class="icon" aria-hidden="true"><use href="#icon-log-out" /></svg>

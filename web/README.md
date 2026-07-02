@@ -72,7 +72,7 @@ Tambien se puede sobrescribir desde el navegador usando `localStorage`:
 localStorage.setItem("komite_api_base", "http://localhost:8000")
 ```
 
-## Login
+## Login y contexto activo
 
 El login consume:
 
@@ -80,7 +80,22 @@ El login consume:
 POST /api/v1/auth/login
 ```
 
-La sesion guarda el token y usuario en `localStorage`, `sessionStorage` y cookies simples.
+El flujo del portal es en dos pasos:
+
+1. El usuario inicia sesion con email y password.
+2. El backend devuelve la empresa asociada y los condominios permitidos para ese usuario.
+3. El usuario selecciona el condominio activo.
+4. Al confirmar, el portal guarda la sesion completa y entra a la aplicacion.
+
+La sesion guarda token, usuario, empresa, condominios disponibles y condominio activo en `localStorage` y `sessionStorage`.
+
+Todas las llamadas posteriores a la API envian el condominio activo en el header:
+
+```text
+X-Condominium: <condominium_id>
+```
+
+El backend debe validar que el usuario tenga permiso sobre ese condominio y usar este contexto para devolver informacion del tenant/condominio seleccionado.
 
 ## Estructura principal
 
@@ -91,8 +106,8 @@ La sesion guarda el token y usuario en `localStorage`, `sessionStorage` y cookie
 - `components/DashboardView.vue`: dashboard inicial conectado a endpoints de resumen.
 - `components/ToolsView.vue`: base del apartado Herramientas.
 - `components/PlaceholderView.vue`: vista temporal para modulos preparados.
-- `composables/useAuth.ts`: manejo de sesion.
-- `composables/useApi.ts`: cliente base para llamadas a la API.
+- `composables/useAuth.ts`: manejo de sesion, empresa y condominio activo.
+- `composables/useApi.ts`: cliente base para llamadas a la API, incluyendo `X-Condominium`.
 - `assets/css/main.css`: estilos globales del portal.
 
 ## Menu actual

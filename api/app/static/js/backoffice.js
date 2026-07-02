@@ -259,8 +259,9 @@ async function login(event) {
 }
 
 async function loadDashboard() {
-  const [condominiums, incidents, tasks, reports, communications, aiRequests] = await Promise.all([
-    fetchPage("/api/v1/condominiums/?page=1&page_size=5"),
+  const [companies, condominiums, incidents, tasks, reports, communications, aiRequests] = await Promise.all([
+    fetchAllPages("/api/v1/companies/"),
+    fetchAllPages("/api/v1/condominiums/"),
     fetchPage("/api/v1/incidents/?page=1&page_size=5"),
     fetchPage("/api/v1/tasks/?page=1&page_size=5"),
     fetchPage("/api/v1/reports/?page=1&page_size=5"),
@@ -268,7 +269,8 @@ async function loadDashboard() {
     fetchPage("/api/v1/ai-requests/?page=1&page_size=5"),
   ]);
 
-  $("#metricCondominiums").textContent = condominiums.meta?.total || 0;
+  $("#metricCompanies").textContent = countActive(companies);
+  $("#metricCondominiums").textContent = countActive(condominiums);
   $("#metricIncidents").textContent = incidents.meta?.total || 0;
   $("#metricTasks").textContent = tasks.meta?.total || 0;
   $("#metricReports").textContent = reports.meta?.total || 0;
@@ -276,6 +278,21 @@ async function loadDashboard() {
   renderList("#recentTasks", tasks.items, "title", "status");
   renderList("#recentCommunications", communications.items, "title", "status");
   renderList("#recentAi", aiRequests.items, "purpose", "status");
+}
+
+function countActive(items) {
+  return (items || []).filter((item) => item.status === "active").length;
+}
+
+async function fetchAllPages(basePath, pageSize = 200) {
+  const firstPage = await fetchPage(`${basePath}?page=1&page_size=${pageSize}`);
+  const pages = firstPage.meta?.pages || 1;
+  if (pages <= 1) return firstPage.items;
+
+  const rest = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, index) => fetchPage(`${basePath}?page=${index + 2}&page_size=${pageSize}`)),
+  );
+  return [firstPage, ...rest].flatMap((page) => page.items || []);
 }
 
 async function fetchPage(path) {

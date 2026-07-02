@@ -89,6 +89,26 @@ a {
   text-transform: uppercase;
 }
 
+.login-selection-summary {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.login-selection-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.login-selection-summary strong {
+  color: var(--navy);
+  font-size: 14px;
+}
+
 .login-form {
   display: grid;
   gap: 16px;
@@ -353,6 +373,26 @@ textarea:focus {
 .user-chip {
   color: var(--muted);
   font-size: 14px;
+}
+
+.context-chip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 320px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--navy);
+  background: var(--white);
+  font-weight: 800;
+}
+
+.context-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eyebrow {

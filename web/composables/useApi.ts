@@ -1,6 +1,6 @@
 export const useApi = () => {
   const config = useRuntimeConfig();
-  const { token } = useAuth();
+  const { activeCondominium, token } = useAuth();
 
   const apiBase = computed(() => {
     if (import.meta.client) {
@@ -13,6 +13,7 @@ export const useApi = () => {
   const request = async <T>(path: string, options: RequestInit = {}) => {
     const headers = new Headers(options.headers || {});
     if (token.value) headers.set("Authorization", `Bearer ${token.value}`);
+    if (activeCondominium.value?.id) headers.set("X-Condominium", activeCondominium.value.id);
 
     const response = await fetch(`${apiBase.value}${path}`, {
       ...options,

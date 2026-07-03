@@ -18,9 +18,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--password", required=True)
     parser.add_argument("--full-name", required=True)
     parser.add_argument("--company-name", default="Komite")
-    parser.add_argument("--global-role", default=None)
+    parser.add_argument("--company-profile", default=None, choices=("project_manager", "ejecutivo"))
     parser.add_argument("--status", default="active")
     parser.add_argument("--condominium-id", default=None)
+    parser.add_argument("--all-condominiums", action="store_true")
     parser.add_argument("--role-code", default=None)
     return parser.parse_args()
 
@@ -37,6 +38,8 @@ async def assign_condominium(user: User, condominium_id: str, role_code: str | N
     role = await Role.get_or_none(code=role_code)
     if not role:
         raise ValueError(f"No existe el rol '{role_code}'. Ejecuta primero scripts\\seed_auth.py")
+    if role.code not in {"vecino", "comite", "supervisor", "conserje"}:
+        raise ValueError(f"Rol no permitido para comunidad: '{role.code}'")
 
     condominium = await Condominium.get_or_none(id=UUID(condominium_id))
     if not condominium:
@@ -55,12 +58,47 @@ async def assign_condominium(user: User, condominium_id: str, role_code: str | N
         return
 
     await UserCondominium.create(
+        company_id=condominium.company_id,
         user=user,
         condominium=condominium,
         role=role,
         status="active",
     )
     print(f"OK: usuario asignado a {condominium.name} como {role.code}")
+
+
+async def assign_all_condominiums(user: User, role_code: str | None) -> None:
+    if not user.company_id:
+        raise ValueError("El usuario necesita empresa para asignar todos los condominios")
+
+    role_code = role_code or "supervisor"
+    role = await Role.get_or_none(code=role_code)
+    if not role:
+        raise ValueError(f"No existe el rol '{role_code}'. Ejecuta primero scripts\\seed_auth.py")
+    if role.code not in {"vecino", "comite", "supervisor", "conserje"}:
+        raise ValueError(f"Rol no permitido para comunidad: '{role.code}'")
+
+    existing = await UserCondominium.get_or_none(
+        user=user,
+        company_id=user.company_id,
+        condominium_id=None,
+        role=role,
+        unit=None,
+    )
+    if existing:
+        existing.status = "active"
+        await existing.save()
+        print(f"OK: membresia existente activada: todos los condominios / {role.code}")
+        return
+
+    await UserCondominium.create(
+        company_id=user.company_id,
+        user=user,
+        condominium=None,
+        role=role,
+        status="active",
+    )
+    print(f"OK: usuario asignado a todos los condominios como {role.code}")
 
 
 async def main() -> int:
@@ -76,7 +114,7 @@ async def main() -> int:
             user.company = company
             user.full_name = args.full_name
             user.password_hash = hash_password(args.password)
-            user.global_role = args.global_role
+            user.company_profile = args.company_profile
             user.status = args.status
             await user.save()
             print(f"OK: usuario actualizado: {args.email}")
@@ -86,12 +124,14 @@ async def main() -> int:
                 email=args.email,
                 password_hash=hash_password(args.password),
                 full_name=args.full_name,
-                global_role=args.global_role,
+                company_profile=args.company_profile,
                 status=args.status,
             )
             print(f"OK: usuario creado: {args.email}")
 
-        if args.condominium_id:
+        if args.all_condominiums:
+            await assign_all_condominiums(user, args.role_code)
+        elif args.condominium_id:
             await assign_condominium(user, args.condominium_id, args.role_code)
 
         return 0
@@ -104,4 +144,3 @@ async def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(asyncio.run(main()))
-

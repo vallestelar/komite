@@ -40,8 +40,8 @@ public sealed class UserLoginResponse
     [JsonPropertyName("full_name")]
     public string FullName { get; set; } = string.Empty;
 
-    [JsonPropertyName("global_role")]
-    public string? GlobalRole { get; set; }
+    [JsonPropertyName("company_profile")]
+    public string? CompanyProfile { get; set; }
 }
 
 public sealed class CompanyLoginResponse

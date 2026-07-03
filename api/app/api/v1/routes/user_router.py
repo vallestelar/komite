@@ -24,12 +24,23 @@ router = APIRouter(
     dependencies=[Depends(require_komite_employee())],
 )
 
+COMPANY_PROFILES = {"project_manager", "ejecutivo"}
+COMMUNITY_ROLES = {"vecino", "comite", "supervisor", "conserje"}
+
+
+def _validate_user_roles(company_profile: str | None) -> None:
+    if company_profile and company_profile not in COMPANY_PROFILES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Perfil Portal Administrador no permitido.",
+        )
+
 
 async def _membership_out(membership: UserCondominium) -> UserMembershipOut:
     return UserMembershipOut(
         id=membership.id,
         condominium_id=membership.condominium_id,
-        condominium_name=membership.condominium.name if membership.condominium else None,
+        condominium_name=membership.condominium.name if membership.condominium else "Todos",
         role_id=membership.role_id,
         role_code=membership.role.code,
         role_name=membership.role.name,
@@ -59,7 +70,7 @@ async def _user_out(user: User) -> UserOut:
         full_name=user.full_name,
         phone=user.phone,
         status=user.status,
-        global_role=user.global_role,
+        company_profile=user.company_profile,
         condominium_id=first_membership.condominium_id if first_membership else None,
         role_code=first_membership.role.code if first_membership else None,
         memberships=[await _membership_out(membership) for membership in memberships],
@@ -90,7 +101,7 @@ async def _replace_memberships(
 
     for item in memberships:
         membership_key = (
-            str(item.condominium_id),
+            str(item.condominium_id) if item.condominium_id else "all",
             item.role_code,
             str(item.unit_id) if item.unit_id else None,
         )
@@ -101,18 +112,38 @@ async def _replace_memberships(
             )
         seen_memberships.add(membership_key)
 
-        condominium = await Condominium.get_or_none(id=item.condominium_id)
-        if not condominium:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Condominio no encontrado: {item.condominium_id}",
-            )
-
         role = await Role.get_or_none(code=item.role_code)
         if not role:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Rol no encontrado: {item.role_code}",
+            )
+        if role.code not in COMMUNITY_ROLES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Rol no permitido para comunidad: {role.code}",
+            )
+
+        condominium = None
+        company_id = user.company_id
+        if item.condominium_id:
+            condominium = await Condominium.get_or_none(id=item.condominium_id)
+            if not condominium:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Condominio no encontrado: {item.condominium_id}",
+                )
+            company_id = condominium.company_id
+        elif item.unit_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="El acceso a todos los condominios no puede tener unidad",
+            )
+
+        if not company_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="El usuario necesita empresa para asignar acceso a todos los condominios",
             )
 
         unit = None
@@ -125,6 +156,7 @@ async def _replace_memberships(
                 )
 
         await UserCondominium.create(
+            company_id=company_id,
             user=user,
             condominium=condominium,
             role=role,
@@ -152,6 +184,7 @@ async def create_user(payload: UserCreate, request: Request) -> UserCreatedOut:
         memberships = _legacy_membership(payload.condominium_id, payload.role_code) or []
 
     try:
+        _validate_user_roles(payload.company_profile)
         user = await User.create(
             company=company,
             email=payload.email,
@@ -159,7 +192,7 @@ async def create_user(payload: UserCreate, request: Request) -> UserCreatedOut:
             full_name=payload.full_name,
             phone=payload.phone,
             status=payload.status,
-            global_role=payload.global_role,
+            company_profile=payload.company_profile,
         )
     except IntegrityError:
         raise HTTPException(
@@ -185,7 +218,7 @@ async def list_users(
         query = query.filter(
             Q(email__icontains=q)
             | Q(full_name__icontains=q)
-            | Q(global_role__icontains=q)
+            | Q(company_profile__icontains=q)
         )
 
     if order_by:
@@ -239,6 +272,8 @@ async def update_user(user_id: UUID, payload: UserUpdate) -> UserOut:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Empresa no encontrada",
             )
+
+    _validate_user_roles(data.get("company_profile"))
 
     for key, value in data.items():
         setattr(user, key, value)

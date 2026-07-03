@@ -13,10 +13,9 @@ class User(TimestampAuditMixin):
     full_name = fields.CharField(max_length=150)
     phone = fields.CharField(max_length=40, null=True)
     status = fields.CharField(max_length=30, default="active")
-    global_role = fields.CharField(max_length=60, null=True)
+    company_profile = fields.CharField(max_length=60, null=True)
     metadata = fields.JSONField(default=dict)
 
     class Meta:
         table = "users"
-        indexes = (("email",), ("company_id",), ("status",))
-
+        indexes = (("email",), ("company_id",), ("company_profile",), ("status",))

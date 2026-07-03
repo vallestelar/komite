@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.core.auth.dependencies import require_access_token, user_is_komite_employee
 from app.core.security.passwords import verify_password
-from app.models.entities import Company
+from app.models.entities import Company, Condominium
 from app.repositories.user_repository import get_user_by_email, get_user_memberships
 from app.schemas.auth.auth_schema import (
     CompanyLoginResponse,
@@ -25,18 +25,43 @@ def _company_payload(company: Company | None) -> CompanyLoginResponse | None:
 
 async def _build_token_response(user) -> TokenResponse:
     memberships = await get_user_memberships(str(user.id))
+    condominiums: list[CondominiumLoginResponse] = []
+    seen_condominiums: set[tuple[str, str, str | None]] = set()
 
-    condominiums = [
-        CondominiumLoginResponse(
-            id=str(membership.condominium.id),
-            name=membership.condominium.name,
-            role=membership.role.code,
-            role_name=membership.role.name,
-            unit_id=str(membership.unit.id) if membership.unit else None,
-            unit_identifier=membership.unit.identifier if membership.unit else None,
+    async def add_condominium_payload(condominium, membership) -> None:
+        key = (
+            str(condominium.id),
+            membership.role.code,
+            str(membership.unit.id) if membership.unit else None,
         )
-        for membership in memberships
-    ]
+        if key in seen_condominiums:
+            return
+        seen_condominiums.add(key)
+        condominiums.append(
+            CondominiumLoginResponse(
+                id=str(condominium.id),
+                name=condominium.name,
+                role=membership.role.code,
+                role_name=membership.role.name,
+                unit_id=str(membership.unit.id) if membership.unit else None,
+                unit_identifier=membership.unit.identifier if membership.unit else None,
+            )
+        )
+
+    for membership in memberships:
+        if membership.condominium:
+            await add_condominium_payload(membership.condominium, membership)
+            continue
+
+        if not membership.company_id:
+            continue
+
+        company_condominiums = await Condominium.filter(
+            company_id=membership.company_id,
+            status="active",
+        ).order_by("name")
+        for condominium in company_condominiums:
+            await add_condominium_payload(condominium, membership)
 
     company = await Company.get_or_none(id=user.company_id) if user.company_id else None
 
@@ -44,7 +69,7 @@ async def _build_token_response(user) -> TokenResponse:
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
-        global_role=user.global_role,
+        company_profile=user.company_profile,
     )
 
     company_payload = _company_payload(company)
@@ -55,7 +80,7 @@ async def _build_token_response(user) -> TokenResponse:
         extra_claims={
             "email": user.email,
             "full_name": user.full_name,
-            "global_role": user.global_role,
+            "company_profile": user.company_profile,
             "company": company_payload.model_dump() if company_payload else None,
             "condominiums": token_condominiums,
         },

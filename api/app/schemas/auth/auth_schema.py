@@ -26,7 +26,7 @@ class UserLoginResponse(BaseModel):
     id: str
     email: str
     full_name: str
-    global_role: Optional[str] = None
+    company_profile: Optional[str] = None
 
 
 class TokenResponse(BaseModel):
@@ -39,4 +39,3 @@ class TokenResponse(BaseModel):
 
 class MeResponse(TokenResponse):
     pass
-

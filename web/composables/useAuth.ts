@@ -2,7 +2,7 @@ type KomiteUser = {
   id?: string;
   email?: string;
   full_name?: string;
-  global_role?: string;
+  company_profile?: string;
 };
 
 export type KomiteCompany = {

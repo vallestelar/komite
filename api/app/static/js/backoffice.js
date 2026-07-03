@@ -94,12 +94,12 @@ const resources = {
   users: {
     title: "Usuarios",
     endpoint: "/api/v1/users/",
-    columns: ["id", "email", "full_name", "global_role", "role_code", "status"],
+    columns: ["id", "email", "full_name", "company_profile", "role_code", "status"],
   },
   roles: {
     title: "Roles",
     endpoint: "/api/v1/roles/",
-    columns: ["id", "code", "name", "scope", "is_system"],
+    columns: ["id", "code", "name", "is_system"],
   },
   attachments: {
     title: "Archivos",
@@ -143,7 +143,7 @@ const columnLabels = {
   started_at: "Inicio",
   finished_at: "Fin",
   full_name: "Nombre completo",
-  global_role: "Rol global",
+  company_profile: "Perfil Portal Administrador",
   role_code: "Rol",
   scope: "Ambito",
   is_system: "Sistema",
@@ -178,6 +178,15 @@ const statusLabels = {
   open: "Abierto",
   closed: "Cerrado",
   published: "Publicado",
+};
+
+const roleLabels = {
+  project_manager: "Project manager",
+  ejecutivo: "Ejecutivo/a",
+  supervisor: "Supervisor",
+  conserje: "Conserje",
+  vecino: "Vecino",
+  comite: "Comite",
 };
 
 const placeholders = {
@@ -525,6 +534,7 @@ function formatTableCell(column, value) {
   if (column === "status") return renderStatusBadge(value);
   if (column === "is_system") return renderBooleanBadge(value);
   if (column === "company_id") return escapeHtml(companyName(value));
+  if (["company_profile", "role_code"].includes(column)) return escapeHtml(roleLabels[value] || formatCell(value));
   return escapeHtml(formatCell(value));
 }
 
@@ -673,7 +683,7 @@ async function ensureUserLookupsLoaded() {
   ]);
   state.companies = companies.items || [];
   state.condominiums = condominiums.items || [];
-  state.roles = roles.items || [];
+  state.roles = (roles.items || []).filter((role) => ["vecino", "comite", "supervisor", "conserje"].includes(role.code));
   state.units = units.items || [];
   state.usersLookup = users.items || [];
 }
@@ -974,7 +984,7 @@ function fillUserForm(item) {
   $("#userPhone").value = item?.phone || "";
   $("#userPassword").value = "";
   $("#userStatus").value = item?.status || "active";
-  $("#userGlobalRole").value = item?.global_role || "";
+  $("#userCompanyProfile").value = item?.company_profile || "";
   renderMembershipRows(item);
 }
 
@@ -1004,6 +1014,7 @@ function addMembershipRow(membership = {}) {
       Condominio
       <select class="membership-condominium" required>
         <option value="">Selecciona condominio</option>
+        <option value="__all__">Todos</option>
         ${state.condominiums.map((condominium) => `<option value="${escapeHtml(condominium.id)}">${escapeHtml(condominium.name)}</option>`).join("")}
       </select>
     </label>
@@ -1028,7 +1039,7 @@ function addMembershipRow(membership = {}) {
   const roleSelect = row.querySelector(".membership-role");
   const unitSelect = row.querySelector(".membership-unit");
 
-  condominiumSelect.value = membership.condominium_id || "";
+  condominiumSelect.value = membership.condominium_id === null ? "__all__" : membership.condominium_id || "";
   roleSelect.value = membership.role_code || membership.role || "";
   updateMembershipUnitOptions(unitSelect, condominiumSelect.value, membership.unit_id || "");
 
@@ -1047,6 +1058,14 @@ function addMembershipRow(membership = {}) {
 }
 
 function updateMembershipUnitOptions(select, condominiumId, selectedUnitId) {
+  if (condominiumId === "__all__" || !condominiumId) {
+    select.innerHTML = `<option value="">Sin unidad</option>`;
+    select.value = "";
+    select.disabled = condominiumId === "__all__";
+    return;
+  }
+
+  select.disabled = false;
   const units = condominiumId
     ? state.units.filter((unit) => unit.condominium_id === condominiumId)
     : [];
@@ -1086,7 +1105,7 @@ function buildUserPayload(isUpdate) {
     full_name: $("#userFullName").value.trim(),
     phone: emptyToNull($("#userPhone").value),
     company_id: emptyToNull($("#userCompany").value),
-    global_role: emptyToNull($("#userGlobalRole").value),
+    company_profile: emptyToNull($("#userCompanyProfile").value),
     status: $("#userStatus").value,
   };
 
@@ -1104,14 +1123,20 @@ function buildUserPayload(isUpdate) {
 
 function buildUserMembershipPayload() {
   return $$("#userMembershipRows .membership-row")
-    .map((row) => ({
-      condominium_id: emptyToNull(row.querySelector(".membership-condominium").value),
-      role_code: emptyToNull(row.querySelector(".membership-role").value),
-      unit_id: emptyToNull(row.querySelector(".membership-unit").value),
-      status: "active",
-      receives_notifications: true,
-    }))
-    .filter((membership) => membership.condominium_id && membership.role_code);
+    .map((row) => {
+      const condominiumValue = row.querySelector(".membership-condominium").value;
+      const isAllCondominiums = condominiumValue === "__all__";
+      return {
+        isValidSelection: Boolean(condominiumValue),
+        condominium_id: isAllCondominiums ? null : emptyToNull(condominiumValue),
+        role_code: emptyToNull(row.querySelector(".membership-role").value),
+        unit_id: isAllCondominiums ? null : emptyToNull(row.querySelector(".membership-unit").value),
+        status: "active",
+        receives_notifications: true,
+      };
+    })
+    .filter((membership) => membership.isValidSelection && membership.role_code)
+    .map(({ isValidSelection, ...membership }) => membership);
 }
 
 async function deleteCurrentUser() {

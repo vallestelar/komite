@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 
-from app.models.entities import User, UserCondominium
+from app.models.entities import Condominium, User, UserCondominium
 
 
 async def get_user_by_email(email: str) -> Optional[User]:
@@ -23,9 +23,21 @@ async def get_user_memberships(user_id: str) -> list[UserCondominium]:
 
 
 async def user_has_condominium(user_id: str, condominium_id: str) -> bool:
-    return await UserCondominium.filter(
+    has_direct_access = await UserCondominium.filter(
         user_id=user_id,
         condominium_id=condominium_id,
         status="active",
     ).exists()
+    if has_direct_access:
+        return True
 
+    condominium = await Condominium.get_or_none(id=condominium_id)
+    if not condominium:
+        return False
+
+    return await UserCondominium.filter(
+        user_id=user_id,
+        company_id=condominium.company_id,
+        condominium_id__isnull=True,
+        status="active",
+    ).exists()

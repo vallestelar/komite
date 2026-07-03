@@ -244,7 +244,7 @@ class RolePage(BaseModel):
 class UserCondominiumCreate(BaseModel):
     company_id: Optional[UUID] = None
     user_id: UUID
-    condominium_id: UUID
+    condominium_id: Optional[UUID] = None
     role_id: UUID
     unit_id: Optional[UUID] = None
     status: str = Field(default="active", max_length=30)
@@ -267,7 +267,7 @@ class UserCondominiumOut(AuditOut):
     id: UUID
     company_id: Optional[UUID] = None
     user_id: UUID
-    condominium_id: UUID
+    condominium_id: Optional[UUID] = None
     role_id: UUID
     unit_id: Optional[UUID] = None
     status: str

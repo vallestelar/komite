@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class UserMembershipInput(BaseModel):
-    condominium_id: UUID
+    condominium_id: Optional[UUID] = None
     role_code: str = Field(..., max_length=60)
     unit_id: Optional[UUID] = None
     status: str = Field(default="active", max_length=30)
@@ -14,7 +14,7 @@ class UserMembershipInput(BaseModel):
 
 class UserMembershipOut(BaseModel):
     id: UUID
-    condominium_id: UUID
+    condominium_id: Optional[UUID] = None
     condominium_name: Optional[str] = None
     role_id: UUID
     role_code: str
@@ -31,7 +31,7 @@ class UserCreate(BaseModel):
     full_name: str = Field(..., min_length=1, max_length=150)
     phone: Optional[str] = Field(default=None, max_length=40)
     company_id: Optional[UUID] = None
-    global_role: Optional[str] = Field(default=None, max_length=60)
+    company_profile: Optional[str] = Field(default=None, max_length=60)
     status: str = Field(default="active", max_length=30)
     condominium_id: Optional[UUID] = None
     role_code: Optional[str] = Field(default=None, max_length=60)
@@ -44,7 +44,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=1, max_length=150)
     phone: Optional[str] = Field(default=None, max_length=40)
     company_id: Optional[UUID] = None
-    global_role: Optional[str] = Field(default=None, max_length=60)
+    company_profile: Optional[str] = Field(default=None, max_length=60)
     status: Optional[str] = Field(default=None, max_length=30)
     condominium_id: Optional[UUID] = None
     role_code: Optional[str] = Field(default=None, max_length=60)
@@ -58,7 +58,7 @@ class UserOut(BaseModel):
     full_name: str
     phone: Optional[str] = None
     status: str
-    global_role: Optional[str] = None
+    company_profile: Optional[str] = None
     condominium_id: Optional[UUID] = None
     role_code: Optional[str] = None
     memberships: list[UserMembershipOut] = Field(default_factory=list)

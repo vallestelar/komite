@@ -140,6 +140,15 @@ KOMITE usa una unica base de datos compartida. La tabla `companies` representa e
 - El backoffice queda reservado a empleados de Komite y puede operar sobre todos los tenants.
 - `banks` y `roles` funcionan como catalogos globales del sistema.
 
+## Roles y perfiles
+
+El modelo de acceso se mantiene intencionalmente reducido:
+
+- `users.company_profile`: perfil del Portal Administrador: `project_manager` o `ejecutivo`.
+- `roles`: accesos mobile por condominio: `vecino`, `comite`, `supervisor` y `conserje`.
+- En `user_condominiums`, `condominium_id = null` representa acceso a todos los condominios activos de la empresa del usuario.
+- El backoffice de Komite exige usuario activo perteneciente a la empresa `Komite`.
+
 Inicializar Aerich una sola vez:
 
 ```powershell
@@ -172,7 +181,7 @@ python -m aerich.cli history
 
 ## Login y token
 
-Crear roles iniciales y usuario superadmin de desarrollo:
+Crear roles iniciales y usuario admin de desarrollo:
 
 ```powershell
 python scripts\seed_auth.py
@@ -231,7 +240,13 @@ Invoke-RestMethod `
     "email": "nuevo@komite.cl",
     "password": "demo1234",
     "full_name": "Nuevo Usuario",
-    "global_role": "supervisor"
+    "company_profile": "ejecutivo",
+    "memberships": [
+      {
+        "condominium_id": null,
+        "role_code": "supervisor"
+      }
+    ]
   }'
 ```
 
@@ -243,6 +258,7 @@ python scripts\create_user.py `
   --password demo1234 `
   --full-name "Supervisor Demo" `
   --condominium-id ID_DEL_CONDOMINIO `
+  --company-profile ejecutivo `
   --role-code supervisor
 ```
 

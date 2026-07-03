@@ -17,6 +17,16 @@ const pendingSession = ref<{
 const { request } = useApi();
 const { setSession } = useAuth();
 
+const availableCondominiums = computed(() => {
+  const byId = new Map<string, KomiteCondominium>();
+  for (const condominium of pendingSession.value?.condominiums || []) {
+    if (!byId.has(condominium.id)) {
+      byId.set(condominium.id, condominium);
+    }
+  }
+  return Array.from(byId.values());
+});
+
 const submit = async () => {
   error.value = "";
   loading.value = true;
@@ -42,7 +52,7 @@ const submit = async () => {
     }
 
     pendingSession.value = session;
-    selectedCondominiumId.value = session.condominiums[0]?.id || "";
+    selectedCondominiumId.value = availableCondominiums.value[0]?.id || "";
     step.value = "condominium";
   } catch {
     error.value = "No se pudo iniciar sesion.";
@@ -54,7 +64,7 @@ const submit = async () => {
 const finishLogin = () => {
   error.value = "";
   const session = pendingSession.value;
-  const condominium = session?.condominiums?.find((item) => item.id === selectedCondominiumId.value);
+  const condominium = availableCondominiums.value.find((item) => item.id === selectedCondominiumId.value);
 
   if (!session || !condominium) {
     error.value = "Selecciona un condominio para continuar.";
@@ -101,8 +111,8 @@ const backToCredentials = () => {
         <label>
           Condominio
           <select v-model="selectedCondominiumId" name="condominium" required>
-            <option v-for="condominium in pendingSession?.condominiums" :key="condominium.id" :value="condominium.id">
-              {{ condominium.name }} - {{ condominium.role_name }}
+            <option v-for="condominium in availableCondominiums" :key="condominium.id" :value="condominium.id">
+              {{ condominium.name }}
             </option>
           </select>
         </label>

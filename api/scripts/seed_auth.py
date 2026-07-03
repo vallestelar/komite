@@ -11,13 +11,10 @@ from app.dbs.postgres.context import DbContext
 from app.models.entities import Company, Role, User
 
 ROLES = [
-    ("superadmin", "Superadmin Komite", {"*": True}),
-    ("administrador_empresa", "Administrador empresa", {"company": "manage"}),
-    ("administrador_condominio", "Administrador condominio", {"condominium": "manage"}),
-    ("supervisor", "Supervisor", {"operations": "write"}),
-    ("conserje", "Conserje / empleado", {"incidents": "create"}),
-    ("comite", "Comite", {"committee": "read"}),
-    ("vecino", "Vecino", {"community": "read"}),
+    ("vecino", "Vecino", {"scope": "community", "community": "read"}),
+    ("comite", "Comite", {"scope": "community", "committee": "write"}),
+    ("supervisor", "Supervisor", {"scope": "operations", "operations": "write"}),
+    ("conserje", "Conserje", {"scope": "operations", "incidents": "create"}),
 ]
 
 
@@ -54,12 +51,12 @@ async def main() -> int:
         if admin:
             admin.company = company
             admin.full_name = settings.seed_admin_full_name
-            admin.global_role = "superadmin"
+            admin.company_profile = "project_manager"
             admin.status = "active"
             if not admin.password_hash:
                 admin.password_hash = hash_password(settings.seed_admin_password)
             await admin.save()
-            print(f"OK: superadmin actualizado: {settings.seed_admin_email}")
+            print(f"OK: admin actualizado: {settings.seed_admin_email}")
         else:
             await User.create(
                 company=company,
@@ -67,9 +64,9 @@ async def main() -> int:
                 password_hash=hash_password(settings.seed_admin_password),
                 full_name=settings.seed_admin_full_name,
                 status="active",
-                global_role="superadmin",
+                company_profile="project_manager",
             )
-            print(f"OK: superadmin creado: {settings.seed_admin_email}")
+            print(f"OK: admin creado: {settings.seed_admin_email}")
 
         print("OK: roles iniciales creados/actualizados.")
         return 0
@@ -79,4 +76,3 @@ async def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(asyncio.run(main()))
-

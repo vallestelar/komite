@@ -96,7 +96,7 @@ public sealed class SessionService : ISessionService
             }
 
             var hasExplicitOperationsRole = _roleModeResolver.IsOperationsRole(condominium.Role);
-            var hasGlobalOperationsRole = _roleModeResolver.IsOperationsRole(null, session.User.GlobalRole);
+            var hasGlobalOperationsRole = _roleModeResolver.IsOperationsRole(null, session.User.CompanyProfile);
             if (hasExplicitOperationsRole || hasGlobalOperationsRole)
             {
                 var key = condominium.Id;

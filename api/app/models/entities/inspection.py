@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class Inspection(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="inspections", null=True, on_delete=fields.CASCADE)
     condominium = fields.ForeignKeyField("models.Condominium", related_name="inspections", on_delete=fields.CASCADE)
     template = fields.ForeignKeyField("models.InspectionTemplate", related_name="inspections", null=True, on_delete=fields.SET_NULL)
     supervisor = fields.ForeignKeyField("models.User", related_name="inspections", null=True, on_delete=fields.SET_NULL)
@@ -21,5 +22,4 @@ class Inspection(TimestampAuditMixin):
 
     class Meta:
         table = "inspections"
-        indexes = (("condominium_id", "status"), ("supervisor_id",), ("inspection_type",), ("submitted_at",))
-
+        indexes = (("company_id",), ("condominium_id", "status"), ("supervisor_id",), ("inspection_type",), ("submitted_at",))

@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class IncidentEvent(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="incident_events", null=True, on_delete=fields.CASCADE)
     incident = fields.ForeignKeyField("models.Incident", related_name="events", on_delete=fields.CASCADE)
     user = fields.ForeignKeyField("models.User", related_name="incident_events", null=True, on_delete=fields.SET_NULL)
     event_type = fields.CharField(max_length=60)
@@ -17,5 +18,4 @@ class IncidentEvent(TimestampAuditMixin):
 
     class Meta:
         table = "incident_events"
-        indexes = (("incident_id",), ("event_type",), ("created_at",))
-
+        indexes = (("company_id",), ("incident_id",), ("event_type",), ("created_at",))

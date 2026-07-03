@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import UploadFile
 
 from app.core.settings import settings
-from app.models.entities import AIRequest, Attachment
+from app.models.entities import AIRequest, Attachment, Condominium, Incident, Inspection, Task
 from app.schemas.audio_schema import AudioProcessingResponse
 from app.services.file_storage_service import FileStorageService
 from app.services.local_whisper_service import LocalWhisperService
@@ -56,6 +56,32 @@ class AudioProcessingService:
             )
         raise ValueError(f"Proveedor de transcripcion no soportado: {provider}")
 
+    async def _resolve_company_id(
+        self,
+        *,
+        condominium_id: UUID | None,
+        incident_id: UUID | None,
+        task_id: UUID | None,
+        inspection_id: UUID | None,
+    ) -> UUID | None:
+        if condominium_id:
+            condominium = await Condominium.get_or_none(id=condominium_id)
+            return condominium.company_id if condominium else None
+
+        if incident_id:
+            incident = await Incident.get_or_none(id=incident_id)
+            return incident.company_id if incident else None
+
+        if task_id:
+            task = await Task.get_or_none(id=task_id)
+            return task.company_id if task else None
+
+        if inspection_id:
+            inspection = await Inspection.get_or_none(id=inspection_id)
+            return inspection.company_id if inspection else None
+
+        return None
+
     async def process_audio(
         self,
         *,
@@ -71,8 +97,15 @@ class AudioProcessingService:
         generate_draft: bool = True,
     ) -> AudioProcessingResponse:
         stored = await self.storage.save_audio(upload)
+        company_id = await self._resolve_company_id(
+            condominium_id=condominium_id,
+            incident_id=incident_id,
+            task_id=task_id,
+            inspection_id=inspection_id,
+        )
 
         attachment = await Attachment.create(
+            company_id=company_id,
             condominium_id=condominium_id,
             uploaded_by_id=user_id,
             incident_id=incident_id,
@@ -87,6 +120,7 @@ class AudioProcessingService:
         )
 
         transcription_request = await AIRequest.create(
+            company_id=company_id,
             condominium_id=condominium_id,
             requested_by_id=user_id,
             provider=self._transcription_provider(),
@@ -134,6 +168,7 @@ class AudioProcessingService:
         if generate_draft:
             prompt = draft_prompt or DEFAULT_DRAFT_PROMPT
             draft_request = await AIRequest.create(
+                company_id=company_id,
                 condominium_id=condominium_id,
                 requested_by_id=user_id,
                 provider="openai",

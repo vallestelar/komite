@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class TaskChecklist(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="task_checklist_items", null=True, on_delete=fields.CASCADE)
     task = fields.ForeignKeyField("models.Task", related_name="checklist_items", on_delete=fields.CASCADE)
     label = fields.CharField(max_length=180)
     is_completed = fields.BooleanField(default=False)
@@ -16,5 +17,4 @@ class TaskChecklist(TimestampAuditMixin):
 
     class Meta:
         table = "task_checklists"
-        indexes = (("task_id", "position"),)
-
+        indexes = (("company_id",), ("task_id", "position"),)

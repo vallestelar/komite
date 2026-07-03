@@ -12,6 +12,7 @@ from tortoise.models import Model
 from pydantic import BaseModel
 
 from app.core.auth.dependencies import require_access_token, require_komite_employee, user_is_komite_employee
+from app.models.entities import Communication, Condominium, Incident, Inspection, Report, Task
 from app.services.service_factory import service_factory
 
 
@@ -80,6 +81,56 @@ async def _read_filters(model: Type[Model], request: Request) -> dict[str, Any]:
     return {}
 
 
+async def _derive_company_id(data: dict[str, Any]) -> Any:
+    if data.get("company_id"):
+        return data["company_id"]
+
+    if data.get("condominium_id"):
+        condominium = await Condominium.get_or_none(id=data["condominium_id"])
+        return condominium.company_id if condominium else None
+
+    parent_lookups = (
+        ("incident_id", Incident),
+        ("task_id", Task),
+        ("inspection_id", Inspection),
+        ("report_id", Report),
+        ("communication_id", Communication),
+    )
+    for field_name, parent_model in parent_lookups:
+        if data.get(field_name):
+            parent = await parent_model.get_or_none(id=data[field_name])
+            return getattr(parent, "company_id", None) if parent else None
+
+    return None
+
+
+async def _with_tenant_data(
+    model: Type[Model],
+    data: dict[str, Any],
+    request: Request,
+    *,
+    default_to_request_company: bool,
+) -> dict[str, Any]:
+    db_fields = set(model._meta.db_fields)
+    if "company_id" not in db_fields:
+        return data
+
+    company_id = await _derive_company_id(data)
+    if company_id:
+        data["company_id"] = company_id
+    elif default_to_request_company and request.state.company_id:
+        data["company_id"] = request.state.company_id
+
+    if not await user_is_komite_employee(request.state.user):
+        if not request.state.company_id or str(data.get("company_id")) != str(request.state.company_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El registro no pertenece a tu empresa",
+            )
+
+    return data
+
+
 def create_crud_router(
     *,
     model: Type[Model],
@@ -97,11 +148,18 @@ def create_crud_router(
         return service_factory.get(model)
 
     async def create_item(
+        request: Request,
         payload=Body(...),
         svc=Depends(get_service),
     ):
         try:
-            obj = await svc.create(**payload.model_dump())
+            data = await _with_tenant_data(
+                model,
+                payload.model_dump(),
+                request,
+                default_to_request_company=True,
+            )
+            obj = await svc.create(**data)
             return response_schema(**serialize_model(obj))
         except IntegrityError as exc:
             raise HTTPException(
@@ -154,12 +212,19 @@ def create_crud_router(
         return response_schema(**serialize_model(obj))
 
     async def update_item(
+        request: Request,
         obj_id: UUID,
         payload=Body(...),
         svc=Depends(get_service),
     ):
         try:
-            obj = await svc.update(obj_id, **payload.model_dump(exclude_unset=True))
+            data = await _with_tenant_data(
+                model,
+                payload.model_dump(exclude_unset=True),
+                request,
+                default_to_request_company=False,
+            )
+            obj = await svc.update(obj_id, **data)
         except IntegrityError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

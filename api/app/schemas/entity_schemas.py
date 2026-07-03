@@ -143,6 +143,7 @@ class CondominiumPage(BaseModel):
 
 
 class BuildingCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     name: str = Field(..., max_length=100)
     floors_count: int = 0
@@ -151,6 +152,7 @@ class BuildingCreate(BaseModel):
 
 
 class BuildingUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     name: Optional[str] = Field(default=None, max_length=100)
     floors_count: Optional[int] = None
@@ -160,6 +162,7 @@ class BuildingUpdate(BaseModel):
 
 class BuildingOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     name: str
     floors_count: int
@@ -173,6 +176,7 @@ class BuildingPage(BaseModel):
 
 
 class UnitCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     building_id: Optional[UUID] = None
     identifier: str = Field(..., max_length=80)
@@ -182,6 +186,7 @@ class UnitCreate(BaseModel):
 
 
 class UnitUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     building_id: Optional[UUID] = None
     identifier: Optional[str] = Field(default=None, max_length=80)
@@ -192,6 +197,7 @@ class UnitUpdate(BaseModel):
 
 class UnitOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     building_id: Optional[UUID] = None
     identifier: str
@@ -236,6 +242,7 @@ class RolePage(BaseModel):
 
 
 class UserCondominiumCreate(BaseModel):
+    company_id: Optional[UUID] = None
     user_id: UUID
     condominium_id: UUID
     role_id: UUID
@@ -246,6 +253,7 @@ class UserCondominiumCreate(BaseModel):
 
 
 class UserCondominiumUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     role_id: Optional[UUID] = None
@@ -257,6 +265,7 @@ class UserCondominiumUpdate(BaseModel):
 
 class UserCondominiumOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     user_id: UUID
     condominium_id: UUID
     role_id: UUID
@@ -272,6 +281,7 @@ class UserCondominiumPage(BaseModel):
 
 
 class IncidentCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     reported_by_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
@@ -287,6 +297,7 @@ class IncidentCreate(BaseModel):
 
 
 class IncidentUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     reported_by_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
@@ -303,6 +314,7 @@ class IncidentUpdate(BaseModel):
 
 class IncidentOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     reported_by_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
@@ -323,6 +335,7 @@ class IncidentPage(BaseModel):
 
 
 class IncidentEventCreate(BaseModel):
+    company_id: Optional[UUID] = None
     incident_id: UUID
     user_id: Optional[UUID] = None
     event_type: str = Field(..., max_length=60)
@@ -333,6 +346,7 @@ class IncidentEventCreate(BaseModel):
 
 
 class IncidentEventUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     incident_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     event_type: Optional[str] = Field(default=None, max_length=60)
@@ -344,6 +358,7 @@ class IncidentEventUpdate(BaseModel):
 
 class IncidentEventOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     incident_id: UUID
     user_id: Optional[UUID] = None
     event_type: str
@@ -359,6 +374,7 @@ class IncidentEventPage(BaseModel):
 
 
 class TaskCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     incident_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
@@ -373,6 +389,7 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     incident_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
@@ -388,6 +405,7 @@ class TaskUpdate(BaseModel):
 
 class TaskOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     incident_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
@@ -461,6 +479,7 @@ class SupportTicketPage(BaseModel):
 
 
 class TaskChecklistCreate(BaseModel):
+    company_id: Optional[UUID] = None
     task_id: UUID
     label: str = Field(..., max_length=180)
     is_completed: bool = False
@@ -470,6 +489,7 @@ class TaskChecklistCreate(BaseModel):
 
 
 class TaskChecklistUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
     label: Optional[str] = Field(default=None, max_length=180)
     is_completed: Optional[bool] = None
@@ -480,6 +500,7 @@ class TaskChecklistUpdate(BaseModel):
 
 class TaskChecklistOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     task_id: UUID
     label: str
     is_completed: bool
@@ -530,6 +551,7 @@ class InspectionTemplatePage(BaseModel):
 
 
 class InspectionCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     template_id: Optional[UUID] = None
     supervisor_id: Optional[UUID] = None
@@ -544,6 +566,7 @@ class InspectionCreate(BaseModel):
 
 
 class InspectionUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     template_id: Optional[UUID] = None
     supervisor_id: Optional[UUID] = None
@@ -559,6 +582,7 @@ class InspectionUpdate(BaseModel):
 
 class InspectionOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     template_id: Optional[UUID] = None
     supervisor_id: Optional[UUID] = None
@@ -578,6 +602,7 @@ class InspectionPage(BaseModel):
 
 
 class InspectionAnswerCreate(BaseModel):
+    company_id: Optional[UUID] = None
     inspection_id: UUID
     question_key: str = Field(..., max_length=100)
     question_label: str = Field(..., max_length=255)
@@ -588,6 +613,7 @@ class InspectionAnswerCreate(BaseModel):
 
 
 class InspectionAnswerUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     inspection_id: Optional[UUID] = None
     question_key: Optional[str] = Field(default=None, max_length=100)
     question_label: Optional[str] = Field(default=None, max_length=255)
@@ -599,6 +625,7 @@ class InspectionAnswerUpdate(BaseModel):
 
 class InspectionAnswerOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     inspection_id: UUID
     question_key: str
     question_label: str
@@ -614,6 +641,7 @@ class InspectionAnswerPage(BaseModel):
 
 
 class ReportCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     incident_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
@@ -630,6 +658,7 @@ class ReportCreate(BaseModel):
 
 
 class ReportUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     incident_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
@@ -647,6 +676,7 @@ class ReportUpdate(BaseModel):
 
 class ReportOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     incident_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
@@ -668,6 +698,7 @@ class ReportPage(BaseModel):
 
 
 class ReportVersionCreate(BaseModel):
+    company_id: Optional[UUID] = None
     report_id: UUID
     version_number: int
     source: str = Field(default="human", max_length=40)
@@ -676,6 +707,7 @@ class ReportVersionCreate(BaseModel):
 
 
 class ReportVersionUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     report_id: Optional[UUID] = None
     version_number: Optional[int] = None
     source: Optional[str] = Field(default=None, max_length=40)
@@ -685,6 +717,7 @@ class ReportVersionUpdate(BaseModel):
 
 class ReportVersionOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     report_id: UUID
     version_number: int
     source: str
@@ -698,6 +731,7 @@ class ReportVersionPage(BaseModel):
 
 
 class CommunicationCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     report_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
@@ -714,6 +748,7 @@ class CommunicationCreate(BaseModel):
 
 
 class CommunicationUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     report_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
@@ -731,6 +766,7 @@ class CommunicationUpdate(BaseModel):
 
 class CommunicationOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: UUID
     report_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
@@ -752,6 +788,7 @@ class CommunicationPage(BaseModel):
 
 
 class CommunicationRecipientCreate(BaseModel):
+    company_id: Optional[UUID] = None
     communication_id: UUID
     user_id: Optional[UUID] = None
     unit_id: Optional[UUID] = None
@@ -765,6 +802,7 @@ class CommunicationRecipientCreate(BaseModel):
 
 
 class CommunicationRecipientUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     communication_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     unit_id: Optional[UUID] = None
@@ -779,6 +817,7 @@ class CommunicationRecipientUpdate(BaseModel):
 
 class CommunicationRecipientOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     communication_id: UUID
     user_id: Optional[UUID] = None
     unit_id: Optional[UUID] = None
@@ -797,6 +836,7 @@ class CommunicationRecipientPage(BaseModel):
 
 
 class AttachmentCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     uploaded_by_id: Optional[UUID] = None
     incident_id: Optional[UUID] = None
@@ -814,6 +854,7 @@ class AttachmentCreate(BaseModel):
 
 
 class AttachmentUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     uploaded_by_id: Optional[UUID] = None
     incident_id: Optional[UUID] = None
@@ -832,6 +873,7 @@ class AttachmentUpdate(BaseModel):
 
 class AttachmentOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     uploaded_by_id: Optional[UUID] = None
     incident_id: Optional[UUID] = None
@@ -854,6 +896,7 @@ class AttachmentPage(BaseModel):
 
 
 class AuditLogCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     action: str = Field(..., max_length=100)
@@ -867,6 +910,7 @@ class AuditLogCreate(BaseModel):
 
 
 class AuditLogUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     action: Optional[str] = Field(default=None, max_length=100)
@@ -881,6 +925,7 @@ class AuditLogUpdate(BaseModel):
 
 class AuditLogOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     action: str
@@ -899,6 +944,7 @@ class AuditLogPage(BaseModel):
 
 
 class AIRequestCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     requested_by_id: Optional[UUID] = None
     provider: str = Field(..., max_length=60)
@@ -916,6 +962,7 @@ class AIRequestCreate(BaseModel):
 
 
 class AIRequestUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     requested_by_id: Optional[UUID] = None
     provider: Optional[str] = Field(default=None, max_length=60)
@@ -934,6 +981,7 @@ class AIRequestUpdate(BaseModel):
 
 class AIRequestOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     requested_by_id: Optional[UUID] = None
     provider: str
@@ -956,6 +1004,7 @@ class AIRequestPage(BaseModel):
 
 
 class NotificationLogCreate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     communication_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
@@ -969,6 +1018,7 @@ class NotificationLogCreate(BaseModel):
 
 
 class NotificationLogUpdate(BaseModel):
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     communication_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
@@ -983,6 +1033,7 @@ class NotificationLogUpdate(BaseModel):
 
 class NotificationLogOut(AuditOut):
     id: UUID
+    company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     communication_id: Optional[UUID] = None
     user_id: Optional[UUID] = None

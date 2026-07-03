@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class Building(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="buildings", null=True, on_delete=fields.CASCADE)
     condominium = fields.ForeignKeyField("models.Condominium", related_name="buildings", on_delete=fields.CASCADE)
     name = fields.CharField(max_length=100)
     floors_count = fields.IntField(default=0)
@@ -15,5 +16,4 @@ class Building(TimestampAuditMixin):
 
     class Meta:
         table = "buildings"
-        indexes = (("condominium_id", "name"),)
-
+        indexes = (("company_id",), ("condominium_id", "name"),)

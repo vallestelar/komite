@@ -130,6 +130,16 @@ Tareas disponibles con `Terminal > Run Task`:
 
 ## Base de datos y migraciones
 
+## Modelo multi-tenant
+
+KOMITE usa una unica base de datos compartida. La tabla `companies` representa el tenant.
+
+- Las entidades principales de negocio guardan `company_id` directo.
+- Las entidades que nacen desde un condominio, incidencia, tarea, inspeccion, informe o comunicacion calculan `company_id` automaticamente desde esa relacion.
+- Los endpoints de lectura filtran por empresa y condominios permitidos cuando el usuario no es empleado de Komite.
+- El backoffice queda reservado a empleados de Komite y puede operar sobre todos los tenants.
+- `banks` y `roles` funcionan como catalogos globales del sistema.
+
 Inicializar Aerich una sola vez:
 
 ```powershell

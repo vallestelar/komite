@@ -7,7 +7,8 @@ Cloudflare DNS + SSL
   -> Amazon Lightsail Ubuntu
   -> Nginx reverse proxy
   -> Docker Compose
-      - web Nuxt, puerto interno 3000
+      - marketing, pagina publica en puerto interno 3001
+      - web Nuxt app, puerto interno 3000
       - api FastAPI + backoffice, puerto interno 8000
       - PostgreSQL
       - Redis
@@ -16,9 +17,11 @@ Cloudflare DNS + SSL
 ## URLs propuestas
 
 ```text
-Web Nuxt:        https://komite.cl
+Marketing:       https://komite.cl
+Marketing www:   https://www.komite.cl
+App Nuxt:        https://app.komite.cl
 API Swagger:     https://api.komite.cl/docs
-Backoffice:      https://api.komite.cl/login
+Backoffice:      https://admin.komite.cl/login
 ```
 
 ## 1. Subir el repo a GitHub
@@ -42,7 +45,9 @@ Crea estos registros `A`, apuntando a la IP publica de Lightsail:
 ```text
 @     -> IP_PUBLICA_LIGHTSAIL
 www   -> IP_PUBLICA_LIGHTSAIL
+app   -> IP_PUBLICA_LIGHTSAIL
 api   -> IP_PUBLICA_LIGHTSAIL
+admin -> IP_PUBLICA_LIGHTSAIL
 ```
 
 En Cloudflare:
@@ -125,7 +130,7 @@ docker compose exec api python scripts/seed_auth.py
 
 ## 8. Configurar Nginx
 
-Frontend:
+Marketing publico:
 
 ```bash
 sudo nano /etc/nginx/sites-available/komite
@@ -135,6 +140,28 @@ sudo nano /etc/nginx/sites-available/komite
 server {
     listen 80;
     server_name komite.cl www.komite.cl;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+App Nuxt:
+
+```bash
+sudo nano /etc/nginx/sites-available/app-komite
+```
+
+```nginx
+server {
+    listen 80;
+    server_name app.komite.cl;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -147,7 +174,7 @@ server {
 }
 ```
 
-API y backoffice:
+API:
 
 ```bash
 sudo nano /etc/nginx/sites-available/api-komite
@@ -169,11 +196,35 @@ server {
 }
 ```
 
+Backoffice:
+
+```bash
+sudo nano /etc/nginx/sites-available/admin-komite
+```
+
+```nginx
+server {
+    listen 80;
+    server_name admin.komite.cl;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
 Activar sitios:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/komite /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/app-komite /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/api-komite /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/admin-komite /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
@@ -182,7 +233,7 @@ sudo systemctl reload nginx
 ## 9. Certificados HTTPS
 
 ```bash
-sudo certbot --nginx -d komite.cl -d www.komite.cl -d api.komite.cl
+sudo certbot --nginx -d komite.cl -d www.komite.cl -d app.komite.cl -d api.komite.cl -d admin.komite.cl
 sudo certbot certificates
 sudo systemctl status certbot.timer
 ```
@@ -192,14 +243,16 @@ sudo systemctl status certbot.timer
 ```bash
 curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:3000
+curl http://127.0.0.1:3001
 ```
 
 En navegador:
 
 ```text
 https://komite.cl
+https://app.komite.cl
 https://api.komite.cl/docs
-https://api.komite.cl/login
+https://admin.komite.cl/login
 ```
 
 ## 11. Deploy diario
@@ -224,6 +277,7 @@ chmod +x deploy.sh
 
 ```bash
 docker compose ps
+docker compose logs -f marketing
 docker compose logs -f api
 docker compose logs -f web
 docker compose logs -f postgres

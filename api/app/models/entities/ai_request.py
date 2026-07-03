@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class AIRequest(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="ai_requests", null=True, on_delete=fields.SET_NULL)
     condominium = fields.ForeignKeyField("models.Condominium", related_name="ai_requests", null=True, on_delete=fields.SET_NULL)
     requested_by = fields.ForeignKeyField("models.User", related_name="ai_requests", null=True, on_delete=fields.SET_NULL)
     provider = fields.CharField(max_length=60)
@@ -24,5 +25,4 @@ class AIRequest(TimestampAuditMixin):
 
     class Meta:
         table = "ai_requests"
-        indexes = (("condominium_id",), ("purpose",), ("provider", "model"), ("status",), ("created_at",))
-
+        indexes = (("company_id",), ("condominium_id",), ("purpose",), ("provider", "model"), ("status",), ("created_at",))

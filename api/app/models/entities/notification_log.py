@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class NotificationLog(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="notification_logs", null=True, on_delete=fields.SET_NULL)
     condominium = fields.ForeignKeyField("models.Condominium", related_name="notification_logs", null=True, on_delete=fields.SET_NULL)
     communication = fields.ForeignKeyField("models.Communication", related_name="notification_logs", null=True, on_delete=fields.SET_NULL)
     user = fields.ForeignKeyField("models.User", related_name="notification_logs", null=True, on_delete=fields.SET_NULL)
@@ -20,5 +21,4 @@ class NotificationLog(TimestampAuditMixin):
 
     class Meta:
         table = "notification_logs"
-        indexes = (("condominium_id",), ("communication_id",), ("user_id",), ("channel",), ("status",), ("sent_at",))
-
+        indexes = (("company_id",), ("condominium_id",), ("communication_id",), ("user_id",), ("channel",), ("status",), ("sent_at",))

@@ -1,4 +1,13 @@
 services:
+  marketing:
+    build:
+      context: .
+      dockerfile: marketing/Dockerfile
+    container_name: komite_marketing
+    restart: always
+    ports:
+      - "3001:80"
+
   api:
     build:
       context: ./api

@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class CommunicationRecipient(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="communication_recipients", null=True, on_delete=fields.CASCADE)
     communication = fields.ForeignKeyField("models.Communication", related_name="recipients", on_delete=fields.CASCADE)
     user = fields.ForeignKeyField("models.User", related_name="communication_recipients", null=True, on_delete=fields.SET_NULL)
     unit = fields.ForeignKeyField("models.Unit", related_name="communication_recipients", null=True, on_delete=fields.SET_NULL)
@@ -20,5 +21,4 @@ class CommunicationRecipient(TimestampAuditMixin):
 
     class Meta:
         table = "communication_recipients"
-        indexes = (("communication_id",), ("user_id",), ("channel",), ("delivery_status",))
-
+        indexes = (("company_id",), ("communication_id",), ("user_id",), ("channel",), ("delivery_status",))

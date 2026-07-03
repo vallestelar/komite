@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Komite | Informacion clara para condominios</title>
+  <meta name="description" content="Komite convierte reportes, audios, fotos y tareas de condominios en informes, comunicaciones y trazabilidad para comites y vecinos.">
+  <link rel="icon" href="assets/komite-logo.png">
+<style>/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/a13eb3d3-25ee-4f91-9c95-adc18442291b.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/c2980fdd-06e1-4043-be3e-9b0da66157df.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/017be711-2a18-421f-8073-2fc3709d37cb.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/07b04747-7f79-44ca-b4a3-0d2eb9d18f46.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/c0d9945f-3d2b-4665-be37-44238d83eb9d.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("assets/fonts/93e132b5-badb-4883-9828-0502f0442669.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/a13eb3d3-25ee-4f91-9c95-adc18442291b.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/c2980fdd-06e1-4043-be3e-9b0da66157df.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/017be711-2a18-421f-8073-2fc3709d37cb.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/07b04747-7f79-44ca-b4a3-0d2eb9d18f46.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/c0d9945f-3d2b-4665-be37-44238d83eb9d.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/93e132b5-badb-4883-9828-0502f0442669.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/a13eb3d3-25ee-4f91-9c95-adc18442291b.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/c2980fdd-06e1-4043-be3e-9b0da66157df.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/017be711-2a18-421f-8073-2fc3709d37cb.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/07b04747-7f79-44ca-b4a3-0d2eb9d18f46.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/c0d9945f-3d2b-4665-be37-44238d83eb9d.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/93e132b5-badb-4883-9828-0502f0442669.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/a13eb3d3-25ee-4f91-9c95-adc18442291b.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/c2980fdd-06e1-4043-be3e-9b0da66157df.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/017be711-2a18-421f-8073-2fc3709d37cb.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/07b04747-7f79-44ca-b4a3-0d2eb9d18f46.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/c0d9945f-3d2b-4665-be37-44238d83eb9d.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/93e132b5-badb-4883-9828-0502f0442669.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("assets/fonts/a13eb3d3-25ee-4f91-9c95-adc18442291b.woff2") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("assets/fonts/c2980fdd-06e1-4043-be3e-9b0da66157df.woff2") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("assets/fonts/017be711-2a18-421f-8073-2fc3709d37cb.woff2") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("assets/fonts/07b04747-7f79-44ca-b4a3-0d2eb9d18f46.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("assets/fonts/c0d9945f-3d2b-4665-be37-44238d83eb9d.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("assets/fonts/93e132b5-badb-4883-9828-0502f0442669.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/99fef394-b9ba-49e3-8f52-f700c072f07f.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/a3873e2e-4770-4aa8-822b-b110c2814143.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("assets/fonts/685f789b-250c-4145-b117-ab3ef6a4d6a6.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/99fef394-b9ba-49e3-8f52-f700c072f07f.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/a3873e2e-4770-4aa8-822b-b110c2814143.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("assets/fonts/685f789b-250c-4145-b117-ab3ef6a4d6a6.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/99fef394-b9ba-49e3-8f52-f700c072f07f.woff2") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/a3873e2e-4770-4aa8-822b-b110c2814143.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("assets/fonts/685f789b-250c-4145-b117-ab3ef6a4d6a6.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+  :root{
+    --navy:#16293b; --navy2:#22425d; --orange:#ef8b1f; --orange2:#f7a53d;
+    --peach:#fbe4c8; --cream:#f5f1ea; --paper:#ffffff; --ink:#17293a;
+    --muted:#5f7182; --line:#e7e1d7; --line2:#dfe6ee;
+  }
+  *{box-sizing:border-box}
+  h1,h2,h3,h4,p,ul,li{margin:0;padding:0}
+  li{list-style:none}
+  html{scroll-behavior:smooth}
+  a{text-decoration:none;color:inherit}
+  ::selection{background:var(--orange);color:#fff}
+  @media (max-width:900px){
+    .k-nav-links{display:none!important}
+    .k-hero-grid{grid-template-columns:1fr!important}
+    .k-two{grid-template-columns:1fr!important}
+    .k-three{grid-template-columns:1fr!important}
+    .k-four{grid-template-columns:1fr 1fr!important}
+    .k-steps{grid-template-columns:1fr 1fr!important}
+    .k-ba{grid-template-columns:1fr!important}
+    .k-ba-arrow{transform:rotate(90deg)}
+    .k-benefits{grid-template-columns:1fr!important}
+    .k-metrics{grid-template-columns:1fr 1fr!important}
+    .k-sect{padding:72px 24px!important}
+    .k-h2{font-size:38px!important}
+    .k-hero-h1{font-size:52px!important}
+  }
+</style>
+</head>
+<body>
+<div style="font-family:'Manrope',sans-serif;color:var(--ink);background:var(--paper);width:100%;overflow-x:hidden">
+
+  <!-- ============ NAV ============ -->
+  <header style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+    <nav style="max-width:1280px;margin:0 auto;padding:16px 40px;display:flex;align-items:center;justify-content:space-between">
+      <a href="#top" style="display:flex;align-items:center"><img src="assets/komite-logo.png" alt="Komite" style="height:46px;width:auto"></a>
+      <div class="k-nav-links" style="display:flex;align-items:center;gap:38px;font:600 17px/1 'Manrope';color:var(--ink)">
+        <a href="#problema">El problema</a>
+        <a href="#producto">Cómo funciona</a>
+        <a href="#beneficios">Beneficios</a>
+        <a href="#partimos">Implementación</a>
+      </div>
+      <a href="#contacto" style="background:var(--navy);color:#fff;font:700 16px/1 'Space Grotesk';padding:14px 24px;border-radius:12px">Agendar demo</a>
+    </nav>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section id="top" style="background:var(--paper);position:relative;overflow:hidden">
+    <div class="k-hero-grid k-sect" style="max-width:1280px;margin:0 auto;padding:96px 40px 40px;display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:10px;background:var(--cream);border:1px solid var(--line);border-radius:30px;padding:10px 18px;font:700 14px/1 'Manrope';letter-spacing:.06em;text-transform:uppercase;color:var(--orange);margin-bottom:28px">
+          <span style="width:10px;height:10px;border-radius:50%;background:var(--orange)"></span>Para administradoras de condominios
+        </div>
+        <h1 class="k-hero-h1" style="font:600 68px/1.06 'Space Grotesk';color:var(--navy);text-wrap:balance">La operación diaria de tus condominios, convertida en <span style="color:var(--orange)">información clara</span>.</h1>
+        <p style="font:500 24px/1.5 'Manrope';color:var(--muted);margin-top:26px;max-width:560px">Komite recoge lo que pasa en terreno y lo transforma en informes, comunicaciones y trazabilidad para el comité y los vecinos. Adiós al caos del WhatsApp.</p>
+        <div style="display:flex;gap:16px;margin-top:40px;flex-wrap:wrap">
+          <a href="#contacto" style="background:var(--orange);color:var(--navy);font:700 19px/1 'Space Grotesk';padding:20px 34px;border-radius:14px">Agendar una demo</a>
+          <a href="#producto" style="background:var(--cream);color:var(--navy);font:600 19px/1 'Manrope';padding:20px 34px;border-radius:14px;border:1px solid var(--line)">Ver cómo funciona</a>
+        </div>
+      </div>
+      <div style="position:relative;display:flex;justify-content:center">
+        <!-- hero dashboard card -->
+        <div style="width:100%;max-width:520px;background:var(--paper);border:1px solid var(--line);border-radius:26px;padding:30px;box-shadow:0 40px 90px -50px rgba(22,41,59,.55)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+            <div style="font:600 26px/1 'Space Grotesk';color:var(--navy)">Condominio Vista Sol</div>
+            <div style="display:flex;gap:7px"><span style="width:11px;height:11px;border-radius:50%;background:var(--line2)"></span><span style="width:11px;height:11px;border-radius:50%;background:var(--line2)"></span><span style="width:11px;height:11px;border-radius:50%;background:var(--orange)"></span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+            <div style="background:var(--cream);border-radius:16px;padding:20px"><div style="font:700 44px/1 'Space Grotesk';color:var(--navy)">3</div><div style="font:600 17px/1.2 'Manrope';color:var(--muted);margin-top:6px">Incidencias abiertas</div></div>
+            <div style="background:rgba(239,139,31,.12);border-radius:16px;padding:20px"><div style="font:700 44px/1 'Space Grotesk';color:var(--orange)">12</div><div style="font:600 17px/1.2 'Manrope';color:var(--muted);margin-top:6px">Tareas resueltas</div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:12px;background:var(--cream);border-radius:12px;padding:14px 16px"><span style="width:30px;height:30px;border-radius:8px;background:var(--navy);display:flex;align-items:center;justify-content:center"><svg width="16" viewBox="0 0 24 24"><path d="M4 13 l5 5 L20 6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></span><span style="font:600 18px/1.2 'Manrope';flex:1">Mantención de bombas</span><span style="font:600 14px/1 'Manrope';color:#2f9e6b;background:#e4f4ec;padding:5px 11px;border-radius:20px">Resuelta</span></div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--cream);border-radius:12px;padding:14px 16px"><span style="width:30px;height:30px;border-radius:8px;background:var(--orange);display:flex;align-items:center;justify-content:center"><svg width="14" viewBox="0 0 24 24"><rect x="10" y="4" width="4" height="10" rx="2" fill="#fff"></rect><rect x="10" y="17" width="4" height="4" rx="2" fill="#fff"></rect></svg></span><span style="font:600 18px/1.2 'Manrope';flex:1">Portón vehicular</span><span style="font:600 14px/1 'Manrope';color:var(--orange);background:rgba(239,139,31,.14);padding:5px 11px;border-radius:20px">En proceso</span></div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--cream);border-radius:12px;padding:14px 16px"><span style="width:30px;height:30px;border-radius:8px;background:var(--navy2);display:flex;align-items:center;justify-content:center"><svg width="14" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2" fill="#fff"></rect><rect x="8" y="7" width="8" height="2" fill="var(--navy)"></rect><rect x="8" y="11" width="8" height="2" fill="var(--navy)"></rect></svg></span><span style="font:600 18px/1.2 'Manrope';flex:1">Informe mensual</span><span style="font:600 14px/1 'Manrope';color:var(--navy);background:#e6ecf2;padding:5px 11px;border-radius:20px">Publicado</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- skyline -->
+    <svg viewBox="0 0 1920 140" width="100%" height="120" preserveAspectRatio="none" style="display:block" aria-hidden="true">
+      <rect x="0" y="112" width="1920" height="28" fill="var(--navy)"></rect>
+      <g fill="var(--navy)"><rect x="120" y="52" width="120" height="60"></rect><rect x="270" y="24" width="96" height="88"></rect><rect x="390" y="70" width="104" height="42"></rect><rect x="1420" y="60" width="120" height="52"></rect><rect x="1560" y="30" width="96" height="82"></rect><rect x="1680" y="66" width="104" height="46"></rect></g>
+      <g fill="var(--orange)"><rect x="150" y="70" width="14" height="14"></rect><rect x="182" y="70" width="14" height="14"></rect><rect x="296" y="46" width="14" height="14"></rect><rect x="328" y="46" width="14" height="14"></rect><rect x="296" y="78" width="14" height="14"></rect><rect x="1588" y="52" width="14" height="14"></rect><rect x="1620" y="52" width="14" height="14"></rect><rect x="1588" y="84" width="14" height="14"></rect></g>
+    </svg>
+  </section>
+
+  <!-- ============ PROBLEMA ============ -->
+  <section id="problema" class="k-sect" style="background:var(--cream);padding:110px 40px">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:20px">El problema</div>
+      <h2 class="k-h2" style="font:600 52px/1.1 'Space Grotesk';color:var(--navy);max-width:900px;text-wrap:balance">Hay una brecha entre lo que la administración hace y lo que la comunidad percibe.</h2>
+      <div class="k-two" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;margin-top:56px">
+        <ul style="display:flex;flex-direction:column;gap:22px">
+          <li style="display:flex;align-items:center;gap:18px;font:500 24px/1.35 'Manrope'"><span style="width:12px;height:12px;border-radius:50%;background:var(--orange);flex:none"></span>Los reportes llegan por WhatsApp, de forma desordenada.</li>
+          <li style="display:flex;align-items:center;gap:18px;font:500 24px/1.35 'Manrope'"><span style="width:12px;height:12px;border-radius:50%;background:var(--orange);flex:none"></span>Fotos, audios y mensajes se pierden en los chats.</li>
+          <li style="display:flex;align-items:center;gap:18px;font:500 24px/1.35 'Manrope'"><span style="width:12px;height:12px;border-radius:50%;background:var(--orange);flex:none"></span>El comité no sabe en qué estado están las tareas.</li>
+          <li style="display:flex;align-items:center;gap:18px;font:500 24px/1.35 'Manrope'"><span style="width:12px;height:12px;border-radius:50%;background:var(--orange);flex:none"></span>Los informes se redactan a mano, una y otra vez.</li>
+          <li style="display:flex;align-items:center;gap:18px;font:500 24px/1.35 'Manrope'"><span style="width:12px;height:12px;border-radius:50%;background:var(--orange);flex:none"></span>No existe un historial claro de lo que ocurrió.</li>
+        </ul>
+        <div style="display:flex;justify-content:center">
+          <svg viewBox="0 0 460 360" width="100%" style="max-width:480px" aria-hidden="true">
+            <rect x="30" y="40" width="250" height="66" rx="18" fill="#ffffff" stroke="var(--line)" stroke-width="2"></rect><rect x="50" y="62" width="150" height="9" rx="4.5" fill="#c8cfd6"></rect><rect x="50" y="80" width="110" height="9" rx="4.5" fill="#dbe0e6"></rect>
+            <rect x="180" y="118" width="250" height="66" rx="18" fill="var(--navy)"></rect><rect x="200" y="140" width="160" height="9" rx="4.5" fill="#5b7085"></rect><rect x="200" y="158" width="120" height="9" rx="4.5" fill="#3f596e"></rect>
+            <rect x="60" y="196" width="230" height="60" rx="18" fill="#ffffff" stroke="var(--line)" stroke-width="2"></rect><rect x="80" y="216" width="120" height="9" rx="4.5" fill="#c8cfd6"></rect><rect x="80" y="233" width="90" height="9" rx="4.5" fill="#dbe0e6"></rect>
+            <g transform="translate(300,232)"><rect x="0" y="0" width="130" height="66" rx="18" fill="var(--peach)"></rect><circle cx="30" cy="33" r="17" fill="var(--orange)"></circle><rect x="28" y="24" width="4" height="12" rx="2" fill="#fff"></rect><rect x="28" y="41" width="4" height="4" rx="2" fill="#fff"></rect><rect x="58" y="24" width="60" height="8" rx="4" fill="var(--orange)"></rect><rect x="58" y="40" width="40" height="8" rx="4" fill="var(--orange2)"></rect></g>
+            <g transform="translate(360,20)"><rect width="70" height="52" rx="12" fill="#ffffff" stroke="var(--line)" stroke-width="2"></rect><circle cx="24" cy="26" r="9" fill="var(--orange2)"></circle><path d="M14 40 L30 26 L44 40 Z" fill="#c8cfd6"></path></g>
+            <g transform="translate(0,140)"><rect width="46" height="46" rx="12" fill="var(--navy2)"></rect><rect x="19" y="12" width="8" height="16" rx="4" fill="#fff"></rect><path d="M15 26 a8 8 0 0 0 16 0" fill="none" stroke="#fff" stroke-width="3"></path><rect x="22" y="30" width="2" height="6" fill="#fff"></rect></g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUÉ ES / CÓMO FUNCIONA ============ -->
+  <section id="producto" class="k-sect" style="background:var(--navy);padding:110px 40px;color:#eaf0f6">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange2);margin-bottom:20px">Qué es Komite</div>
+      <h2 class="k-h2" style="font:500 52px/1.14 'Space Grotesk';color:#fff;max-width:1080px;text-wrap:balance">Transformamos mensajes, audios, fotos y tareas del día a día en <span style="color:var(--orange2)">informes, comunicaciones y trazabilidad</span>.</h2>
+
+      <div class="k-steps" style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:64px">
+        <div style="background:rgba(255,255,255,.06);border-radius:22px;padding:34px 28px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 38px/1 'Space Grotesk';color:var(--navy2)">01</span><svg viewBox="0 0 48 48" width="40"><rect x="8" y="10" width="26" height="34" rx="4" fill="#eaf0f6"></rect><rect x="12" y="15" width="18" height="22" rx="2" fill="var(--navy)"></rect><circle cx="38" cy="14" r="10" fill="var(--orange)"></circle><rect x="36" y="9" width="4" height="10" rx="2" fill="#fff"></rect><rect x="31" y="12" width="10" height="4" rx="2" fill="#fff"></rect></svg></div>
+          <h3 style="font:600 27px/1.1 'Space Grotesk';color:#fff">Se reporta</h3>
+          <p style="font:500 18px/1.45 'Manrope';color:#a9bccd">El equipo de terreno registra la novedad con foto, audio o texto.</p>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:22px;padding:34px 28px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 38px/1 'Space Grotesk';color:var(--navy2)">02</span><svg viewBox="0 0 48 48" width="40"><path d="M24 8 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="var(--orange)"></path><circle cx="39" cy="34" r="4" fill="#eaf0f6"></circle><circle cx="12" cy="12" r="3" fill="#eaf0f6"></circle></svg></div>
+          <h3 style="font:600 27px/1.1 'Space Grotesk';color:#fff">Komite ordena</h3>
+          <p style="font:500 18px/1.45 'Manrope';color:#a9bccd">La IA clasifica, prioriza y redacta un borrador profesional.</p>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:22px;padding:34px 28px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 38px/1 'Space Grotesk';color:var(--navy2)">03</span><svg viewBox="0 0 48 48" width="40"><rect x="8" y="6" width="28" height="36" rx="4" fill="#eaf0f6"></rect><rect x="13" y="13" width="14" height="4" rx="2" fill="var(--navy)"></rect><rect x="13" y="22" width="14" height="4" rx="2" fill="var(--navy)"></rect><circle cx="34" cy="34" r="12" fill="var(--orange)"></circle><path d="M29 34 l4 4 7 -8" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+          <h3 style="font:600 27px/1.1 'Space Grotesk';color:#fff">El admin aprueba</h3>
+          <p style="font:500 18px/1.45 'Manrope';color:#a9bccd">Nada se publica solo: el administrador da el visto bueno final.</p>
+        </div>
+        <div style="background:rgba(239,139,31,.16);border-radius:22px;padding:34px 28px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 38px/1 'Space Grotesk';color:var(--orange2)">04</span><svg viewBox="0 0 48 48" width="40"><path d="M8 22 L40 8 L34 42 L24 30 Z" fill="var(--orange)"></path><path d="M24 30 L40 8" stroke="var(--navy)" stroke-width="2.5" fill="none"></path></svg></div>
+          <h3 style="font:600 27px/1.1 'Space Grotesk';color:#fff">La comunidad recibe</h3>
+          <p style="font:500 18px/1.45 'Manrope';color:#dfe8ef">El informe llega al comité y a los vecinos por el canal adecuado.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ IA ANTES/DESPUÉS ============ -->
+  <section class="k-sect" style="background:var(--paper);padding:110px 40px">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:20px">La IA que redacta por ti</div>
+      <h2 class="k-h2" style="font:600 52px/1.1 'Space Grotesk';color:var(--navy);max-width:960px;text-wrap:balance">Un audio de un minuto se convierte en un informe listo para enviar.</h2>
+      <div class="k-ba" style="display:grid;grid-template-columns:1fr auto 1.15fr;gap:36px;align-items:stretch;margin-top:54px">
+        <div style="background:var(--cream);border-radius:24px;padding:36px;display:flex;flex-direction:column;gap:20px;justify-content:center">
+          <div style="display:flex;align-items:center;gap:12px;font:700 15px/1 'Manrope';color:var(--muted);text-transform:uppercase;letter-spacing:.08em"><span style="width:40px;height:40px;border-radius:11px;background:var(--navy2);display:flex;align-items:center;justify-content:center"><svg width="18" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"></rect><path d="M6 12 a6 6 0 0 0 12 0" stroke="#fff" stroke-width="2.4" fill="none"></path><rect x="11" y="18" width="2" height="4" fill="#fff"></rect></svg></span>Lo que se dijo en terreno</div>
+          <p style="font:400 22px/1.55 'Manrope';font-style:italic;color:var(--ink)">"Revisamos las bombas de Vista Sol. La uno normal. La dos con un ruido leve, no vimos fuga. Recomiendo pedir mantención preventiva."</p>
+        </div>
+        <div class="k-ba-arrow" style="display:flex;align-items:center;justify-content:center;color:var(--orange)"><svg width="60" height="30" viewBox="0 0 60 30"><path d="M2 15 H46 M36 5 L52 15 L36 25" stroke="currentColor" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+        <div style="background:var(--navy);border-radius:24px;padding:36px;display:flex;flex-direction:column;gap:16px;justify-content:center;box-shadow:0 30px 70px -40px rgba(22,41,59,.6)">
+          <div style="display:flex;align-items:center;gap:12px;font:700 15px/1 'Manrope';color:var(--orange2);text-transform:uppercase;letter-spacing:.08em"><span style="width:40px;height:40px;border-radius:11px;background:var(--orange);display:flex;align-items:center;justify-content:center"><svg width="20" viewBox="0 0 24 24"><path d="M12 2 l1.6 4.4 4.4 1.6 -4.4 1.6 L12 14 l-1.6-4.4 -4.4-1.6 4.4-1.6z" fill="#fff"></path></svg></span>Informe generado por Komite</div>
+          <p style="font:500 20px/1.5 'Manrope';color:#eaf0f6"><strong style="color:#fff">Revisión del sistema de bombas · Vista Sol</strong><br><br>Se realizó una revisión del sistema de bombas. La bomba N°1 opera con normalidad; la N°2 presenta un ruido leve durante su funcionamiento. No se detectaron filtraciones visibles.</p>
+          <div style="font:600 19px/1.3 'Manrope';color:var(--orange2)">Recomendación: coordinar mantención preventiva.</div>
+        </div>
+      </div>
+      <p style="font:600 18px/1.3 'Manrope';color:var(--muted);margin-top:26px;display:flex;align-items:center;gap:12px"><span style="width:11px;height:11px;border-radius:50%;background:var(--orange);flex:none"></span>La IA no inventa: solo ordena lo reportado, y el texto original siempre queda guardado.</p>
+    </div>
+  </section>
+
+  <!-- ============ TRANSPARENCIA + TRAZABILIDAD (dos bloques) ============ -->
+  <section class="k-sect" style="background:var(--cream);padding:110px 40px">
+    <div style="max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:80px">
+      <!-- transparencia -->
+      <div class="k-two" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+        <div>
+          <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:18px">Transparencia con el comité</div>
+          <h3 style="font:600 40px/1.12 'Space Grotesk';color:var(--navy);text-wrap:balance">El comité ve por sí mismo lo que se hizo, sin llamar a nadie.</h3>
+          <ul style="display:flex;flex-direction:column;gap:16px;margin-top:28px">
+            <li style="display:flex;align-items:center;gap:16px;font:500 21px/1.3 'Manrope'"><span style="width:11px;height:11px;border-radius:50%;background:var(--orange);flex:none"></span>Incidencias abiertas y en proceso</li>
+            <li style="display:flex;align-items:center;gap:16px;font:500 21px/1.3 'Manrope'"><span style="width:11px;height:11px;border-radius:50%;background:var(--orange);flex:none"></span>Mantenciones realizadas y próximas</li>
+            <li style="display:flex;align-items:center;gap:16px;font:500 21px/1.3 'Manrope'"><span style="width:11px;height:11px;border-radius:50%;background:var(--orange);flex:none"></span>Informes mensuales disponibles</li>
+            <li style="display:flex;align-items:center;gap:16px;font:500 21px/1.3 'Manrope'"><span style="width:11px;height:11px;border-radius:50%;background:var(--orange);flex:none"></span>Historial consultable en cualquier momento</li>
+          </ul>
+        </div>
+        <div style="display:flex;justify-content:center">
+          <svg viewBox="0 0 440 320" width="100%" style="max-width:440px" aria-hidden="true">
+            <rect x="20" y="30" width="400" height="260" rx="20" fill="#fff" stroke="var(--line)" stroke-width="2"></rect>
+            <rect x="44" y="58" width="150" height="14" rx="7" fill="var(--navy)"></rect>
+            <rect x="44" y="94" width="170" height="80" rx="14" fill="var(--cream)"></rect><text x="60" y="140" font-family="Space Grotesk" font-size="42" font-weight="700" fill="var(--navy)">3</text><rect x="60" y="150" width="120" height="8" rx="4" fill="#c8cfd6"></rect>
+            <rect x="226" y="94" width="170" height="80" rx="14" fill="rgba(239,139,31,.14)"></rect><text x="242" y="140" font-family="Space Grotesk" font-size="42" font-weight="700" fill="var(--orange)">12</text><rect x="242" y="150" width="120" height="8" rx="4" fill="#e6b98a"></rect>
+            <rect x="44" y="192" width="352" height="34" rx="10" fill="var(--cream)"></rect><circle cx="64" cy="209" r="8" fill="var(--navy)"></circle><rect x="82" y="205" width="180" height="8" rx="4" fill="#c8cfd6"></rect><rect x="330" y="201" width="52" height="16" rx="8" fill="#e4f4ec"></rect>
+            <rect x="44" y="236" width="352" height="34" rx="10" fill="var(--cream)"></rect><circle cx="64" cy="253" r="8" fill="var(--orange)"></circle><rect x="82" y="249" width="150" height="8" rx="4" fill="#c8cfd6"></rect><rect x="330" y="245" width="52" height="16" rx="8" fill="rgba(239,139,31,.18)"></rect>
+          </svg>
+        </div>
+      </div>
+      <!-- trazabilidad -->
+      <div class="k-two" style="display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center">
+        <div style="order:2">
+          <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:18px">Trazabilidad y evidencias</div>
+          <h3 style="font:600 40px/1.12 'Space Grotesk';color:var(--navy);text-wrap:balance">Cada acción queda registrada: quién, cuándo y con qué respaldo.</h3>
+          <p style="font:500 21px/1.5 'Manrope';color:var(--muted);margin-top:22px">Fotos, audios e historial buscable. Cuando hay un reclamo o una discusión en la reunión, la prueba está siempre a mano.</p>
+          <div style="display:flex;gap:14px;margin-top:26px;flex-wrap:wrap">
+            <span style="font:600 17px/1 'Manrope';color:var(--navy);background:#fff;border:1px solid var(--line);padding:12px 18px;border-radius:24px">📷 Fotos</span>
+            <span style="font:600 17px/1 'Manrope';color:var(--navy);background:#fff;border:1px solid var(--line);padding:12px 18px;border-radius:24px">🎙 Audios</span>
+            <span style="font:600 17px/1 'Manrope';color:var(--navy);background:#fff;border:1px solid var(--line);padding:12px 18px;border-radius:24px">🗂 Historial buscable</span>
+          </div>
+        </div>
+        <div style="order:1;position:relative;padding-left:44px">
+          <div style="position:absolute;left:15px;top:8px;bottom:8px;width:3px;background:var(--line)"></div>
+          <div style="display:flex;flex-direction:column;gap:26px">
+            <div style="position:relative"><span style="position:absolute;left:-44px;top:2px;width:30px;height:30px;border-radius:50%;background:var(--orange);border:5px solid var(--cream)"></span><div style="font:700 17px/1 'Manrope';color:var(--orange);margin-bottom:5px">28 jun · 12:30</div><div style="font:500 21px/1.35 'Manrope';color:var(--ink)">Supervisor cierra "Revisión de bombas" y adjunta 4 fotografías.</div></div>
+            <div style="position:relative"><span style="position:absolute;left:-44px;top:2px;width:30px;height:30px;border-radius:50%;background:var(--navy2);border:5px solid var(--cream)"></span><div style="font:700 17px/1 'Manrope';color:var(--muted);margin-bottom:5px">28 jun · 12:32</div><div style="font:500 21px/1.35 'Manrope';color:var(--ink)">Komite genera el informe preliminar automáticamente.</div></div>
+            <div style="position:relative"><span style="position:absolute;left:-44px;top:2px;width:30px;height:30px;border-radius:50%;background:var(--navy2);border:5px solid var(--cream)"></span><div style="font:700 17px/1 'Manrope';color:var(--muted);margin-bottom:5px">28 jun · 13:10</div><div style="font:500 21px/1.35 'Manrope';color:var(--ink)">Administrador aprueba y publica al comité.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EDIFITO ============ -->
+  <section class="k-sect" style="background:var(--paper);padding:110px 40px">
+    <div style="max-width:1180px;margin:0 auto;text-align:center">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:20px">Sin reemplazar lo que ya usas</div>
+      <h2 class="k-h2" style="font:600 48px/1.12 'Space Grotesk';color:var(--navy);max-width:900px;margin:0 auto;text-wrap:balance">Komite complementa a Edifito y a tu sistema contable, no los reemplaza.</h2>
+      <div class="k-two" style="display:grid;grid-template-columns:1fr auto 1fr;gap:32px;align-items:stretch;margin-top:56px;text-align:left">
+        <div style="background:var(--cream);border-radius:24px;padding:40px;display:flex;flex-direction:column;gap:16px;justify-content:center">
+          <div style="font:700 14px/1 'Manrope';text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Tu sistema administrativo</div>
+          <div style="font:600 30px/1.15 'Space Grotesk';color:var(--navy)">Gastos comunes · Contabilidad · Cobranza</div>
+          <p style="font:500 20px/1.5 'Manrope';color:var(--muted)">Sigue gestionando la parte financiera y administrativa, tal como hoy.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px"><div style="width:80px;height:80px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center"><svg width="40" viewBox="0 0 24 24"><path d="M7 12 h10 M12 7 v10" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"></path></svg></div><div style="font:600 17px/1 'Manrope';color:var(--muted)">conviven</div></div>
+        <div style="background:var(--navy);border-radius:24px;padding:40px;display:flex;flex-direction:column;gap:16px;justify-content:center;box-shadow:0 30px 70px -40px rgba(22,41,59,.6)">
+          <div style="font:700 14px/1 'Manrope';text-transform:uppercase;letter-spacing:.1em;color:var(--orange2)">Komite</div>
+          <div style="font:600 30px/1.15 'Space Grotesk';color:#fff">Operación · Comunicación · Evidencia</div>
+          <p style="font:500 20px/1.5 'Manrope';color:#a9bccd">Se encarga del día a día en terreno, los informes y la transparencia con la comunidad.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROLES ============ -->
+  <section class="k-sect" style="background:var(--cream);padding:110px 40px">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:20px">Una plataforma, cada rol en su lugar</div>
+      <h2 class="k-h2" style="font:600 48px/1.12 'Space Grotesk';color:var(--navy);max-width:800px">Cada persona ve exactamente lo que le corresponde.</h2>
+      <div class="k-three" style="display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:52px">
+        <div style="background:#fff;border:1px solid var(--line);border-radius:24px;padding:38px 32px;display:flex;flex-direction:column;gap:18px">
+          <div style="width:84px;height:84px;border-radius:20px;background:rgba(239,139,31,.12);display:flex;align-items:center;justify-content:center"><svg width="46" viewBox="0 0 48 48"><rect x="14" y="6" width="22" height="38" rx="5" fill="var(--navy)"></rect><rect x="18" y="11" width="14" height="24" rx="2" fill="#fff"></rect><circle cx="25" cy="39.5" r="2" fill="#fff"></circle><circle cx="25" cy="22" r="5" fill="var(--orange)"></circle></svg></div>
+          <h3 style="font:600 32px/1.1 'Space Grotesk';color:var(--navy)">Terreno</h3>
+          <p style="font:600 17px/1.3 'Manrope';color:var(--orange)">Conserjes y supervisores</p>
+          <p style="font:500 19px/1.5 'Manrope';color:var(--muted)">Reportan rápido desde el celular o la tablet: foto, audio, checklist. Sin formularios largos.</p>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:24px;padding:38px 32px;display:flex;flex-direction:column;gap:18px">
+          <div style="width:84px;height:84px;border-radius:20px;background:rgba(34,66,92,.1);display:flex;align-items:center;justify-content:center"><svg width="46" viewBox="0 0 48 48"><rect x="6" y="9" width="36" height="24" rx="3" fill="var(--navy)"></rect><rect x="10" y="13" width="28" height="16" rx="1.5" fill="#fff"></rect><rect x="18" y="33" width="12" height="4" fill="var(--navy)"></rect><rect x="13" y="37" width="22" height="3" rx="1.5" fill="var(--navy)"></rect><rect x="14" y="17" width="8" height="8" rx="1" fill="var(--orange)"></rect><rect x="25" y="17" width="9" height="3" fill="#c8cfd6"></rect><rect x="25" y="22" width="9" height="3" fill="#c8cfd6"></rect></svg></div>
+          <h3 style="font:600 32px/1.1 'Space Grotesk';color:var(--navy)">Administradora</h3>
+          <p style="font:600 17px/1.3 'Manrope';color:var(--orange)">Backoffice de control</p>
+          <p style="font:500 19px/1.5 'Manrope';color:var(--muted)">Revisa todos los condominios, aprueba informes, asigna tareas y controla los pendientes.</p>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:24px;padding:38px 32px;display:flex;flex-direction:column;gap:18px">
+          <div style="width:84px;height:84px;border-radius:20px;background:rgba(239,139,31,.12);display:flex;align-items:center;justify-content:center"><svg width="50" viewBox="0 0 48 48"><circle cx="15" cy="17" r="6" fill="var(--navy)"></circle><circle cx="33" cy="17" r="6" fill="var(--orange)"></circle><path d="M4 40 c0-8 5-13 11-13 s11 5 11 13z" fill="var(--navy)"></path><path d="M22 40 c0-8 5-13 11-13 s11 5 11 13z" fill="var(--orange)"></path></svg></div>
+          <h3 style="font:600 32px/1.1 'Space Grotesk';color:var(--navy)">Comité y vecinos</h3>
+          <p style="font:600 17px/1.3 'Manrope';color:var(--orange)">La comunidad</p>
+          <p style="font:500 19px/1.5 'Manrope';color:var(--muted)">Reciben solo la información aprobada: comunicados, informes y novedades del condominio.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BENEFICIOS ============ -->
+  <section id="beneficios" class="k-sect" style="background:var(--paper);padding:110px 40px">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:20px">Lo que gana tu administradora</div>
+      <h2 class="k-h2" style="font:600 48px/1.12 'Space Grotesk';color:var(--navy);max-width:760px">Menos trabajo manual, comités más conformes.</h2>
+      <div class="k-benefits" style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:52px">
+        <div style="background:var(--cream);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px"><svg width="42" viewBox="0 0 48 48"><circle cx="24" cy="26" r="17" fill="none" stroke="var(--orange)" stroke-width="4"></circle><path d="M24 26 V17 M24 26 l7 5" stroke="var(--navy)" stroke-width="4" fill="none" stroke-linecap="round"></path><rect x="19" y="4" width="10" height="5" rx="2" fill="var(--navy)"></rect></svg><h3 style="font:600 26px/1.1 'Space Grotesk';color:var(--navy)">Ahorro de horas</h3><p style="font:500 18px/1.45 'Manrope';color:var(--muted)">Los informes se redactan solos; tu equipo deja de escribir desde cero.</p></div>
+        <div style="background:var(--cream);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px"><svg width="42" viewBox="0 0 48 48"><path d="M24 6 l14 6 v10 c0 10-7 16-14 20 -7-4-14-10-14-20 V12z" fill="none" stroke="var(--orange)" stroke-width="4"></path><path d="M17 24 l5 5 9-11" stroke="var(--navy)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><h3 style="font:600 26px/1.1 'Space Grotesk';color:var(--navy)">Respaldo ante reclamos</h3><p style="font:500 18px/1.45 'Manrope';color:var(--muted)">Toda acción con fecha, responsable y evidencia. La prueba siempre a mano.</p></div>
+        <div style="background:var(--navy);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px"><svg width="42" viewBox="0 0 48 48"><circle cx="18" cy="16" r="6" fill="var(--orange)"></circle><circle cx="32" cy="16" r="6" fill="#eaf0f6"></circle><path d="M6 38 c0-7 5-11 10-11 s10 4 10 11z" fill="var(--orange)"></path><path d="M23 38 c0-7 5-11 11-11 s10 4 10 11z" fill="#eaf0f6"></path></svg><h3 style="font:600 26px/1.1 'Space Grotesk';color:#fff">Comités más conformes</h3><p style="font:500 18px/1.45 'Manrope';color:#a9bccd">La comunidad percibe orden y transparencia. Menos fricción en las reuniones.</p></div>
+        <div style="background:var(--cream);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px"><svg width="42" viewBox="0 0 48 48"><rect x="8" y="26" width="8" height="16" rx="2" fill="var(--navy)"></rect><rect x="20" y="16" width="8" height="26" rx="2" fill="var(--orange)"></rect><rect x="32" y="8" width="8" height="34" rx="2" fill="var(--navy)"></rect></svg><h3 style="font:600 26px/1.1 'Space Grotesk';color:var(--navy)">Imagen profesional</h3><p style="font:500 18px/1.45 'Manrope';color:var(--muted)">Informes y comunicados prolijos que elevan la percepción de tu servicio.</p></div>
+        <div style="background:var(--cream);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px"><svg width="42" viewBox="0 0 48 48"><path d="M24 42 C10 32 6 24 6 17 a10 10 0 0 1 18-5 10 10 0 0 1 18 5 c0 7-4 15-18 25z" fill="none" stroke="var(--orange)" stroke-width="4"></path></svg><h3 style="font:600 26px/1.1 'Space Grotesk';color:var(--navy)">Retención de clientes</h3><p style="font:500 18px/1.45 'Manrope';color:var(--muted)">Un comité que ve y confía renueva el contrato. Menos rotación de condominios.</p></div>
+        <div style="background:var(--cream);border-radius:22px;padding:32px;display:flex;flex-direction:column;gap:14px"><svg width="42" viewBox="0 0 48 48"><rect x="8" y="8" width="32" height="32" rx="8" fill="none" stroke="var(--orange)" stroke-width="4"></rect><path d="M16 24 h16 M24 16 v16" stroke="var(--navy)" stroke-width="4" stroke-linecap="round"></path></svg><h3 style="font:600 26px/1.1 'Space Grotesk';color:var(--navy)">Todo centralizado</h3><p style="font:500 18px/1.45 'Manrope';color:var(--muted)">Tareas, informes y comunicaciones en un solo lugar. Se acaba el caos del WhatsApp.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MÉTRICAS ============ -->
+  <section class="k-sect" style="background:var(--navy);padding:96px 40px;color:#eaf0f6">
+    <div style="max-width:1280px;margin:0 auto">
+      <div class="k-metrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+        <div style="text-align:center"><div style="font:700 66px/1 'Space Grotesk';color:var(--orange2)">-40%</div><div style="font:600 19px/1.3 'Manrope';color:#cdd9e3;margin-top:10px">tiempo en redactar informes</div></div>
+        <div style="text-align:center"><div style="font:700 66px/1 'Space Grotesk';color:#fff">100%</div><div style="font:600 19px/1.3 'Manrope';color:#cdd9e3;margin-top:10px">de las acciones con evidencia</div></div>
+        <div style="text-align:center"><div style="font:700 66px/1 'Space Grotesk';color:#fff">1</div><div style="font:600 19px/1.3 'Manrope';color:#cdd9e3;margin-top:10px">panel para todos tus condominios</div></div>
+        <div style="text-align:center"><div style="font:700 66px/1 'Space Grotesk';color:var(--orange2)">24/7</div><div style="font:600 19px/1.3 'Manrope';color:#cdd9e3;margin-top:10px">acceso del comité al estado real</div></div>
+      </div>
+      <p style="font:500 15px/1.3 'Manrope';color:#7f97ab;margin-top:36px;text-align:center">Cifras referenciales para ilustrar el impacto; se ajustan a la realidad de cada administradora.</p>
+    </div>
+  </section>
+
+  <!-- ============ IMPLEMENTACIÓN ============ -->
+  <section id="partimos" class="k-sect" style="background:var(--cream);padding:110px 40px">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="font:700 14px/1 'Manrope';letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:20px">Cómo partimos</div>
+      <h2 class="k-h2" style="font:600 48px/1.12 'Space Grotesk';color:var(--navy);max-width:760px">Empezamos simple y crecemos contigo.</h2>
+      <div class="k-three" style="display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:24px;margin-top:52px;align-items:stretch">
+        <div style="background:var(--navy);border-radius:24px;padding:38px;display:flex;flex-direction:column;gap:18px;box-shadow:0 30px 70px -40px rgba(22,41,59,.6)">
+          <span style="align-self:flex-start;font:600 15px/1 'Manrope';color:var(--navy);background:var(--orange2);padding:8px 15px;border-radius:20px">Fase 1 · Ahora</span>
+          <h3 style="font:600 30px/1.1 'Space Grotesk';color:#fff">Operación y comité</h3>
+          <ul style="display:flex;flex-direction:column;gap:12px">
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope';color:#dfe8ef"><span style="color:var(--orange2)">✓</span>App para supervisores y conserjes</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope';color:#dfe8ef"><span style="color:var(--orange2)">✓</span>Incidencias con foto, audio y texto</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope';color:#dfe8ef"><span style="color:var(--orange2)">✓</span>Informes con IA y aprobación</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope';color:#dfe8ef"><span style="color:var(--orange2)">✓</span>Panel para el comité</li>
+          </ul>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:24px;padding:38px;display:flex;flex-direction:column;gap:18px">
+          <span style="align-self:flex-start;font:600 15px/1 'Manrope';color:var(--muted);background:var(--line);padding:8px 15px;border-radius:20px">Fase 2</span>
+          <h3 style="font:600 30px/1.1 'Space Grotesk';color:var(--navy)">Comunidad</h3>
+          <ul style="display:flex;flex-direction:column;gap:12px">
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope'"><span style="color:var(--orange)">→</span>Portal y app para vecinos</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope'"><span style="color:var(--orange)">→</span>Comunicados y notificaciones</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope'"><span style="color:var(--orange)">→</span>Correo y segmentación por torre</li>
+          </ul>
+        </div>
+        <div style="background:#fff;border:1px solid var(--line);border-radius:24px;padding:38px;display:flex;flex-direction:column;gap:18px">
+          <span style="align-self:flex-start;font:600 15px/1 'Manrope';color:var(--muted);background:var(--line);padding:8px 15px;border-radius:20px">Fase 3</span>
+          <h3 style="font:600 30px/1.1 'Space Grotesk';color:var(--navy)">Automatización</h3>
+          <ul style="display:flex;flex-direction:column;gap:12px">
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope'"><span style="color:var(--orange)">→</span>WhatsApp y Telegram</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope'"><span style="color:var(--orange)">→</span>Informes mensuales automáticos</li>
+            <li style="display:flex;gap:10px;font:500 19px/1.35 'Manrope'"><span style="color:var(--orange)">→</span>Indicadores y comparativas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA / CONTACTO ============ -->
+  <section id="contacto" class="k-sect" style="background:var(--paper);padding:110px 40px">
+    <div style="max-width:1100px;margin:0 auto;background:var(--navy);border-radius:32px;padding:80px 60px;text-align:center;position:relative;overflow:hidden">
+      <div style="background:#fff;border-radius:20px;padding:18px 30px;display:inline-flex;margin-bottom:32px"><img src="assets/komite-logo.png" alt="Komite" style="height:70px;width:auto"></div>
+      <h2 class="k-h2" style="font:500 46px/1.15 'Space Grotesk';color:#fff;max-width:800px;margin:0 auto;text-wrap:balance">Mostrémosle a un comité, en un condominio piloto, lo que Komite puede hacer.</h2>
+      <p style="font:500 21px/1.5 'Manrope';color:#a9bccd;margin-top:22px;max-width:680px;margin-left:auto;margin-right:auto">Agenda una demostración y define un condominio para partir. En pocas semanas verás el primer informe automático aprobado.</p>
+      <div style="display:flex;gap:16px;margin-top:40px;flex-wrap:wrap;justify-content:center">
+        <a href="mailto:contacto@komite.cl" style="background:var(--orange);color:var(--navy);font:700 20px/1 'Space Grotesk';padding:20px 38px;border-radius:14px">Agendar demo</a>
+        <a href="mailto:contacto@komite.cl" style="border:2px solid rgba(255,255,255,.3);color:#fff;font:600 20px/1 'Manrope';padding:20px 38px;border-radius:14px;display:flex;align-items:center;gap:12px"><span style="width:11px;height:11px;border-radius:50%;background:var(--orange2)"></span>contacto@komite.cl</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer style="background:var(--navy);padding:44px 40px;color:#7f97ab">
+    <div style="max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px">
+      <div style="background:#fff;border-radius:12px;padding:10px 18px;display:inline-flex"><img src="assets/komite-logo.png" alt="Komite" style="height:34px;width:auto"></div>
+      <div style="font:600 16px/1 'Manrope';letter-spacing:.05em">Información clara, comunidad transparente</div>
+      <div style="font:500 15px/1 'Manrope'">© 2026 Komite</div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

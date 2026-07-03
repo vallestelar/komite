@@ -7,6 +7,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 
 class UserCondominium(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
+    company = fields.ForeignKeyField("models.Company", related_name="user_condominium_memberships", null=True, on_delete=fields.CASCADE)
     user = fields.ForeignKeyField("models.User", related_name="condominium_memberships", on_delete=fields.CASCADE)
     condominium = fields.ForeignKeyField("models.Condominium", related_name="user_memberships", on_delete=fields.CASCADE)
     role = fields.ForeignKeyField("models.Role", related_name="user_condominiums", on_delete=fields.RESTRICT)
@@ -18,5 +19,4 @@ class UserCondominium(TimestampAuditMixin):
     class Meta:
         table = "user_condominiums"
         unique_together = (("user", "condominium", "role", "unit"),)
-        indexes = (("user_id",), ("condominium_id",), ("role_id",), ("status",))
-
+        indexes = (("company_id",), ("user_id",), ("condominium_id",), ("role_id",), ("status",))

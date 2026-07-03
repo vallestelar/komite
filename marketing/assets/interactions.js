@@ -140,7 +140,7 @@
       if (!contactForm.reportValidity()) return;
 
       const data = new FormData(contactForm);
-      const recipient = contactForm.dataset.contactEmail || "contacto@komite.cl";
+      const recipient = contactForm.dataset.contactEmail || "contacto.komite@gmail.com";
       const lines = [
         "Hola, quiero agendar una demo de Komite.",
         "",

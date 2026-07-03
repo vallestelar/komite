@@ -63,6 +63,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { id: "tools", label: "Centro de herramientas", icon: "tool", view: "tools" },
       { id: "edifito", label: "Edifito", icon: "table", view: "edifito" },
+      { id: "comunidad-feliz", label: "Comunidad Feliz", icon: "home", view: "comunidad-feliz" },
       { id: "audio", label: "Procesar audio", icon: "mic", view: "audio" },
       { id: "spreadsheet-tools", label: "Importar planillas", icon: "table", view: "spreadsheet-tools" },
       { id: "monthly-summary", label: "Resumen mensual", icon: "spark", view: "monthly-summary" },
@@ -198,6 +199,7 @@ onMounted(() => {
       </header>
 
       <DashboardView v-if="currentView === 'dashboard'" @open-view="selectView" />
+      <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" />
       <ToolsView v-else-if="['tools', 'edifito', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" />
       <PlaceholderView v-else :title="currentTitle" :view="currentView" />
     </section>

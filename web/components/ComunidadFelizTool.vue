@@ -1,8 +1,4 @@
 <script setup lang="ts">
-const props = defineProps<{
-  view: string;
-}>();
-
 type BankOption = {
   id?: string;
   name: string;
@@ -10,7 +6,7 @@ type BankOption = {
   status?: string;
 };
 
-type EdifitoRow = {
+type ComunidadFelizRow = {
   monto: string;
   rut: string;
   nombre: string;
@@ -27,8 +23,8 @@ type EdifitoRow = {
   status: string;
 };
 
-type EdifitoResponse = {
-  rows: EdifitoRow[];
+type ComunidadFelizResponse = {
+  rows: ComunidadFelizRow[];
   summary: {
     total: number;
     matched: number;
@@ -39,59 +35,27 @@ type EdifitoResponse = {
   };
   download_filename: string;
   download_base64: string;
+  ingresos_filename: string;
+  ingresos_base64: string;
 };
 
 const { request } = useApi();
 const { activeCondominium } = useAuth();
 
-const tools = [
-  {
-    title: "Edifito",
-    icon: "table",
-    status: "Preparado",
-    copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
-  },
-  {
-    title: "Comunidad Feliz",
-    icon: "home",
-    status: "Preparado",
-    copy: "Cruzar cartolas Banco de Chile con boletas Comunidad Feliz y generar archivos de carga automatica.",
-  },
-  {
-    title: "Procesar audio",
-    icon: "mic",
-    status: "Preparado",
-    copy: "Transcribir audios de terreno y convertirlos en borradores de incidencia, tarea, informe o comunicado.",
-  },
-  {
-    title: "Importar planillas",
-    icon: "table",
-    status: "Preparado",
-    copy: "Cargar planillas de novedades, unidades, mantenciones o pendientes para normalizarlas antes de trabajarlas.",
-  },
-  {
-    title: "Resumen mensual",
-    icon: "spark",
-    status: "Preparado",
-    copy: "Agrupar incidencias, tareas, mantenciones e inspecciones para preparar informes de gestion revisables.",
-  },
-];
-
 const banks = ref<BankOption[]>([]);
-const selectedBankKey = ref("name:Santander");
+const selectedBankKey = ref("name:Banco de Chile");
 const bankStatementFile = ref<File | null>(null);
-const assignmentsFile = ref<File | null>(null);
-const chargeDetailFile = ref<File | null>(null);
+const chargesFile = ref<File | null>(null);
 const fileInputKey = ref(0);
 const processing = ref(false);
 const errorMessage = ref("");
-const result = ref<EdifitoResponse | null>(null);
+const result = ref<ComunidadFelizResponse | null>(null);
 const selectedUcoFilter = ref("");
 const selectedStatusFilter = ref("");
 
+const bankKey = (bank: BankOption) => bank.id || `name:${bank.name}`;
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
-const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && assignmentsFile.value && chargeDetailFile.value && !processing.value));
-const isEdifito = computed(() => props.view === "edifito");
+const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && chargesFile.value && !processing.value));
 const ucoOptions = computed(() => {
   const values = new Set((result.value?.rows || []).map((row) => row.uco).filter(Boolean));
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -108,66 +72,72 @@ const filteredRows = computed(() => {
     return matchesUco && matchesStatus;
   });
 });
-
-const bankKey = (bank: BankOption) => bank.id || `name:${bank.name}`;
+const liveSummary = computed(() => {
+  const rows = result.value?.rows || [];
+  return {
+    total: rows.length,
+    matched: rows.filter((row) => row.uco).length,
+    not_matched: rows.filter((row) => !row.uco).length,
+    procesar_pago: rows.filter((row) => row.status === "Procesar Pago").length,
+    analizar: rows.filter((row) => row.status === "Analizar").length,
+    ya_procesado: rows.filter((row) => row.status === "Ya procesado").length,
+  };
+});
 
 const loadBanks = async () => {
   try {
     const data = await request<{ items?: BankOption[] }>("/api/v1/banks/?page=1&page_size=100&order_by=name");
     const activeBanks = (data.items || []).filter((bank) => bank.name && (!bank.status || bank.status === "active"));
-    banks.value = activeBanks.length ? activeBanks : [{ name: "Santander", code: "santander" }];
+    banks.value = activeBanks.length ? activeBanks : [{ name: "Banco de Chile", code: "banco_chile" }];
   } catch {
-    banks.value = [{ name: "Santander", code: "santander" }];
+    banks.value = [{ name: "Banco de Chile", code: "banco_chile" }];
   }
 
-  const santander = banks.value.find((bank) => `${bank.name} ${bank.code || ""}`.toLowerCase().includes("santander"));
-  selectedBankKey.value = bankKey(santander || banks.value[0]);
+  const chile = banks.value.find((bank) => `${bank.name} ${bank.code || ""}`.toLowerCase().includes("chile"));
+  selectedBankKey.value = bankKey(chile || banks.value[0]);
 };
 
-const setFile = (event: Event, target: "bank" | "assignments" | "detail") => {
+const setFile = (event: Event, target: "bank" | "charges") => {
   const file = (event.target as HTMLInputElement).files?.[0] || null;
   if (target === "bank") bankStatementFile.value = file;
-  if (target === "assignments") assignmentsFile.value = file;
-  if (target === "detail") chargeDetailFile.value = file;
+  if (target === "charges") chargesFile.value = file;
   result.value = null;
   errorMessage.value = "";
 };
 
-const resetEdifito = () => {
-  const santander = banks.value.find((bank) => `${bank.name} ${bank.code || ""}`.toLowerCase().includes("santander"));
-  selectedBankKey.value = bankKey(santander || banks.value[0]);
+const resetTool = () => {
+  const chile = banks.value.find((bank) => `${bank.name} ${bank.code || ""}`.toLowerCase().includes("chile"));
+  selectedBankKey.value = bankKey(chile || banks.value[0]);
   bankStatementFile.value = null;
-  assignmentsFile.value = null;
-  chargeDetailFile.value = null;
-  selectedUcoFilter.value = "";
-  selectedStatusFilter.value = "";
+  chargesFile.value = null;
   processing.value = false;
   errorMessage.value = "";
   result.value = null;
+  selectedUcoFilter.value = "";
+  selectedStatusFilter.value = "";
   fileInputKey.value += 1;
 };
 
-const processEdifito = async () => {
+const processFiles = async () => {
   if (!canProcess.value || !selectedBank.value) return;
 
   const form = new FormData();
   form.append("bank_statement", bankStatementFile.value as File);
-  form.append("assignments_file", assignmentsFile.value as File);
-  form.append("charge_detail_file", chargeDetailFile.value as File);
+  form.append("charges_file", chargesFile.value as File);
   if (selectedBank.value.id) form.append("bank_id", selectedBank.value.id);
   form.append("bank_name", selectedBank.value.name);
 
   processing.value = true;
   errorMessage.value = "";
   result.value = null;
+  selectedUcoFilter.value = "";
+  selectedStatusFilter.value = "";
 
   try {
-    result.value = await request<EdifitoResponse>("/api/v1/edifito/process", {
+    result.value = await request<ComunidadFelizResponse>("/api/v1/comunidad-feliz/process", {
       method: "POST",
       body: form,
     });
-    selectedUcoFilter.value = "";
-    selectedStatusFilter.value = "";
   } catch (error) {
     errorMessage.value = parseError(error);
   } finally {
@@ -175,28 +145,52 @@ const processEdifito = async () => {
   }
 };
 
-const downloadResult = () => {
-  if (!result.value) return;
+const toggleStatus = (row: ComunidadFelizRow) => {
+  if (row.status === "Analizar") {
+    row.status = "Procesar Pago";
+  } else if (row.status === "Procesar Pago") {
+    row.status = "Analizar";
+  }
+};
 
-  const binary = atob(result.value.download_base64);
+const downloadBase64 = (base64: string, filename: string) => {
+  const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index);
   }
-
   const blob = new Blob([bytes], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = result.value.download_filename;
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
 };
 
+const downloadMovements = () => {
+  if (!result.value) return;
+  downloadBase64(result.value.download_base64, result.value.download_filename);
+};
+
+const downloadIngresos = async () => {
+  if (!result.value) return;
+  try {
+    const data = await request<{ ingresos_filename: string; ingresos_base64: string }>("/api/v1/comunidad-feliz/export-ingresos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rows: result.value.rows }),
+    });
+    downloadBase64(data.ingresos_base64, data.ingresos_filename);
+  } catch (error) {
+    errorMessage.value = parseError(error);
+  }
+};
+
 const parseError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : "No se pudo procesar Edifito.";
+  const message = error instanceof Error ? error.message : "No se pudo procesar Comunidad Feliz.";
   try {
     const parsed = JSON.parse(message);
     return parsed.detail || message;
@@ -212,53 +206,30 @@ const actionIcon = (status: string) => {
   return "help-circle";
 };
 
-watch(isEdifito, (active) => {
-  if (active && !banks.value.length) loadBanks();
-}, { immediate: true });
+onMounted(loadBanks);
 </script>
 
 <template>
-  <section v-if="view !== 'edifito'" class="panel placeholder-panel">
-    <p class="eyebrow">Herramientas</p>
-    <h2>Centro de apoyo para la administradora</h2>
-    <p class="placeholder-copy">
-      Funciones pensadas para reducir trabajo repetitivo del equipo del cliente: procesar informacion, ordenar evidencias y preparar borradores antes de publicar o enviar.
-    </p>
-
-    <div class="tool-grid" style="margin-top: 18px">
-      <article v-for="tool in tools" :key="tool.title" class="tool-card">
-        <span class="tool-icon">
-          <svg class="icon" aria-hidden="true"><use :href="`#icon-${tool.icon}`" /></svg>
-        </span>
-        <div>
-          <h3>{{ tool.title }}</h3>
-          <p class="card-copy">{{ tool.copy }}</p>
-        </div>
-        <span class="status-pill">{{ tool.status }}</span>
-      </article>
-    </div>
-  </section>
-
-  <section v-else class="panel edifito-panel">
+  <section class="panel edifito-panel">
     <div class="edifito-header">
       <div>
         <p class="eyebrow">Herramientas</p>
-        <h2>Edifito</h2>
+        <h2>Comunidad Feliz</h2>
         <p class="placeholder-copy">Condominio activo: {{ activeCondominium?.name || "Sin condominio seleccionado" }}</p>
       </div>
       <div class="hero-actions">
-        <button class="button ghost" type="button" @click="resetEdifito">
+        <button class="button ghost" type="button" @click="resetTool">
           <svg class="icon" aria-hidden="true"><use href="#icon-settings" /></svg>
           <span>Reset</span>
         </button>
-        <button class="button orange" type="button" :disabled="!canProcess" @click="processEdifito">
+        <button class="button orange" type="button" :disabled="!canProcess" @click="processFiles">
           <svg class="icon" aria-hidden="true"><use href="#icon-checks" /></svg>
           <span>{{ processing ? "Procesando" : "Procesar" }}</span>
         </button>
       </div>
     </div>
 
-    <div :key="fileInputKey" class="edifito-form">
+    <div :key="fileInputKey" class="comunidad-form">
       <label>
         Banco
         <select v-model="selectedBankKey">
@@ -268,16 +239,12 @@ watch(isEdifito, (active) => {
         </select>
       </label>
       <label>
-        Cartola banco
-        <input type="file" accept=".pdf" @change="setFile($event, 'bank')" />
+        Cartola Banco de Chile
+        <input type="file" accept=".xls,.xlsx" @change="setFile($event, 'bank')" />
       </label>
       <label>
-        Informe asignaciones
-        <input type="file" accept=".xlsx" @change="setFile($event, 'assignments')" />
-      </label>
-      <label>
-        Detalle cobros y pagos por UCO
-        <input type="file" accept=".xlsx" @change="setFile($event, 'detail')" />
+        Boletas Comunidad Feliz
+        <input type="file" accept=".xlsx" @change="setFile($event, 'charges')" />
       </label>
     </div>
 
@@ -285,15 +252,15 @@ watch(isEdifito, (active) => {
 
     <div v-if="result" class="edifito-results">
       <div class="edifito-summary">
-        <article><span>Total</span><strong>{{ result.summary.total }}</strong></article>
-        <article><span>Match</span><strong>{{ result.summary.matched }}</strong></article>
-        <article><span>Sin match</span><strong>{{ result.summary.not_matched }}</strong></article>
-        <article><span>Procesar</span><strong>{{ result.summary.procesar_pago }}</strong></article>
-        <article><span>Analizar</span><strong>{{ result.summary.analizar }}</strong></article>
-        <article><span>Ya procesado</span><strong>{{ result.summary.ya_procesado }}</strong></article>
+        <article><span>Total</span><strong>{{ liveSummary.total }}</strong></article>
+        <article><span>Match</span><strong>{{ liveSummary.matched }}</strong></article>
+        <article><span>Sin match</span><strong>{{ liveSummary.not_matched }}</strong></article>
+        <article><span>Procesar</span><strong>{{ liveSummary.procesar_pago }}</strong></article>
+        <article><span>Analizar</span><strong>{{ liveSummary.analizar }}</strong></article>
+        <article><span>Ya procesado</span><strong>{{ liveSummary.ya_procesado }}</strong></article>
       </div>
 
-      <div class="edifito-toolbar">
+      <div class="comunidad-toolbar">
         <label>
           Filtrar por UCO
           <select v-model="selectedUcoFilter">
@@ -308,45 +275,51 @@ watch(isEdifito, (active) => {
             <option v-for="status in statusOptions" :key="status" :value="status">{{ status }}</option>
           </select>
         </label>
-        <button class="button ghost" type="button" @click="downloadResult">
+        <button class="button ghost" type="button" @click="downloadMovements">
           <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
           <span>Descargar Excel</span>
+        </button>
+        <button class="button orange" type="button" @click="downloadIngresos">
+          <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
+          <span>Carga Automatica</span>
         </button>
       </div>
 
       <div class="edifito-table-wrap">
-        <table class="edifito-table">
+        <table class="edifito-table comunidad-table">
           <thead>
             <tr>
               <th class="bank-col">MONTO</th>
-              <th class="bank-col">RUT</th>
               <th class="bank-col">NOMBRE</th>
               <th class="bank-col">FECHA</th>
               <th class="bank-col">DOCUMENTO</th>
               <th class="bank-col">SUCURSAL</th>
               <th class="analysis-col">UCO</th>
-              <th class="analysis-col">MATCH RUT</th>
               <th class="analysis-col">MATCH NOMBRE</th>
+              <th class="analysis-col">COBRO</th>
+              <th class="analysis-col">PAGO</th>
               <th class="analysis-col">ESTADO</th>
               <th class="analysis-col">ACCION</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in filteredRows" :key="`${row.rut}-${row.fecha}-${index}`">
+            <tr v-for="(row, index) in filteredRows" :key="`${row.nombre}-${row.fecha}-${index}`">
               <td>{{ row.monto }}</td>
-              <td>{{ row.rut }}</td>
               <td>{{ row.nombre }}</td>
               <td>{{ row.fecha }}</td>
               <td>{{ row.documento }}</td>
               <td>{{ row.sucursal }}</td>
               <td>{{ row.uco }}</td>
-              <td>{{ row.match_rut }}</td>
               <td>{{ row.match_nombre }}</td>
+              <td>{{ row.cobro }}</td>
+              <td>{{ row.pago }}</td>
               <td>{{ row.status }}</td>
               <td class="center-cell">
-                <svg class="status-action" :class="row.status ? row.status.toLowerCase().replaceAll(' ', '-') : 'not-match'" aria-hidden="true">
-                  <use :href="`#icon-${actionIcon(row.status)}`" />
-                </svg>
+                <button class="icon-action-button" type="button" @click="toggleStatus(row)">
+                  <svg class="status-action" :class="row.status ? row.status.toLowerCase().replaceAll(' ', '-') : 'not-match'" aria-hidden="true">
+                    <use :href="`#icon-${actionIcon(row.status)}`" />
+                  </svg>
+                </button>
               </td>
             </tr>
             <tr v-if="!filteredRows.length">

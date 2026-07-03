@@ -538,6 +538,7 @@ function showPanel(panel) {
 async function openView(view) {
   state.currentView = view;
   $$(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+  scrollViewToTop();
 
   if (view === "dashboard") {
     $("#viewTitle").textContent = "Dashboard";
@@ -582,6 +583,18 @@ async function openView(view) {
   }
   showPanel("table");
   await loadTable();
+}
+
+function scrollViewToTop() {
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    const workspace = document.querySelector(".workspace");
+    if (workspace) {
+      workspace.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    }
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  });
 }
 
 async function loadTable() {

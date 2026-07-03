@@ -20,6 +20,7 @@ const { activeCondominium, company, user, clearSession, refreshToken } = useAuth
 const currentView = ref("dashboard");
 const sidebarCollapsed = ref(false);
 const collapsedGroups = ref<string[]>([]);
+const workspaceRef = ref<HTMLElement | null>(null);
 
 const menuGroups: MenuGroup[] = [
   {
@@ -105,6 +106,9 @@ const selectView = (view: string) => {
   currentView.value = view;
   nextTick(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    workspaceRef.value?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   });
 };
 
@@ -172,7 +176,7 @@ onMounted(() => {
       </nav>
     </aside>
 
-    <section class="workspace">
+    <section ref="workspaceRef" class="workspace">
       <header class="topbar">
         <div class="title-row">
           <button class="button ghost icon-only" type="button" :title="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'" @click="toggleSidebar">

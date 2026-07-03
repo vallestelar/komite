@@ -12,6 +12,7 @@ marketing/
   assets/
     komite-logo.png
     logo.png
+    interactions.js
     fonts/
   Dockerfile
 ```
@@ -76,6 +77,7 @@ docker compose stop marketing
 
 - Texto y secciones: `index.html`.
 - Colores, layout y responsive: estilos embebidos en `index.html`.
+- Movimiento e interacciones: `assets/interactions.js`.
 - Imagenes y logos: `assets/`.
 
 Despues de cambiar archivos, refresca el navegador. Si estas usando Docker y

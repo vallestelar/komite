@@ -205,6 +205,33 @@ Invoke-RestMethod `
   -Body '{"email":"admin@komite.cl","password":"admin1234"}'
 ```
 
+El login devuelve un `access_token` corto y un `refresh_token` largo. La configuracion recomendada actual es:
+
+```env
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+```
+
+Renovar sesion cuando caduque el access token:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8000/api/v1/auth/refresh `
+  -ContentType "application/json" `
+  -Body '{"refresh_token":"TU_REFRESH_TOKEN"}'
+```
+
+Cerrar sesion y revocar refresh token:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8000/api/v1/auth/logout `
+  -ContentType "application/json" `
+  -Body '{"refresh_token":"TU_REFRESH_TOKEN"}'
+```
+
 Consultar usuario actual:
 
 ```powershell

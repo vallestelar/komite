@@ -6,6 +6,7 @@ from app.models.entities.role import Role
 from app.models.entities.bank import Bank
 from app.models.entities.user import User
 from app.models.entities.user_condominium import UserCondominium
+from app.models.entities.refresh_token import RefreshToken
 from app.models.entities.incident import Incident
 from app.models.entities.incident_event import IncidentEvent
 from app.models.entities.task import Task
@@ -32,6 +33,7 @@ __all__ = [
     "Bank",
     "User",
     "UserCondominium",
+    "RefreshToken",
     "Incident",
     "IncidentEvent",
     "Task",

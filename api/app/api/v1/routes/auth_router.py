@@ -8,7 +8,9 @@ from app.schemas.auth.auth_schema import (
     CompanyLoginResponse,
     CondominiumLoginResponse,
     LoginRequest,
+    LogoutRequest,
     MeResponse,
+    RefreshTokenRequest,
     TokenResponse,
     UserLoginResponse,
 )
@@ -23,7 +25,14 @@ def _company_payload(company: Company | None) -> CompanyLoginResponse | None:
     return CompanyLoginResponse(id=str(company.id), name=company.name)
 
 
-async def _build_token_response(user) -> TokenResponse:
+def _client_ip(request: Request) -> str | None:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else None
+
+
+async def _build_token_response(user, refresh_token: str | None = None) -> TokenResponse:
     memberships = await get_user_memberships(str(user.id))
     condominiums: list[CondominiumLoginResponse] = []
     seen_condominiums: set[tuple[str, str, str | None]] = set()
@@ -88,6 +97,7 @@ async def _build_token_response(user) -> TokenResponse:
 
     return TokenResponse(
         access_token=access_token,
+        refresh_token=refresh_token,
         user=user_payload,
         company=company_payload,
         condominiums=condominiums,
@@ -95,7 +105,7 @@ async def _build_token_response(user) -> TokenResponse:
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest) -> TokenResponse:
+async def login(payload: LoginRequest, request: Request) -> TokenResponse:
     invalid_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales invalidas",
@@ -115,11 +125,16 @@ async def login(payload: LoginRequest) -> TokenResponse:
     if not verify_password(payload.password, user.password_hash):
         raise invalid_exc
 
-    return await _build_token_response(user)
+    refresh_token, _ = await AuthService.create_refresh_token(
+        user=user,
+        created_by_ip=_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return await _build_token_response(user, refresh_token)
 
 
 @router.post("/backoffice-login", response_model=TokenResponse)
-async def backoffice_login(payload: LoginRequest) -> TokenResponse:
+async def backoffice_login(payload: LoginRequest, request: Request) -> TokenResponse:
     invalid_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales invalidas",
@@ -145,7 +160,36 @@ async def backoffice_login(payload: LoginRequest) -> TokenResponse:
             detail="Acceso restringido a empleados de Komite",
         )
 
-    return await _build_token_response(user)
+    refresh_token, _ = await AuthService.create_refresh_token(
+        user=user,
+        created_by_ip=_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return await _build_token_response(user, refresh_token)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh(payload: RefreshTokenRequest, request: Request) -> TokenResponse:
+    try:
+        user, new_refresh_token, _ = await AuthService.rotate_refresh_token(
+            token=payload.refresh_token,
+            created_by_ip=_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token invalido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return await _build_token_response(user, new_refresh_token)
+
+
+@router.post("/logout")
+async def logout(payload: LogoutRequest) -> dict[str, bool]:
+    await AuthService.revoke_refresh_token(payload.refresh_token)
+    return {"success": True}
 
 
 @router.get("/me", response_model=MeResponse, dependencies=[Depends(require_access_token())])

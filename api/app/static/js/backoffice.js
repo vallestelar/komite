@@ -1,12 +1,16 @@
 const API_BASE = localStorage.getItem("komite_api_base") || window.location.origin;
 const BACKOFFICE_PATH = "/backoffice";
 const TOKEN_KEY = "komite_token";
+const REFRESH_TOKEN_KEY = "komite_refresh_token";
 const USER_KEY = "komite_user";
 const SIDEBAR_KEY = "komite_sidebar_collapsed";
 const NAV_GROUPS_KEY = "komite_nav_groups_collapsed";
+const ACCESS_TOKEN_MAX_AGE_SECONDS = 1800;
+const REFRESH_TOKEN_MAX_AGE_SECONDS = 604800;
 
 const state = {
   token: readToken(),
+  refreshToken: readRefreshToken(),
   user: readUser(),
   currentView: "dashboard",
   currentItems: [],
@@ -213,10 +217,21 @@ async function apiFetch(path, options = {}) {
     headers.Authorization = `Bearer ${state.token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  let response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
   });
+
+  if (response.status === 401 && state.refreshToken && shouldAttemptRefresh(path)) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      headers.Authorization = `Bearer ${state.token}`;
+      response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+      });
+    }
+  }
 
   if (!response.ok) {
     const text = await response.text();
@@ -228,33 +243,65 @@ async function apiFetch(path, options = {}) {
 
 function setSession(data) {
   state.token = data.access_token;
+  state.refreshToken = data.refresh_token || state.refreshToken;
   state.user = data.user;
-  persistSession(state.token, state.user);
+  persistSession(state.token, state.refreshToken, state.user);
+}
+
+function shouldAttemptRefresh(path) {
+  return ![
+    "/api/v1/auth/login",
+    "/api/v1/auth/backoffice-login",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/logout",
+  ].includes(path);
 }
 
 function clearSession() {
   state.token = null;
+  state.refreshToken = null;
   state.user = null;
+  purgeStoredSession();
+}
+
+function purgeStoredSession() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
   document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
+  document.cookie = `${REFRESH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
   document.cookie = `${USER_KEY}=; path=/; max-age=0; SameSite=Lax`;
 }
 
-function persistSession(token, user) {
+function persistSession(token, refreshToken, user) {
   const userPayload = JSON.stringify(user || null);
   localStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   localStorage.setItem(USER_KEY, userPayload);
   sessionStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   sessionStorage.setItem(USER_KEY, userPayload);
-  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=28800; SameSite=Lax`;
-  document.cookie = `${USER_KEY}=${encodeURIComponent(userPayload)}; path=/; max-age=28800; SameSite=Lax`;
+  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=${ACCESS_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+  if (refreshToken) {
+    document.cookie = `${REFRESH_TOKEN_KEY}=${encodeURIComponent(refreshToken)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+  }
+  document.cookie = `${USER_KEY}=${encodeURIComponent(userPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
 }
 
 function readToken() {
-  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || readCookie(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || readCookie(TOKEN_KEY);
+  if (token && isJwtExpired(token)) {
+    purgeStoredSession();
+    return null;
+  }
+  return token;
+}
+
+function readRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY) || readCookie(REFRESH_TOKEN_KEY);
 }
 
 function readUser() {
@@ -275,6 +322,42 @@ function readCookie(name) {
     .map((item) => item.trim())
     .find((item) => item.startsWith(prefix));
   return match ? decodeURIComponent(match.slice(prefix.length)) : null;
+}
+
+function isJwtExpired(token) {
+  try {
+    const payload = JSON.parse(atob(base64UrlToBase64(token.split(".")[1] || "")));
+    return typeof payload.exp === "number" && payload.exp <= Math.floor(Date.now() / 1000);
+  } catch (error) {
+    return true;
+  }
+}
+
+function base64UrlToBase64(value) {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  return base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+}
+
+async function refreshSession() {
+  if (!state.refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: state.refreshToken }),
+    });
+    if (!response.ok) {
+      clearSession();
+      return false;
+    }
+
+    setSession(await response.json());
+    return true;
+  } catch (error) {
+    clearSession();
+    return false;
+  }
 }
 
 function showLogin() {
@@ -1361,7 +1444,18 @@ function escapeHtml(value) {
 }
 
 $("#loginForm").addEventListener("submit", login);
-$("#logoutButton").addEventListener("click", () => {
+$("#logoutButton").addEventListener("click", async () => {
+  if (state.refreshToken) {
+    try {
+      await fetch(`${API_BASE}/api/v1/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: state.refreshToken }),
+      });
+    } catch (error) {
+      // Local logout still wins if the server cannot be reached.
+    }
+  }
   clearSession();
   showLogin();
 });
@@ -1406,12 +1500,20 @@ document.addEventListener("click", (event) => {
 $$(".nav-item").forEach((button) => button.addEventListener("click", () => openView(button.dataset.view)));
 $$("[data-view-target]").forEach((button) => button.addEventListener("click", () => openView(button.dataset.viewTarget)));
 
-if (state.token) {
-  if (window.location.pathname === "/login") {
-    window.location.replace(BACKOFFICE_PATH);
-  } else {
-    showOffice();
+async function bootstrap() {
+  if (!state.token && state.refreshToken) {
+    await refreshSession();
   }
-} else {
-  showLogin();
+
+  if (state.token) {
+    if (window.location.pathname === "/login") {
+      window.location.replace(BACKOFFICE_PATH);
+    } else {
+      showOffice();
+    }
+  } else {
+    showLogin();
+  }
 }
+
+bootstrap();

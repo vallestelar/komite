@@ -50,4 +50,41 @@ public sealed class AuthService : IAuthService
 
         return tokenResponse ?? throw new InvalidOperationException("La API no entrego una sesion valida.");
     }
+
+    public async Task<TokenResponse> RefreshAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/v1/auth/refresh",
+            new RefreshTokenRequest { RefreshToken = refreshToken },
+            JsonOptions,
+            cancellationToken);
+
+        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            throw new InvalidOperationException("La sesion expiro. Inicia sesion nuevamente.");
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>(
+            JsonOptions,
+            cancellationToken);
+
+        return tokenResponse ?? throw new InvalidOperationException("La API no entrego una sesion valida.");
+    }
+
+    public async Task LogoutAsync(
+        string refreshToken,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/v1/auth/logout",
+            new RefreshTokenRequest { RefreshToken = refreshToken },
+            JsonOptions,
+            cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+    }
 }

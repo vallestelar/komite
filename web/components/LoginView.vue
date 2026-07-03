@@ -9,6 +9,7 @@ const step = ref<"credentials" | "condominium">("credentials");
 const selectedCondominiumId = ref("");
 const pendingSession = ref<{
   access_token: string;
+  refresh_token?: string | null;
   user: Record<string, unknown>;
   company?: { id: string; name: string } | null;
   condominiums?: KomiteCondominium[];
@@ -34,6 +35,7 @@ const submit = async () => {
   try {
     const session = await request<{
       access_token: string;
+      refresh_token?: string | null;
       user: Record<string, unknown>;
       company?: { id: string; name: string } | null;
       condominiums?: KomiteCondominium[];

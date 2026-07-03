@@ -15,7 +15,8 @@ type MenuGroup = {
 const SIDEBAR_KEY = "komite_sidebar_collapsed";
 const NAV_GROUPS_KEY = "komite_nav_groups_collapsed";
 
-const { activeCondominium, company, user, clearSession } = useAuth();
+const config = useRuntimeConfig();
+const { activeCondominium, company, user, clearSession, refreshToken } = useAuth();
 const currentView = ref("dashboard");
 const sidebarCollapsed = ref(false);
 const collapsedGroups = ref<string[]>([]);
@@ -107,6 +108,23 @@ const selectView = (view: string) => {
   });
 };
 
+const logout = async () => {
+  const tokenToRevoke = refreshToken.value;
+  if (tokenToRevoke && import.meta.client) {
+    const apiBase = localStorage.getItem("komite_api_base") || config.public.apiBase;
+    try {
+      await fetch(`${apiBase}/api/v1/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: tokenToRevoke }),
+      });
+    } catch {
+      // Local logout still wins if the API is unreachable.
+    }
+  }
+  clearSession();
+};
+
 onMounted(() => {
   sidebarCollapsed.value = localStorage.getItem(SIDEBAR_KEY) === "true";
   try {
@@ -168,7 +186,7 @@ onMounted(() => {
             <span>{{ contextLabel }}</span>
           </span>
           <span>{{ userName }}</span>
-          <button class="button orange" type="button" @click="clearSession">
+          <button class="button orange" type="button" @click="logout">
             <svg class="icon" aria-hidden="true"><use href="#icon-log-out" /></svg>
             <span>Salir</span>
           </button>

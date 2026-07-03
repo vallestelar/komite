@@ -1,49 +1,155 @@
 # Roles y accesos en la app mobile Komite
 
-Este documento explica como configurar usuarios para la app mobile y que vera cada usuario al iniciar sesion segun su rol global y sus accesos a condominios.
+Este documento explica el modelo actual de usuarios, perfiles y accesos para la app mobile Komite. Tambien aclara la diferencia entre Portal Administrador, app mobile y backoffice interno.
 
-## Conceptos base
+## Resumen actual
 
-La app mobile trabaja con tres niveles:
+Komite separa los permisos en tres conceptos distintos:
 
 ```text
-Tenant / Compania
-  -> Modo de uso
-      -> Condominio activo
-          -> Unidad, si aplica
+Empresa / tenant
+  -> Perfil Portal Administrador, si aplica
+  -> Accesos a condominios app mobile
+      -> Rol mobile
+      -> Unidad, si aplica
 ```
 
-El tenant sale de la compania asignada al usuario (`users.company_id`). Despues del login, la app revisa los accesos del usuario en `user_condominiums` y decide que flujo mostrar.
+El rol global fue eliminado. Ya no se usa `users.global_role`.
 
-## Rol global
+## Empresa / tenant
 
-El rol global vive en `users.global_role`. Sirve para permisos generales del sistema, pero en la app mobile actual no reemplaza los accesos a condominios.
+Cada usuario puede pertenecer a una empresa mediante `users.company_id`.
 
-Valores disponibles en el backoffice:
+La empresa sirve para:
 
-| Rol global | Uso esperado | Efecto actual en app mobile |
-|---|---|---|
-| Sin rol global | Usuario normal | La app decide solo por sus accesos a condominios. |
-| `superadmin` | Administracion global del sistema | Puede habilitar modo Operacion sobre los condominios donde el usuario tenga acceso. Si no tiene accesos a condominios, no hay contexto mobile util. |
-| `admin` | Administracion general | Actualmente no cambia el modo mobile por si solo. |
-| `operator` | Operador general | Actualmente no cambia el modo mobile por si solo. |
-| `viewer` | Lector general | Actualmente no cambia el modo mobile por si solo. |
+- Separar datos entre tenants.
+- Saber a que administradora pertenece el usuario.
+- Determinar que condominios puede expandir un acceso mobile marcado como `Todos`.
+- Restringir el backoffice interno a usuarios activos de la empresa `Komite`.
 
-Regla practica: para que la app mobile tenga un contexto concreto, el usuario debe tener al menos un acceso en "Accesos a condominios".
+## Perfil Portal Administrador
 
-## Accesos a condominios
+El campo `users.company_profile` se usa para el Portal Administrador, es decir, la web app administrativa de la empresa administradora cliente.
 
-Cada acceso se configura con:
+Valores actuales:
+
+| Perfil Portal Administrador | Uso esperado |
+|---|---|
+| `project_manager` | Gestion y coordinacion de la operacion de la empresa administradora. |
+| `ejecutivo` | Gestion operativa administrativa, seguimiento, consultas y tareas. |
+| Sin perfil | El usuario no tiene acceso funcional al Portal Administrador por perfil. |
+
+Importante:
+
+- Este perfil aplica a la web app administrativa.
+- No es un rol mobile.
+- No debe confundirse con `vecino`, `comite`, `supervisor` o `conserje`.
+- Supervisor y conserje pertenecen al ambito mobile/operativo, no al perfil del portal.
+
+## Backoffice interno Komite
+
+El backoffice interno es solo para Komite como proveedor SaaS.
+
+Puede entrar un usuario que cumpla:
 
 ```text
-Condominio
-Rol
+Usuario activo
+Empresa asignada: Komite
+Empresa Komite activa
+```
+
+Ya no existe condicion por rol global. Cualquier usuario activo de la empresa `Komite` puede entrar al backoffice interno.
+
+Uso esperado del backoffice:
+
+- Gestionar empresas clientes.
+- Gestionar condominios.
+- Gestionar usuarios.
+- Gestionar tickets de soporte.
+- Gestionar bancos y catalogos globales.
+- Revisar datos generales de la plataforma.
+
+## Accesos a condominios app mobile
+
+Los accesos mobile viven en `user_condominiums`.
+
+Cada acceso contiene:
+
+```text
+Empresa
+Usuario
+Condominio o Todos
+Rol mobile
 Unidad opcional
+Estado
 ```
 
-La app clasifica los roles por `role_code`.
+La app mobile usa estos accesos para decidir que contexto mostrar al usuario.
 
-### Roles de Comunidad
+## Condominio especifico o Todos
+
+En el backoffice, dentro de usuarios, el bloque se llama:
+
+```text
+Accesos a condominios app mobile
+```
+
+En el combo de condominio existen dos formas de configuracion.
+
+### 1. Condominio especifico
+
+Ejemplo:
+
+```text
+Condominio: Vista Sol
+Rol: supervisor
+Unidad: Sin unidad
+```
+
+Resultado:
+
+```text
+El usuario ve Vista Sol en la app mobile con rol supervisor.
+```
+
+### 2. Todos
+
+Ejemplo:
+
+```text
+Condominio: Todos
+Rol: supervisor
+Unidad: bloqueada / Sin unidad
+```
+
+Resultado:
+
+```text
+El usuario ve todos los condominios activos de su empresa en la app mobile.
+```
+
+Reglas de `Todos`:
+
+- Se guarda con `condominium_id = null`.
+- La unidad queda bloqueada.
+- La unidad siempre debe quedar vacia.
+- Requiere que el usuario tenga empresa asignada.
+- Al iniciar sesion, la API expande ese acceso a todos los condominios activos de la empresa del usuario.
+
+## Roles mobile
+
+Los roles mobile disponibles son:
+
+```text
+vecino
+comite
+supervisor
+conserje
+```
+
+Se dividen en dos grupos funcionales.
+
+## Roles de Comunidad
 
 Estos roles llevan al modo Comunidad:
 
@@ -52,68 +158,132 @@ vecino
 comite
 ```
 
-Uso esperado:
-
-- `vecino`: residente asociado a una unidad.
-- `comite`: miembro del comite; puede tener unidad o no.
-
-### Roles de Operacion
-
-Estos roles llevan al modo Operacion:
-
-```text
-administrador_empresa
-administrador_condominio
-supervisor
-conserje
-superadmin
-```
+### Vecino
 
 Uso esperado:
 
-- `supervisor`: usuario de terreno que gestiona inspecciones, tareas y reportes.
-- `conserje`: usuario operativo del condominio.
-- `administrador_condominio`: gestiona un condominio.
-- `administrador_empresa`: gestiona condominios de la empresa, pero por ahora debe tener accesos asignados por condominio.
-- `superadmin`: acceso operativo amplio, condicionado a tener contexto de condominio en mobile.
-
-## Unidad
-
-La unidad apunta a la tabla `units`. Sirve para vincular a un usuario con un departamento, casa, oficina o local dentro del condominio.
+- Residente, propietario o usuario asociado a una comunidad.
+- Normalmente deberia tener unidad asignada.
+- Ve informacion y funcionalidades de su comunidad.
 
 Ejemplo:
 
 ```text
-Usuario: Claudia Fuentes
-Condominio: Edificio Los Alerces
+Condominio: Vista Sol
 Rol: vecino
 Unidad: 1204
 ```
 
-Para roles operativos normalmente se deja sin unidad:
+### Comite
+
+Uso esperado:
+
+- Miembro del comite de administracion.
+- Puede tener unidad o no.
+- Tiene una vision comunitaria mas amplia que un vecino.
+
+Ejemplo:
 
 ```text
-Usuario: Antonio Vergara
-Condominio: Edificio Los Alerces
+Condominio: Vista Sol
+Rol: comite
+Unidad: Sin unidad
+```
+
+## Roles de Operacion
+
+Estos roles llevan al modo Operacion:
+
+```text
+supervisor
+conserje
+```
+
+### Supervisor
+
+Uso esperado:
+
+- Usuario de la empresa administradora.
+- Gestiona operacion en terreno.
+- Puede revisar tareas, incidencias, inspecciones y seguimiento operativo.
+- Puede tener un condominio especifico o acceso a `Todos`.
+
+Ejemplo:
+
+```text
+Condominio: Todos
 Rol: supervisor
 Unidad: Sin unidad
 ```
 
-## Flujo despues del login
+### Conserje
+
+Uso esperado:
+
+- Usuario operativo de terreno o conserjeria.
+- Registra novedades, eventos o incidencias.
+- Normalmente trabaja sobre uno o varios condominios concretos.
+
+Ejemplo:
+
+```text
+Condominio: Vista Sol
+Rol: conserje
+Unidad: Sin unidad
+```
+
+## Unidad
+
+La unidad apunta a la tabla `units`.
+
+Sirve para vincular al usuario con un departamento, casa, oficina o local dentro de un condominio.
+
+Ejemplo de vecino:
+
+```text
+Usuario: Claudia Fuentes
+Condominio: Vista Sol
+Rol: vecino
+Unidad: 1204
+```
+
+Ejemplo operativo:
+
+```text
+Usuario: Antonio Vergara
+Condominio: Vista Sol
+Rol: supervisor
+Unidad: Sin unidad
+```
+
+Regla practica:
+
+- Para `vecino`, conviene asignar unidad en casos reales.
+- Para `comite`, la unidad puede ser opcional.
+- Para `supervisor` y `conserje`, normalmente se deja sin unidad.
+- Para `Todos`, la unidad queda bloqueada y debe ser nula.
+
+## Flujo despues del login mobile
 
 La app decide asi:
 
 ```text
 Login correcto
-  -> Lee company y condominiums desde la API
-  -> Clasifica accesos por role_code
-  -> Si tiene Comunidad y Operacion: muestra selector de modo
+  -> API devuelve empresa y condominios permitidos
+  -> Si existe acceso Todos:
+       -> API lo expande a todos los condominios activos de la empresa
+  -> App clasifica accesos por rol mobile
+  -> Si tiene Comunidad y Operacion:
+       -> muestra selector de modo
   -> Si solo tiene Comunidad:
-       - 1 comunidad: entra directo
-       - varias comunidades: muestra selector de comunidad
+       -> entra o selecciona comunidad
   -> Si solo tiene Operacion:
-       - muestra selector de condominio operativo
+       -> entra o selecciona condominio operativo
 ```
+
+Nota actual del Portal Administrador:
+
+Si un usuario tiene doble rol en un mismo condominio, por ejemplo `supervisor` y `comite`, el selector de condominio del Portal Administrador debe mostrar el condominio una sola vez y solo por nombre.
 
 ## Casos de configuracion
 
@@ -122,27 +292,19 @@ Login correcto
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / vecino / Unidad 1204
+Empresa: Administradora cliente
+Perfil Portal Administrador: Sin perfil
+Accesos mobile:
+  - Condominio Vista Sol / vecino / Unidad 1204
 ```
 
-Resultado en app:
+Resultado:
 
 ```text
-Login
-  -> Entra directo a modo Comunidad
-  -> Condominio activo: Los Alerces / Unidad 1204
-```
-
-Veria el menu Comunidad:
-
-```text
-Inicio
-Avisos
-Incidencias
-Documentos
-Mas
+App mobile
+  -> Modo Comunidad
+  -> Condominio activo: Vista Sol
+  -> Unidad: 1204
 ```
 
 ### Caso 2: vecino con varias comunidades
@@ -150,20 +312,18 @@ Mas
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / vecino / Unidad 1204
-  - Condominio Las Palmas / vecino / Unidad 804
+Accesos mobile:
+  - Condominio Vista Sol / vecino / Unidad 1204
+  - Condominio Espacio Uno III / vecino / Unidad 804
 ```
 
-Resultado en app:
+Resultado:
 
 ```text
-Login
+App mobile
   -> Selector de comunidad
-      - Los Alerces / Unidad 1204
-      - Las Palmas / Unidad 804
-  -> Entra a modo Comunidad con la comunidad elegida
+      - Vista Sol / Unidad 1204
+      - Espacio Uno III / Unidad 804
 ```
 
 ### Caso 3: miembro de comite
@@ -171,85 +331,82 @@ Login
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / comite / Sin unidad
+Accesos mobile:
+  - Condominio Vista Sol / comite / Sin unidad
 ```
 
-Resultado en app:
+Resultado:
 
 ```text
-Login
-  -> Entra directo a modo Comunidad
-  -> Condominio activo: Los Alerces
+App mobile
+  -> Modo Comunidad
+  -> Condominio activo: Vista Sol
 ```
 
-Veria informacion comunitaria del condominio, no herramientas operativas de terreno.
-
-### Caso 4: supervisor operativo con un condominio
+### Caso 4: supervisor con un condominio
 
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / supervisor / Sin unidad
+Accesos mobile:
+  - Condominio Vista Sol / supervisor / Sin unidad
 ```
 
-Resultado en app:
+Resultado:
 
 ```text
-Login
-  -> Selector de condominio operativo
-      - Los Alerces
-  -> Entra a modo Operacion
+App mobile
+  -> Modo Operacion
+  -> Condominio activo: Vista Sol
 ```
 
-Veria el menu Operacion:
-
-```text
-Panel
-Tareas
-Inspecciones
-Reportar
-Mas
-```
-
-### Caso 5: supervisor operativo con varios condominios
+### Caso 5: supervisor con todos los condominios de su empresa
 
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / supervisor / Sin unidad
-  - Condominio Las Palmas / supervisor / Sin unidad
+Empresa: Administradora cliente
+Accesos mobile:
+  - Todos / supervisor / Sin unidad
 ```
 
-Resultado en app:
+Resultado:
 
 ```text
 Login
-  -> Selector de condominio operativo
-      - Los Alerces
-      - Las Palmas
-  -> Entra a modo Operacion con el condominio elegido
+  -> API busca todos los condominios activos de la empresa
+  -> App muestra esos condominios como opciones operativas
+  -> Usuario trabaja en modo Operacion
 ```
 
-Todas las pantallas operativas usan el condominio activo.
-
-### Caso 6: usuario con Comunidad y Operacion
+### Caso 6: conserje con un condominio
 
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / vecino / Unidad 1204
-  - Condominio Los Alerces / supervisor / Sin unidad
+Accesos mobile:
+  - Condominio Vista Sol / conserje / Sin unidad
 ```
 
-Resultado en app:
+Resultado:
+
+```text
+App mobile
+  -> Modo Operacion
+  -> Condominio activo: Vista Sol
+```
+
+### Caso 7: usuario con Comunidad y Operacion en el mismo condominio
+
+Configuracion:
+
+```text
+Accesos mobile:
+  - Condominio Vista Sol / comite / Sin unidad
+  - Condominio Vista Sol / supervisor / Sin unidad
+```
+
+Resultado en app mobile:
 
 ```text
 Login
@@ -261,147 +418,170 @@ Login
 Si elige Comunidad:
 
 ```text
-Condominio activo: Los Alerces / Unidad 1204
-Menu: Comunidad
+Condominio activo: Vista Sol
+Rol funcional: comite
 ```
 
 Si elige Operacion:
 
 ```text
-Selector de condominio operativo
-  -> Los Alerces
-Menu: Operacion
+Condominio activo: Vista Sol
+Rol funcional: supervisor
 ```
 
-### Caso 7: usuario de comite y supervisor en distintos condominios
+Resultado en Portal Administrador:
+
+```text
+Selector de condominio:
+  - Vista Sol
+```
+
+El condominio aparece una sola vez, sin mostrar el rol.
+
+### Caso 8: usuario de Portal Administrador sin mobile
 
 Configuracion:
 
 ```text
-Rol global: sin rol global
-Accesos:
-  - Condominio Los Alerces / comite / Sin unidad
-  - Condominio Las Palmas / supervisor / Sin unidad
-```
-
-Resultado en app:
-
-```text
-Login
-  -> Selector de modo
-      - Comunidad
-      - Operacion
-```
-
-Si elige Comunidad, trabaja sobre Los Alerces. Si elige Operacion, trabaja sobre Las Palmas.
-
-### Caso 8: superadmin sin accesos a condominios
-
-Configuracion:
-
-```text
-Rol global: superadmin
-Accesos:
+Empresa: Administradora cliente
+Perfil Portal Administrador: project_manager
+Accesos mobile:
   - Ninguno
-```
-
-Resultado actual en app:
-
-```text
-Login
-  -> No hay condominios disponibles para Comunidad ni Operacion
-```
-
-Este usuario puede ser valido para backoffice, pero no tiene contexto suficiente para la app mobile actual.
-
-Recomendacion: asignar al menos un acceso de condominio si debe usar la app mobile.
-
-### Caso 9: superadmin con acceso a un condominio
-
-Configuracion:
-
-```text
-Rol global: superadmin
-Accesos:
-  - Condominio Los Alerces / vecino / Unidad 1204
-```
-
-Resultado actual en app:
-
-```text
-Login
-  -> Selector de modo
-      - Comunidad
-      - Operacion
-```
-
-Por que ocurre: el acceso `vecino` habilita Comunidad, y el rol global `superadmin` habilita Operacion sobre los condominios donde el usuario ya tiene acceso.
-
-### Caso 10: administrador de empresa
-
-Configuracion recomendada actual:
-
-```text
-Rol global: admin o sin rol global
-Accesos:
-  - Condominio Los Alerces / administrador_empresa / Sin unidad
-  - Condominio Las Palmas / administrador_empresa / Sin unidad
-```
-
-Resultado en app:
-
-```text
-Login
-  -> Selector de condominio operativo
-      - Los Alerces
-      - Las Palmas
-  -> Menu Operacion
-```
-
-Nota: aunque conceptualmente `administrador_empresa` podria operar todos los condominios del tenant, en la implementacion actual hay que asignarle accesos por condominio para que aparezcan en la app mobile.
-
-## Configuracion recomendada para pruebas
-
-### Antonio: Operacion
-
-```text
-Usuario: antoniomanuelvergara@gmail.com
-Rol global: sin rol global
-Accesos:
-  - Condominio de prueba / supervisor / Sin unidad
 ```
 
 Resultado:
 
 ```text
-Login
-  -> Selector de condominio operativo
-  -> Modo Operacion
+Portal Administrador:
+  -> Puede entrar segun perfil.
+
+App mobile:
+  -> No tiene condominios habilitados.
 ```
 
-### Claudia: Comunidad
+### Caso 9: usuario interno Komite para backoffice
+
+Configuracion:
+
+```text
+Empresa: Komite
+Estado usuario: active
+Perfil Portal Administrador: opcional
+Accesos mobile: opcional
+```
+
+Resultado:
+
+```text
+Backoffice:
+  -> Puede entrar.
+
+Portal Administrador:
+  -> No es su canal principal.
+
+App mobile:
+  -> Solo tendra contexto si se le asignan accesos mobile.
+```
+
+## Que ve cada tipo de usuario
+
+| Usuario | Portal Administrador | App mobile Comunidad | App mobile Operacion | Backoffice |
+|---|---:|---:|---:|---:|
+| `project_manager` | Si | Solo si tiene rol mobile `vecino` o `comite` | Solo si tiene rol mobile `supervisor` o `conserje` | No, salvo que pertenezca a Komite |
+| `ejecutivo` | Si | Solo si tiene rol mobile `vecino` o `comite` | Solo si tiene rol mobile `supervisor` o `conserje` | No, salvo que pertenezca a Komite |
+| `vecino` | No por rol mobile | Si | No | No |
+| `comite` | No por rol mobile | Si | No | No |
+| `supervisor` | No por rol mobile | No | Si | No |
+| `conserje` | No por rol mobile | No | Si | No |
+| Empleado Komite activo | No necesariamente | Solo si tiene accesos mobile | Solo si tiene accesos mobile | Si |
+
+## Configuracion recomendada para pruebas
+
+### Usuario de operacion
+
+```text
+Usuario: antoniomanuelvergara@gmail.com
+Empresa: Administradora cliente
+Perfil Portal Administrador: project_manager o ejecutivo, si debe entrar al portal
+Accesos mobile:
+  - Todos / supervisor / Sin unidad
+```
+
+Resultado:
+
+```text
+Portal Administrador:
+  -> Entra si tiene perfil.
+
+App mobile:
+  -> Modo Operacion
+  -> Puede elegir entre condominios activos de su empresa.
+```
+
+### Usuario de comunidad
 
 ```text
 Usuario: claudiafuentescabrera@gmail.com
-Rol global: sin rol global
-Accesos:
+Empresa: Administradora cliente
+Perfil Portal Administrador: Sin perfil
+Accesos mobile:
   - Condominio de prueba / vecino / Unidad correspondiente
 ```
 
 Resultado:
 
 ```text
-Login
+App mobile:
   -> Modo Comunidad
+  -> Condominio y unidad asignados.
 ```
 
-Si Claudia no tiene unidad creada, se puede dejar "Sin unidad" temporalmente, pero para un caso real de vecino conviene crear/asignar la unidad.
+### Usuario de comite
+
+```text
+Usuario: miembrocomite@demo.cl
+Empresa: Administradora cliente
+Perfil Portal Administrador: Sin perfil
+Accesos mobile:
+  - Condominio de prueba / comite / Sin unidad
+```
+
+Resultado:
+
+```text
+App mobile:
+  -> Modo Comunidad
+  -> Vista de comite.
+```
+
+### Usuario interno Komite
+
+```text
+Usuario: admin@komite.cl
+Empresa: Komite
+Estado: active
+Perfil Portal Administrador: opcional
+Accesos mobile: opcional
+```
+
+Resultado:
+
+```text
+Backoffice:
+  -> Puede entrar.
+```
 
 ## Reglas finales
 
-- El rol global no sustituye los accesos a condominios.
-- Comunidad se decide por roles `vecino` y `comite`.
-- Operacion se decide por roles `administrador_empresa`, `administrador_condominio`, `supervisor`, `conserje`, `superadmin`.
+- No existe rol global.
+- El Portal Administrador usa `company_profile`: `project_manager` o `ejecutivo`.
+- La app mobile usa roles por condominio: `vecino`, `comite`, `supervisor`, `conserje`.
+- Comunidad se decide por `vecino` y `comite`.
+- Operacion se decide por `supervisor` y `conserje`.
+- `Todos` equivale a todos los condominios activos de la empresa del usuario.
+- `Todos` se guarda con `condominium_id = null`.
+- `Todos` no permite unidad.
 - Un usuario puede tener varios accesos y por tanto ver selector de modo.
-- La unidad solo aplica cuando necesitamos vincular al usuario a una vivienda/local concreto.
-- Para operar varios condominios, se deben crear varios accesos operativos.
+- El backoffice interno es solo para usuarios activos de la empresa `Komite`.
+- El Portal Administrador no debe mostrar duplicado un condominio aunque el usuario tenga doble rol sobre el mismo.
+

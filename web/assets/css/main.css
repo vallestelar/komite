@@ -546,6 +546,23 @@ h3 {
   gap: 10px;
 }
 
+.tool-card-link {
+  width: 100%;
+  align-content: start;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.tool-card-link:hover,
+.tool-card-link:focus-visible {
+  border-color: rgba(247, 148, 29, 0.75);
+  box-shadow: 0 12px 28px rgba(16, 36, 55, 0.1);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .tool-icon {
   width: 42px;
   height: 42px;
@@ -565,6 +582,28 @@ h3 {
   background: var(--white);
   font-size: 12px;
   font-weight: 800;
+}
+
+.tool-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tool-link-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tool-link-label .icon {
+  width: 15px;
+  height: 15px;
+  transform: rotate(-90deg);
 }
 
 .edifito-panel {

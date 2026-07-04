@@ -3,6 +3,10 @@ const props = defineProps<{
   view: string;
 }>();
 
+const emit = defineEmits<{
+  openView: [view: string];
+}>();
+
 type BankOption = {
   id?: string;
   name: string;
@@ -48,30 +52,35 @@ const tools = [
   {
     title: "Edifito",
     icon: "table",
+    targetView: "edifito",
     status: "Preparado",
     copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
   },
   {
     title: "Comunidad Feliz",
     icon: "home",
+    targetView: "comunidad-feliz",
     status: "Preparado",
     copy: "Cruzar cartolas Banco de Chile con boletas Comunidad Feliz y generar archivos de carga automatica.",
   },
   {
     title: "Procesar audio",
     icon: "mic",
+    targetView: "audio",
     status: "Preparado",
     copy: "Transcribir audios de terreno y convertirlos en borradores de incidencia, tarea, informe o comunicado.",
   },
   {
     title: "Importar planillas",
     icon: "table",
+    targetView: "spreadsheet-tools",
     status: "Preparado",
     copy: "Cargar planillas de novedades, unidades, mantenciones o pendientes para normalizarlas antes de trabajarlas.",
   },
   {
     title: "Resumen mensual",
     icon: "spark",
+    targetView: "monthly-summary",
     status: "Preparado",
     copy: "Agrupar incidencias, tareas, mantenciones e inspecciones para preparar informes de gestion revisables.",
   },
@@ -226,7 +235,7 @@ watch(isEdifito, (active) => {
     </p>
 
     <div class="tool-grid" style="margin-top: 18px">
-      <article v-for="tool in tools" :key="tool.title" class="tool-card">
+      <button v-for="tool in tools" :key="tool.title" class="tool-card tool-card-link" type="button" @click="emit('openView', tool.targetView)">
         <span class="tool-icon">
           <svg class="icon" aria-hidden="true"><use :href="`#icon-${tool.icon}`" /></svg>
         </span>
@@ -234,8 +243,14 @@ watch(isEdifito, (active) => {
           <h3>{{ tool.title }}</h3>
           <p class="card-copy">{{ tool.copy }}</p>
         </div>
-        <span class="status-pill">{{ tool.status }}</span>
-      </article>
+        <span class="tool-card-footer">
+          <span class="status-pill">{{ tool.status }}</span>
+          <span class="tool-link-label">
+            <span>Abrir</span>
+            <svg class="icon" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
+          </span>
+        </span>
+      </button>
     </div>
   </section>
 
@@ -268,15 +283,15 @@ watch(isEdifito, (active) => {
         </select>
       </label>
       <label>
-        Cartola banco
+        Cartola banco Santander PDF
         <input type="file" accept=".pdf" @change="setFile($event, 'bank')" />
       </label>
       <label>
-        Informe asignaciones
+        Informe asignaciones Edifito XLSX
         <input type="file" accept=".xlsx" @change="setFile($event, 'assignments')" />
       </label>
       <label>
-        Detalle cobros y pagos por UCO
+        Informe en detalle cobros y pagos por UCO XLSX
         <input type="file" accept=".xlsx" @change="setFile($event, 'detail')" />
       </label>
     </div>

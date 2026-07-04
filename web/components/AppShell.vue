@@ -200,7 +200,7 @@ onMounted(() => {
 
       <DashboardView v-if="currentView === 'dashboard'" @open-view="selectView" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" />
-      <ToolsView v-else-if="['tools', 'edifito', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" />
+      <ToolsView v-else-if="['tools', 'edifito', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :title="currentTitle" :view="currentView" />
     </section>
 

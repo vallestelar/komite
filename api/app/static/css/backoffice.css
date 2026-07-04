@@ -559,6 +559,62 @@ h2 {
   min-width: 0;
 }
 
+.chart-card {
+  display: grid;
+  grid-template-rows: auto minmax(240px, 1fr) auto;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-heading h2 {
+  margin-bottom: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border: 1px solid #b7d8c1;
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: #1f7a3a;
+  background: #effaf2;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.chart-wrap {
+  position: relative;
+  min-height: 260px;
+}
+
+.chart-wrap-wide {
+  min-height: 300px;
+}
+
+.chart-fallback {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chart-fallback div {
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--white);
+}
+
 .list {
   display: grid;
   gap: 8px;

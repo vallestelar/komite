@@ -239,7 +239,7 @@ onMounted(loadBanks);
         </select>
       </label>
       <label>
-        Cartola Banco de Chile XLS/XLSX
+        Cartola Banco XLS/XLSX
         <input type="file" accept=".xls,.xlsx" @change="setFile($event, 'bank')" />
       </label>
       <label>

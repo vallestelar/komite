@@ -170,9 +170,9 @@
           <section id="dashboardPanel" class="panel">
             <div class="dashboard-hero">
               <div>
-                <p class="eyebrow">Resumen operativo</p>
-                <h2>Estado general de comunidades</h2>
-                <p class="hero-copy">Vista inicial para controlar pendientes, actividad reciente y flujo de informacion hacia comite y vecinos.</p>
+                <p class="eyebrow">Resumen SaaS Komite</p>
+                <h2>Estado general de clientes y soporte</h2>
+                <p class="hero-copy">Vista interna para controlar empresas activas, tickets de clientes y senales de soporte de la plataforma.</p>
               </div>
               <div class="hero-actions">
                 <button class="quick-action icon-button" data-view-target="supportTickets">
@@ -187,29 +187,45 @@
             </div>
 
             <div class="metrics-grid">
-              <article class="metric"><span>Empresas activas</span><strong id="metricCompanies">0</strong><small>Administradores operativos</small></article>
-              <article class="metric"><span>Condominios activos</span><strong id="metricCondominiums">0</strong><small>Comunidades gestionadas</small></article>
+              <article class="metric"><span>Empresas activas</span><strong id="metricCompanies">0</strong><small>Tenants operativos</small></article>
+              <article class="metric"><span>Empresas totales</span><strong id="metricCompaniesTotal">0</strong><small>Clientes registrados</small></article>
               <article class="metric"><span>Tickets abiertos</span><strong id="metricTickets">0</strong><small id="metricTicketsBreakdown">Pendientes: 0</small></article>
-              <article class="metric"><span>Tareas</span><strong id="metricTasks">0</strong><small>Seguimiento interno</small></article>
-              <article class="metric"><span>Informes</span><strong id="metricReports">0</strong><small>Borradores y publicados</small></article>
+              <article class="metric"><span>Tickets urgentes</span><strong id="metricUrgentTickets">0</strong><small>Alta prioridad SaaS</small></article>
+              <article class="metric"><span>SLA vencido</span><strong id="metricOverdueTickets">0</strong><small>Requieren accion</small></article>
             </div>
 
             <div class="dashboard-grid">
-              <section>
-                <h2>Incidencias recientes</h2>
-                <div id="recentIncidents" class="list"></div>
+              <section class="chart-card">
+                <div class="section-heading">
+                  <h2>Tickets por estado</h2>
+                  <span class="status-pill">Datos reales</span>
+                </div>
+                <div class="chart-wrap">
+                  <canvas id="ticketsStatusChart" aria-label="Tickets por estado"></canvas>
+                </div>
+                <div id="ticketChartFallback" class="chart-fallback" hidden></div>
+              </section>
+              <section class="chart-card">
+                <div class="section-heading">
+                  <h2>Tickets por empresa y condominio</h2>
+                  <span class="status-pill">Aporte por condominio</span>
+                </div>
+                <div class="chart-wrap chart-wrap-wide">
+                  <canvas id="ticketsCompanyChart" aria-label="Tickets por empresa y condominio"></canvas>
+                </div>
+                <div id="ticketCompanyChartFallback" class="chart-fallback" hidden></div>
               </section>
               <section>
-                <h2>Tareas recientes</h2>
-                <div id="recentTasks" class="list"></div>
+                <h2>Tickets prioritarios</h2>
+                <div id="priorityTickets" class="list"></div>
               </section>
               <section>
-                <h2>Comunicaciones recientes</h2>
-                <div id="recentCommunications" class="list"></div>
+                <h2>Empresas recientes</h2>
+                <div id="recentCompanies" class="list"></div>
               </section>
               <section>
-                <h2>Audio e IA</h2>
-                <div id="recentAi" class="list"></div>
+                <h2>Soporte Komite</h2>
+                <div id="supportSummary" class="list"></div>
               </section>
             </div>
           </section>
@@ -582,6 +598,7 @@
       <symbol id="icon-spark" viewBox="0 0 24 24"><path d="M12 3 14 9l6 3-6 3-2 6-2-6-6-3 6-3Z"></path><path d="M19 3v4"></path><path d="M21 5h-4"></path></symbol>
       <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path></symbol>
     </svg>
-    <script src="/static/js/backoffice.js?v=20260703-02"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="/static/js/backoffice.js?v=20260704-02"></script>
   </body>
 </html>

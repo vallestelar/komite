@@ -23,6 +23,9 @@ const state = {
   confirmResolver: null,
 };
 
+let ticketsStatusChart = null;
+let ticketsCompanyChart = null;
+
 const resources = {
   companies: {
     title: "Empresas",
@@ -450,30 +453,49 @@ async function login(event) {
 }
 
 async function loadDashboard() {
-  const [companies, condominiums, tickets, incidents, tasks, reports, communications, aiRequests] = await Promise.all([
-    fetchAllPages("/api/v1/companies/"),
-    fetchAllPages("/api/v1/condominiums/"),
-    fetchAllPages("/api/v1/support-tickets/"),
-    fetchPage("/api/v1/incidents/?page=1&page_size=5"),
-    fetchPage("/api/v1/tasks/?page=1&page_size=5"),
-    fetchPage("/api/v1/reports/?page=1&page_size=5"),
-    fetchPage("/api/v1/communications/?page=1&page_size=5"),
-    fetchPage("/api/v1/ai-requests/?page=1&page_size=5"),
-  ]);
+  const dashboardData = await fetchBackofficeDashboardData();
+  const companies = dashboardData.companies || [];
+  const condominiums = dashboardData.condominiums || [];
+  const tickets = dashboardData.tickets || [];
 
-  $("#metricCompanies").textContent = countActive(companies);
-  $("#metricCondominiums").textContent = countActive(condominiums);
+  const activeCompanies = countActive(companies);
   const openTickets = countByStatus(tickets, "open");
   const pendingTickets = countByStatus(tickets, "pending");
   const inProgressTickets = countByStatus(tickets, "in_progress");
+  const urgentTickets = tickets.filter((ticket) => ["urgent", "high"].includes(String(ticket.priority || "").toLowerCase()) && !["resolved", "closed"].includes(String(ticket.status || "").toLowerCase())).length;
+  const overdueTickets = tickets.filter((ticket) => ticketIsOverdue(ticket)).length;
+
+  $("#metricCompanies").textContent = activeCompanies;
+  $("#metricCompaniesTotal").textContent = companies.length;
   $("#metricTickets").textContent = openTickets;
   $("#metricTicketsBreakdown").textContent = `Pendientes: ${pendingTickets} | En curso: ${inProgressTickets}`;
-  $("#metricTasks").textContent = tasks.meta?.total || 0;
-  $("#metricReports").textContent = reports.meta?.total || 0;
-  renderList("#recentIncidents", incidents.items, "category", "status");
-  renderList("#recentTasks", tasks.items, "title", "status");
-  renderList("#recentCommunications", communications.items, "title", "status");
-  renderList("#recentAi", aiRequests.items, "purpose", "status");
+  $("#metricUrgentTickets").textContent = urgentTickets;
+  $("#metricOverdueTickets").textContent = overdueTickets;
+
+  renderTicketsStatusChart(tickets);
+  renderTicketsByCompanyChart(tickets, companies);
+  renderPriorityTickets(tickets);
+  renderRecentCompanies(companies, condominiums);
+  renderSupportSummary({
+    tickets,
+    activeCompanies,
+    totalCompanies: companies.length,
+    activeCondominiums: countActive(condominiums),
+    overdueTickets,
+  });
+}
+
+async function fetchBackofficeDashboardData() {
+  try {
+    return await apiFetch("/api/v1/backoffice/dashboard");
+  } catch (error) {
+    const [companies, condominiums, tickets] = await Promise.all([
+      fetchAllPages("/api/v1/companies/"),
+      fetchAllPages("/api/v1/condominiums/"),
+      fetchAllPages("/api/v1/support-tickets/"),
+    ]);
+    return { companies, condominiums, tickets };
+  }
 }
 
 function countActive(items) {
@@ -482,6 +504,156 @@ function countActive(items) {
 
 function countByStatus(items, status) {
   return (items || []).filter((item) => item.status === status).length;
+}
+
+function ticketIsOverdue(ticket) {
+  if (!ticket.due_date || ["resolved", "closed"].includes(String(ticket.status || "").toLowerCase())) return false;
+  const rawDueDate = String(ticket.due_date);
+  const dueDate = new Date(rawDueDate.includes("T") ? rawDueDate : `${rawDueDate}T23:59:59`);
+  return Number.isFinite(dueDate.getTime()) && dueDate < new Date();
+}
+
+function renderTicketsStatusChart(tickets) {
+  const statuses = ["open", "pending", "in_progress", "resolved", "closed"];
+  const labels = statuses.map((status) => statusLabels[status] || status);
+  const values = statuses.map((status) => countByStatus(tickets, status));
+
+  const canvas = $("#ticketsStatusChart");
+  const fallback = $("#ticketChartFallback");
+  if (!window.Chart) {
+    fallback.hidden = false;
+    fallback.innerHTML = statuses
+      .map((status, index) => `<div><strong>${escapeHtml(labels[index])}</strong><span>${values[index]}</span></div>`)
+      .join("");
+    return;
+  }
+
+  fallback.hidden = true;
+  if (ticketsStatusChart) ticketsStatusChart.destroy();
+  ticketsStatusChart = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: ["#f7941d", "#f5c542", "#1f78b4", "#2f9e44", "#667789"],
+        borderColor: "#ffffff",
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 12, color: "#172536" } },
+      },
+      cutout: "62%",
+    },
+  });
+}
+
+function renderTicketsByCompanyChart(tickets, companies) {
+  const canvas = $("#ticketsCompanyChart");
+  const fallback = $("#ticketCompanyChartFallback");
+  const safeTickets = tickets || [];
+  const companiesWithTickets = companies
+    .filter((company) => safeTickets.some((ticket) => sameId(ticket.company_id, company.id)))
+    .slice(0, 8);
+  const labels = companiesWithTickets.map((company) => company.name || "Empresa");
+  const condominiumNames = Array.from(new Set(safeTickets.map(ticketCondominiumName))).filter(Boolean);
+  const colors = ["#f7941d", "#1f78b4", "#2f9e44", "#8a63d2", "#e8590c", "#099268", "#d6336c", "#667789"];
+
+  if (!companiesWithTickets.length || !condominiumNames.length) {
+    if (ticketsCompanyChart) ticketsCompanyChart.destroy();
+    fallback.hidden = false;
+    fallback.innerHTML = `<div><strong>Sin datos</strong><span>Crea tickets con condominio asociado.</span></div>`;
+    return;
+  }
+
+  const datasets = condominiumNames.map((condominiumName, index) => ({
+    label: condominiumName,
+    data: companiesWithTickets.map((company) => safeTickets.filter((ticket) => sameId(ticket.company_id, company.id) && ticketCondominiumName(ticket) === condominiumName).length),
+    backgroundColor: colors[index % colors.length],
+    borderRadius: 4,
+  }));
+
+  if (!window.Chart) {
+    fallback.hidden = false;
+    fallback.innerHTML = companiesWithTickets.map((company) => {
+      const total = safeTickets.filter((ticket) => sameId(ticket.company_id, company.id)).length;
+      return `<div><strong>${escapeHtml(company.name)}</strong><span>${total}</span></div>`;
+    }).join("");
+    return;
+  }
+
+  fallback.hidden = true;
+  if (ticketsCompanyChart) ticketsCompanyChart.destroy();
+  ticketsCompanyChart = new Chart(canvas, {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { color: "#172536" }, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0, color: "#667789" } },
+      },
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 12, color: "#172536" } },
+        tooltip: { mode: "index", intersect: false },
+      },
+    },
+  });
+}
+
+function renderPriorityTickets(tickets) {
+  const priorityTickets = [...tickets]
+    .filter((ticket) => !["resolved", "closed"].includes(String(ticket.status || "").toLowerCase()))
+    .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority))
+    .slice(0, 5);
+
+  const target = $("#priorityTickets");
+  target.innerHTML = priorityTickets.length
+    ? priorityTickets.map((ticket) => `<div class="list-item"><strong>${escapeHtml(ticket.subject || "Ticket")}</strong><span>${escapeHtml(priorityLabel(ticket.priority))} | ${escapeHtml(statusLabels[ticket.status] || ticket.status || "Sin estado")}</span></div>`).join("")
+    : `<div class="list-item"><span>Sin tickets prioritarios.</span></div>`;
+}
+
+function renderRecentCompanies(companies, condominiums) {
+  const recentCompanies = [...companies].slice(0, 5);
+  const target = $("#recentCompanies");
+  target.innerHTML = recentCompanies.length
+    ? recentCompanies.map((company) => {
+      const totalCondominiums = condominiums.filter((condominium) => sameId(condominium.company_id, company.id)).length;
+      return `<div class="list-item"><strong>${escapeHtml(company.name || "Empresa")}</strong><span>${escapeHtml(statusLabels[company.status] || company.status || "Sin estado")} | Condominios: ${totalCondominiums}</span></div>`;
+    }).join("")
+    : `<div class="list-item"><span>Sin empresas registradas.</span></div>`;
+}
+
+function renderSupportSummary(summary) {
+  const target = $("#supportSummary");
+  target.innerHTML = [
+    ["Modo de datos", "Tickets reales en BBDD"],
+    ["Empresas activas", `${summary.activeCompanies} de ${summary.totalCompanies}`],
+    ["Condominios activos", String(summary.activeCondominiums)],
+    ["Tickets vencidos", String(summary.overdueTickets)],
+  ].map(([label, value]) => `<div class="list-item"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`).join("");
+}
+
+function ticketCondominiumName(ticket) {
+  const metadata = ticket && typeof ticket.metadata === "object" && ticket.metadata ? ticket.metadata : {};
+  return metadata.condominium_name || metadata.condominium || "Sin condominio";
+}
+
+function sameId(left, right) {
+  return String(left || "") === String(right || "");
+}
+
+function priorityWeight(priority) {
+  return { urgent: 4, high: 3, medium: 2, low: 1 }[String(priority || "").toLowerCase()] || 0;
+}
+
+function priorityLabel(priority) {
+  return { urgent: "Urgente", high: "Alta", medium: "Media", low: "Baja" }[String(priority || "").toLowerCase()] || "Sin prioridad";
 }
 
 async function fetchAllPages(basePath, pageSize = 200) {

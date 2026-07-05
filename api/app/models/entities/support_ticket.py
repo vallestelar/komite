@@ -8,6 +8,7 @@ from app.models.entities.mixins import TimestampAuditMixin
 class SupportTicket(TimestampAuditMixin):
     id = fields.UUIDField(pk=True)
     company = fields.ForeignKeyField("models.Company", related_name="support_tickets", on_delete=fields.CASCADE)
+    condominium = fields.ForeignKeyField("models.Condominium", related_name="support_tickets", null=True, on_delete=fields.SET_NULL)
     created_by_user = fields.ForeignKeyField("models.User", related_name="created_support_tickets", null=True, on_delete=fields.SET_NULL)
     assigned_to = fields.ForeignKeyField("models.User", related_name="assigned_support_tickets", null=True, on_delete=fields.SET_NULL)
     requester_name = fields.CharField(max_length=150, null=True)
@@ -23,4 +24,4 @@ class SupportTicket(TimestampAuditMixin):
 
     class Meta:
         table = "support_tickets"
-        indexes = (("company_id", "status"), ("assigned_to_id",), ("priority",), ("due_date",))
+        indexes = (("company_id", "status"), ("condominium_id",), ("assigned_to_id",), ("priority",), ("due_date",))

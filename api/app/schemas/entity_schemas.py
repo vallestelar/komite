@@ -426,6 +426,7 @@ class TaskPage(BaseModel):
 
 class SupportTicketCreate(BaseModel):
     company_id: UUID
+    condominium_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
     requester_name: Optional[str] = Field(default=None, max_length=150)
@@ -442,6 +443,7 @@ class SupportTicketCreate(BaseModel):
 
 class SupportTicketUpdate(BaseModel):
     company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
     requester_name: Optional[str] = Field(default=None, max_length=150)
@@ -459,6 +461,7 @@ class SupportTicketUpdate(BaseModel):
 class SupportTicketOut(AuditOut):
     id: UUID
     company_id: UUID
+    condominium_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
     assigned_to_id: Optional[UUID] = None
     requester_name: Optional[str] = None

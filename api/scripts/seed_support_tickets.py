@@ -176,6 +176,7 @@ async def create_company_tickets(company: Company, condominiums: list[Condominiu
             subject, category, status, priority, due_offset = TICKET_PATTERNS[(condo_index + pattern_index) % len(TICKET_PATTERNS)]
             await SupportTicket.create(
                 company=company,
+                condominium=condominium,
                 requester_name="Mesa de ayuda Komite",
                 requester_email="soporte@komite.cl",
                 subject=f"{subject} - {condominium.name}",
@@ -186,8 +187,6 @@ async def create_company_tickets(company: Company, condominiums: list[Condominiu
                 due_date=today + timedelta(days=due_offset),
                 metadata={
                     "seed_batch": SEED_BATCH,
-                    "condominium_id": str(condominium.id),
-                    "condominium_name": condominium.name,
                     "dashboard_seed": True,
                 },
             )

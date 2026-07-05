@@ -82,12 +82,12 @@ async def _read_filters(model: Type[Model], request: Request) -> dict[str, Any]:
 
 
 async def _derive_company_id(data: dict[str, Any]) -> Any:
-    if data.get("company_id"):
-        return data["company_id"]
-
     if data.get("condominium_id"):
         condominium = await Condominium.get_or_none(id=data["condominium_id"])
         return condominium.company_id if condominium else None
+
+    if data.get("company_id"):
+        return data["company_id"]
 
     parent_lookups = (
         ("incident_id", Incident),
@@ -172,12 +172,29 @@ def create_crud_router(
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=200),
         q: str | None = Query(None),
+        company_id: UUID | None = Query(None),
+        condominium_id: UUID | None = Query(None),
+        status: str | None = Query(None),
+        filter_company_id: UUID | None = Query(None),
+        filter_condominium_id: UUID | None = Query(None),
+        filter_status: str | None = Query(None),
         order_by: list[str] | None = Query(None),
         svc=Depends(get_service),
     ):
         search_q = _search_query(q, search_fields)
         q_args = [search_q] if search_q is not None else []
         filters = await _read_filters(model, request)
+        db_fields = set(model._meta.db_fields)
+        if await user_is_komite_employee(request.state.user):
+            selected_company_id = filter_company_id or company_id
+            selected_condominium_id = filter_condominium_id or condominium_id
+            selected_status = filter_status or status
+            if selected_company_id and "company_id" in db_fields:
+                filters["company_id"] = selected_company_id
+            if selected_condominium_id and "condominium_id" in db_fields:
+                filters["condominium_id"] = selected_condominium_id
+            if selected_status and "status" in db_fields:
+                filters["status"] = selected_status
         result = await svc.list_paginated(
             page,
             page_size,

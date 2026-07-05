@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Komite Backoffice</title>
-    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260702-21" />
+    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260704-23" />
   </head>
   <body>
     <main id="app">
@@ -233,6 +233,18 @@
           <section id="tablePanel" class="panel" hidden>
             <div class="table-toolbar">
               <input id="searchInput" type="search" placeholder="Buscar" />
+              <select id="companyFilter" class="toolbar-select" hidden>
+                <option value="">Todas las empresas</option>
+              </select>
+              <select id="ticketCompanyFilter" class="toolbar-select" hidden>
+                <option value="">Todas las empresas</option>
+              </select>
+              <select id="ticketCondominiumFilter" class="toolbar-select" hidden>
+                <option value="">Todos los condominios</option>
+              </select>
+              <select id="ticketStatusFilter" class="toolbar-select" hidden>
+                <option value="">Todos los estados</option>
+              </select>
               <button id="newCompanyButton" class="primary-action icon-button" type="button" hidden>
                 <svg aria-hidden="true"><use href="#icon-plus"></use></svg>
                 <span>Nueva empresa</span>
@@ -259,6 +271,34 @@
                 <thead id="tableHead"></thead>
                 <tbody id="tableBody"></tbody>
               </table>
+            </div>
+            <div class="pagination-bar">
+              <div id="paginationSummary" class="pagination-summary">Sin registros</div>
+              <div class="pagination-controls">
+                <label class="page-size-label">
+                  Filas
+                  <select id="pageSizeSelect">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                  </select>
+                </label>
+                <button id="firstPageButton" class="ghost-action icon-button page-icon-button" type="button" aria-label="Primera pagina" title="Primera pagina">
+                  <svg aria-hidden="true"><use href="#icon-chevrons-left"></use></svg>
+                </button>
+                <button id="prevPageButton" class="ghost-action icon-button" type="button">
+                  <svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg>
+                  <span>Anterior</span>
+                </button>
+                <span id="pageIndicator" class="page-indicator">Pagina 1 de 1</span>
+                <button id="nextPageButton" class="ghost-action icon-button" type="button">
+                  <span>Siguiente</span>
+                  <svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
+                </button>
+                <button id="lastPageButton" class="ghost-action icon-button page-icon-button" type="button" aria-label="Ultima pagina" title="Ultima pagina">
+                  <svg aria-hidden="true"><use href="#icon-chevrons-right"></use></svg>
+                </button>
+              </div>
             </div>
           </section>
 
@@ -572,6 +612,10 @@
       <symbol id="icon-panel-left" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path><path d="M15 10l-3 2 3 2"></path></symbol>
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></symbol>
       <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+      <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+      <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></symbol>
+      <symbol id="icon-chevrons-left" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5"></path><path d="m18 17-5-5 5-5"></path></symbol>
+      <symbol id="icon-chevrons-right" viewBox="0 0 24 24"><path d="m6 17 5-5-5-5"></path><path d="m13 17 5-5-5-5"></path></symbol>
       <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"></path><path d="M20 20v-4h-4"></path></symbol>
       <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></symbol>
       <symbol id="icon-pencil" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></symbol>
@@ -599,6 +643,6 @@
       <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path></symbol>
     </svg>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/static/js/backoffice.js?v=20260704-02"></script>
+    <script src="/static/js/backoffice.js?v=20260704-24"></script>
   </body>
 </html>

@@ -85,6 +85,7 @@ def require_access_token(require_condominium: bool = False) -> Callable:
                 detail="Usuario inactivo",
             )
 
+        is_komite_employee = await user_is_komite_employee(user)
         condominium_id = (
             request.headers.get("X-Condominium")
             or request.query_params.get("condominium")
@@ -103,7 +104,7 @@ def require_access_token(require_condominium: bool = False) -> Callable:
             if isinstance(item, dict) and item.get("id")
         }
 
-        if condominium_id:
+        if condominium_id and not is_komite_employee:
             if str(condominium_id) not in allowed_condominium_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

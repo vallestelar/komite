@@ -14,6 +14,9 @@ const state = {
   user: readUser(),
   currentView: "dashboard",
   currentItems: [],
+  tablePage: 1,
+  tablePageSize: 10,
+  tableMeta: { total: 0, page: 1, page_size: 10, pages: 1 },
   companies: [],
   condominiums: [],
   units: [],
@@ -25,6 +28,71 @@ const state = {
 
 let ticketsStatusChart = null;
 let ticketsCompanyChart = null;
+let searchDebounceTimer = null;
+
+const outerStackBorderPlugin = {
+  id: "outerStackBorder",
+  afterDatasetsDraw(chart) {
+    const { ctx, data } = chart;
+    if (chart.config.type !== "bar" || !chart.options.plugins?.outerStackBorder?.enabled) return;
+
+    ctx.save();
+    ctx.strokeStyle = chart.options.plugins.outerStackBorder.color || "#93c5fd";
+    ctx.lineWidth = chart.options.plugins.outerStackBorder.width || 1.5;
+    data.labels.forEach((_, dataIndex) => {
+      const visibleBars = data.datasets
+        .map((__, datasetIndex) => chart.getDatasetMeta(datasetIndex).data[dataIndex])
+        .filter(Boolean);
+      if (!visibleBars.length) return;
+
+      const left = Math.min(...visibleBars.map((bar) => bar.x - bar.width / 2));
+      const right = Math.max(...visibleBars.map((bar) => bar.x + bar.width / 2));
+      const top = Math.min(...visibleBars.map((bar) => bar.y));
+      const bottom = Math.max(...visibleBars.map((bar) => bar.base));
+      ctx.strokeRect(left, top, right - left, bottom - top);
+    });
+    ctx.restore();
+  },
+};
+
+const stackPercentageLabelsPlugin = {
+  id: "stackPercentageLabels",
+  afterDatasetsDraw(chart) {
+    if (chart.config.type !== "bar" || !chart.options.plugins?.stackPercentageLabels?.enabled) return;
+    const { ctx, data } = chart;
+    const color = chart.options.plugins.stackPercentageLabels.color || "#172536";
+    const minHeight = chart.options.plugins.stackPercentageLabels.minHeight || 18;
+
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = "700 11px Inter, Segoe UI, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    data.labels.forEach((_, dataIndex) => {
+      const total = data.datasets.reduce((sum, dataset) => sum + Number(dataset.data[dataIndex] || 0), 0);
+      if (!total) return;
+
+      data.datasets.forEach((dataset, datasetIndex) => {
+        const value = Number(dataset.data[dataIndex] || 0);
+        if (!value) return;
+
+        const bar = chart.getDatasetMeta(datasetIndex).data[dataIndex];
+        if (!bar) return;
+        const height = Math.abs(bar.base - bar.y);
+        if (height < minHeight) return;
+
+        const percent = Math.round((value / total) * 100);
+        ctx.fillText(`${percent}%`, bar.x, (bar.y + bar.base) / 2);
+      });
+    });
+    ctx.restore();
+  },
+};
+
+if (window.Chart) {
+  Chart.register(outerStackBorderPlugin, stackPercentageLabelsPlugin);
+}
 
 const resources = {
   companies: {
@@ -60,11 +128,12 @@ const resources = {
   supportTickets: {
     title: "Tickets",
     endpoint: "/api/v1/support-tickets/",
-    columns: ["company_id", "subject", "category", "priority", "status", "due_date"],
+    columns: ["company_id", "condominium_id", "subject", "category", "priority", "status", "due_date"],
     createLabel: "Nuevo ticket",
     singular: "ticket",
     fields: [
       { name: "company_id", label: "Empresa", type: "company", required: true },
+      { name: "condominium_id", label: "Condominio", type: "condominium" },
       { name: "subject", label: "Asunto", required: true, maxLength: 180 },
       { name: "description", label: "Descripcion", type: "textarea" },
       { name: "requester_name", label: "Solicitante", maxLength: 150 },
@@ -133,6 +202,7 @@ const columnLabels = {
   status: "Estado",
   address: "Direccion",
   company_id: "Empresa",
+  condominium_id: "Condominio",
   code: "Codigo",
   country: "Pais",
   website: "Web",
@@ -186,6 +256,25 @@ const statusLabels = {
   closed: "Cerrado",
   published: "Publicado",
 };
+
+const ticketStatusPalette = {
+  open: { background: "#dbeafe", color: "#1d4f91", accent: "#60a5fa" },
+  pending: { background: "#fef3c7", color: "#8a5a10", accent: "#fbbf24" },
+  in_progress: { background: "#ede9fe", color: "#5b3aa4", accent: "#a78bfa" },
+  resolved: { background: "#dcfce7", color: "#1f7a3a", accent: "#86efac" },
+  closed: { background: "#f1f5f9", color: "#475569", accent: "#94a3b8" },
+};
+
+const companyChartPalette = [
+  { background: "#bfdbfe", border: "#60a5fa" },
+  { background: "#bbf7d0", border: "#4ade80" },
+  { background: "#ddd6fe", border: "#a78bfa" },
+  { background: "#fecaca", border: "#f87171" },
+  { background: "#fde68a", border: "#fbbf24" },
+  { background: "#99f6e4", border: "#2dd4bf" },
+  { background: "#fed7aa", border: "#fb923c" },
+  { background: "#fbcfe8", border: "#f472b6" },
+];
 
 const roleLabels = {
   project_manager: "Project manager",
@@ -457,8 +546,11 @@ async function loadDashboard() {
   const companies = dashboardData.companies || [];
   const condominiums = dashboardData.condominiums || [];
   const tickets = dashboardData.tickets || [];
+  const clientCompanies = companies.filter((company) => !isInternalKomiteCompany(company));
+  const clientCompanyIds = new Set(clientCompanies.map((company) => String(company.id)));
+  const clientCondominiums = condominiums.filter((condominium) => clientCompanyIds.has(String(condominium.company_id)));
 
-  const activeCompanies = countActive(companies);
+  const activeCompanies = countActive(clientCompanies);
   const openTickets = countByStatus(tickets, "open");
   const pendingTickets = countByStatus(tickets, "pending");
   const inProgressTickets = countByStatus(tickets, "in_progress");
@@ -466,21 +558,21 @@ async function loadDashboard() {
   const overdueTickets = tickets.filter((ticket) => ticketIsOverdue(ticket)).length;
 
   $("#metricCompanies").textContent = activeCompanies;
-  $("#metricCompaniesTotal").textContent = companies.length;
+  $("#metricCompaniesTotal").textContent = clientCompanies.length;
   $("#metricTickets").textContent = openTickets;
   $("#metricTicketsBreakdown").textContent = `Pendientes: ${pendingTickets} | En curso: ${inProgressTickets}`;
   $("#metricUrgentTickets").textContent = urgentTickets;
   $("#metricOverdueTickets").textContent = overdueTickets;
 
   renderTicketsStatusChart(tickets);
-  renderTicketsByCompanyChart(tickets, companies);
+  renderTicketsByCompanyChart(tickets, clientCompanies, clientCondominiums);
   renderPriorityTickets(tickets);
-  renderRecentCompanies(companies, condominiums);
+  renderRecentCompanies(clientCompanies, clientCondominiums);
   renderSupportSummary({
     tickets,
     activeCompanies,
-    totalCompanies: companies.length,
-    activeCondominiums: countActive(condominiums),
+    totalCompanies: clientCompanies.length,
+    activeCondominiums: countActive(clientCondominiums),
     overdueTickets,
   });
 }
@@ -506,6 +598,10 @@ function countByStatus(items, status) {
   return (items || []).filter((item) => item.status === status).length;
 }
 
+function isInternalKomiteCompany(company) {
+  return String(company?.name || "").trim().toLowerCase() === "komite";
+}
+
 function ticketIsOverdue(ticket) {
   if (!ticket.due_date || ["resolved", "closed"].includes(String(ticket.status || "").toLowerCase())) return false;
   const rawDueDate = String(ticket.due_date);
@@ -517,6 +613,8 @@ function renderTicketsStatusChart(tickets) {
   const statuses = ["open", "pending", "in_progress", "resolved", "closed"];
   const labels = statuses.map((status) => statusLabels[status] || status);
   const values = statuses.map((status) => countByStatus(tickets, status));
+  const statusColors = statuses.map((status) => ticketStatusPalette[status].background);
+  const statusBorders = statuses.map((status) => ticketStatusPalette[status].accent);
 
   const canvas = $("#ticketsStatusChart");
   const fallback = $("#ticketChartFallback");
@@ -536,8 +634,8 @@ function renderTicketsStatusChart(tickets) {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: ["#f7941d", "#f5c542", "#1f78b4", "#2f9e44", "#667789"],
-        borderColor: "#ffffff",
+        backgroundColor: statusColors,
+        borderColor: statusBorders,
         borderWidth: 2,
       }],
     },
@@ -552,28 +650,43 @@ function renderTicketsStatusChart(tickets) {
   });
 }
 
-function renderTicketsByCompanyChart(tickets, companies) {
+function renderTicketsByCompanyChart(tickets, companies, condominiums) {
   const canvas = $("#ticketsCompanyChart");
   const fallback = $("#ticketCompanyChartFallback");
   const safeTickets = tickets || [];
+  const condominiumLookup = new Map((condominiums || []).map((condominium) => [String(condominium.id), condominium.name]));
   const companiesWithTickets = companies
     .filter((company) => safeTickets.some((ticket) => sameId(ticket.company_id, company.id)))
     .slice(0, 8);
   const labels = companiesWithTickets.map((company) => company.name || "Empresa");
-  const condominiumNames = Array.from(new Set(safeTickets.map(ticketCondominiumName))).filter(Boolean);
-  const colors = ["#f7941d", "#1f78b4", "#2f9e44", "#8a63d2", "#e8590c", "#099268", "#d6336c", "#667789"];
+  const companyCondominiumBuckets = companiesWithTickets.map((company) => {
+    const counts = new Map();
+    safeTickets
+      .filter((ticket) => sameId(ticket.company_id, company.id))
+      .forEach((ticket) => {
+        const condominiumName = ticketCondominiumName(ticket, condominiumLookup);
+        counts.set(condominiumName, (counts.get(condominiumName) || 0) + 1);
+      });
+    return Array.from(counts.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name));
+  });
+  const maxCondominiums = Math.max(0, ...companyCondominiumBuckets.map((items) => items.length));
 
-  if (!companiesWithTickets.length || !condominiumNames.length) {
+  if (!companiesWithTickets.length || !maxCondominiums) {
     if (ticketsCompanyChart) ticketsCompanyChart.destroy();
     fallback.hidden = false;
     fallback.innerHTML = `<div><strong>Sin datos</strong><span>Crea tickets con condominio asociado.</span></div>`;
     return;
   }
 
-  const datasets = condominiumNames.map((condominiumName, index) => ({
-    label: condominiumName,
-    data: companiesWithTickets.map((company) => safeTickets.filter((ticket) => sameId(ticket.company_id, company.id) && ticketCondominiumName(ticket) === condominiumName).length),
-    backgroundColor: colors[index % colors.length],
+  const datasets = Array.from({ length: maxCondominiums }, (_, index) => ({
+    label: `Condominio ${index + 1}`,
+    data: companyCondominiumBuckets.map((items) => items[index]?.count || 0),
+    condominiumNames: companyCondominiumBuckets.map((items) => items[index]?.name || ""),
+    backgroundColor: companyChartPalette[index % companyChartPalette.length].background,
+    borderColor: "transparent",
+    borderWidth: 0,
     borderRadius: 4,
   }));
 
@@ -599,8 +712,30 @@ function renderTicketsByCompanyChart(tickets, companies) {
         y: { stacked: true, beginAtZero: true, ticks: { precision: 0, color: "#667789" } },
       },
       plugins: {
-        legend: { position: "bottom", labels: { boxWidth: 12, color: "#172536" } },
-        tooltip: { mode: "index", intersect: false },
+        legend: { display: false },
+        tooltip: {
+          mode: "index",
+          intersect: false,
+          itemSort(left, right) {
+            return right.datasetIndex - left.datasetIndex;
+          },
+          callbacks: {
+            label(context) {
+              const condominiumName = context.dataset.condominiumNames?.[context.dataIndex] || context.dataset.label;
+              return `${condominiumName}: ${context.parsed.y}`;
+            },
+          },
+        },
+        outerStackBorder: {
+          enabled: true,
+          color: "#93c5fd",
+          width: 1.5,
+        },
+        stackPercentageLabels: {
+          enabled: true,
+          color: "#172536",
+          minHeight: 18,
+        },
       },
     },
   });
@@ -639,9 +774,11 @@ function renderSupportSummary(summary) {
   ].map(([label, value]) => `<div class="list-item"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`).join("");
 }
 
-function ticketCondominiumName(ticket) {
-  const metadata = ticket && typeof ticket.metadata === "object" && ticket.metadata ? ticket.metadata : {};
-  return metadata.condominium_name || metadata.condominium || "Sin condominio";
+function ticketCondominiumName(ticket, condominiumLookup = new Map()) {
+  if (ticket?.condominium_id) {
+    return condominiumLookup.get(String(ticket.condominium_id)) || formatCell(ticket.condominium_id);
+  }
+  return "Ticket general empresa";
 }
 
 function sameId(left, right) {
@@ -743,6 +880,15 @@ async function openView(view) {
 
   $("#viewTitle").textContent = resources[view].title;
   $("#searchInput").value = "";
+  $("#companyFilter").value = "";
+  $("#ticketCompanyFilter").value = "";
+  $("#ticketCondominiumFilter").value = "";
+  $("#ticketStatusFilter").value = "";
+  state.tablePage = 1;
+  $("#companyFilter").hidden = view !== "condominiums";
+  $("#ticketCompanyFilter").hidden = view !== "supportTickets";
+  $("#ticketCondominiumFilter").hidden = view !== "supportTickets";
+  $("#ticketStatusFilter").hidden = view !== "supportTickets";
   $("#newCompanyButton").hidden = view !== "companies";
   $("#newCondominiumButton").hidden = view !== "condominiums";
   $("#newUserButton").hidden = view !== "users";
@@ -750,8 +896,13 @@ async function openView(view) {
   if (resources[view].fields) {
     $("#newGenericButtonLabel").textContent = resources[view].createLabel || "Nuevo";
   }
-  if (view === "supportTickets") {
+  if (view === "condominiums") {
     await ensureCompaniesLoaded();
+    populateCompanyFilter();
+  }
+  if (view === "supportTickets") {
+    await ensureUserLookupsLoaded();
+    populateTicketFilters();
   }
   showPanel("table");
   await loadTable();
@@ -771,15 +922,52 @@ function scrollViewToTop() {
 
 async function loadTable() {
   const resource = resources[state.currentView];
-  const q = encodeURIComponent($("#searchInput").value.trim());
-  const data = await apiFetch(`${resource.endpoint}?page=1&page_size=50${q ? `&q=${q}` : ""}`);
+  const query = buildTableQueryParams();
+  const data = await apiFetch(`${resource.endpoint}?${query}`);
   state.currentItems = data.items || [];
-  renderTable(resource.columns, data.items);
+  state.tableMeta = normalizeTableMeta(data.meta, state.currentItems.length);
+  renderTable(resource.columns, filteredTableItems());
+  renderPagination();
+}
+
+function buildTableQueryParams() {
+  const params = new URLSearchParams({
+    page: String(state.tablePage),
+    page_size: String(state.tablePageSize),
+  });
+  const search = $("#searchInput").value.trim();
+  if (search) params.set("q", search);
+
+  if (state.currentView === "supportTickets") {
+    const companyId = $("#ticketCompanyFilter").value;
+    const condominiumId = $("#ticketCondominiumFilter").value;
+    const status = $("#ticketStatusFilter").value;
+    if (companyId) params.set("filter_company_id", companyId);
+    if (condominiumId) params.set("filter_condominium_id", condominiumId);
+    if (status) params.set("filter_status", status);
+  }
+
+  return params.toString();
+}
+
+function filteredTableItems() {
+  let items = state.currentItems || [];
+  if (state.currentView === "condominiums") {
+    const companyId = $("#companyFilter").value;
+    if (companyId) {
+      items = items.filter((item) => sameId(item.company_id, companyId));
+    }
+  }
+  return items;
 }
 
 function renderTable(columns, items) {
   const actionColumn = ["condominiums", "companies", "users"].includes(state.currentView) || Boolean(resources[state.currentView]?.fields);
   $("#tableHead").innerHTML = `<tr>${columns.map((column) => `<th>${escapeHtml(labelForColumn(column))}</th>`).join("")}${actionColumn ? "<th>Acciones</th>" : ""}</tr>`;
+  if (!items.length) {
+    $("#tableBody").innerHTML = `<tr><td colspan="${columns.length + (actionColumn ? 1 : 0)}" class="empty-table">Sin registros para mostrar.</td></tr>`;
+    return;
+  }
   $("#tableBody").innerHTML = items
     .map((item) => {
       const cells = columns.map((column) => `<td>${formatTableCell(column, item[column])}</td>`).join("");
@@ -794,6 +982,37 @@ function renderTable(columns, items) {
   bindGenericRowActions();
 }
 
+function normalizeTableMeta(meta, fallbackCount) {
+  const pageSize = Number(meta?.page_size || state.tablePageSize);
+  const total = Number(meta?.total ?? fallbackCount);
+  const pages = Math.max(1, Number(meta?.pages || Math.ceil(total / pageSize) || 1));
+  const page = Math.min(Math.max(1, Number(meta?.page || state.tablePage)), pages);
+  state.tablePage = page;
+  return { total, page, page_size: pageSize, pages };
+}
+
+function renderPagination() {
+  const meta = state.tableMeta;
+  const start = meta.total ? (meta.page - 1) * meta.page_size + 1 : 0;
+  const end = Math.min(meta.page * meta.page_size, meta.total);
+  $("#paginationSummary").textContent = meta.total ? `${start}-${end} de ${meta.total} registros` : "Sin registros";
+  $("#pageIndicator").textContent = `Pagina ${meta.page} de ${meta.pages}`;
+  $("#pageSizeSelect").value = String(state.tablePageSize);
+
+  const isFirst = meta.page <= 1;
+  const isLast = meta.page >= meta.pages;
+  $("#firstPageButton").disabled = isFirst;
+  $("#prevPageButton").disabled = isFirst;
+  $("#nextPageButton").disabled = isLast;
+  $("#lastPageButton").disabled = isLast;
+}
+
+async function goToTablePage(page) {
+  const pages = state.tableMeta.pages || 1;
+  state.tablePage = Math.min(Math.max(1, page), pages);
+  await loadTable();
+}
+
 function labelForColumn(column) {
   return columnLabels[column] || column.replaceAll("_", " ");
 }
@@ -802,18 +1021,29 @@ function formatTableCell(column, value) {
   if (column === "status") return renderStatusBadge(value);
   if (column === "is_system") return renderBooleanBadge(value);
   if (column === "company_id") return escapeHtml(companyName(value));
+  if (column === "condominium_id") return escapeHtml(condominiumName(value));
   if (["company_profile", "role_code"].includes(column)) return escapeHtml(roleLabels[value] || formatCell(value));
   return escapeHtml(formatCell(value));
 }
 
 function companyName(companyId) {
-  const company = state.companies.find((item) => item.id === companyId);
+  const company = state.companies.find((item) => sameId(item.id, companyId));
   return company?.name || formatCell(companyId);
+}
+
+function condominiumName(condominiumId) {
+  if (!condominiumId) return "";
+  const condominium = state.condominiums.find((item) => sameId(item.id, condominiumId));
+  return condominium?.name || formatCell(condominiumId);
 }
 
 function renderStatusBadge(status) {
   const normalized = String(status || "").toLowerCase();
   const label = statusLabels[normalized] || formatCell(status);
+  if (ticketStatusPalette[normalized]) {
+    const palette = ticketStatusPalette[normalized];
+    return `<span class="status-badge is-ticket-status" style="--badge-bg: ${palette.background}; --badge-color: ${palette.color}; --badge-accent: ${palette.accent};"><span aria-hidden="true"></span>${escapeHtml(label)}</span>`;
+  }
   const className = normalized === "active" ? "is-active" : normalized === "inactive" ? "is-inactive" : "is-neutral";
   return `<span class="status-badge ${className}"><span aria-hidden="true"></span>${escapeHtml(label)}</span>`;
 }
@@ -941,6 +1171,36 @@ async function ensureCompaniesLoaded() {
   state.companies = data.items || [];
 }
 
+function populateCompanyFilter() {
+  const options = state.companies
+    .filter((company) => !isInternalKomiteCompany(company))
+    .map((company) => `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name || "Empresa")}</option>`)
+    .join("");
+  $("#companyFilter").innerHTML = `<option value="">Todas las empresas</option>${options}`;
+}
+
+function populateTicketFilters() {
+  const companies = state.companies.filter((company) => !isInternalKomiteCompany(company));
+  $("#ticketCompanyFilter").innerHTML = `<option value="">Todas las empresas</option>${companies
+    .map((company) => `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name || "Empresa")}</option>`)
+    .join("")}`;
+  $("#ticketStatusFilter").innerHTML = `<option value="">Todos los estados</option>${resources.supportTickets.fields
+    .find((field) => field.name === "status")
+    .options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+    .join("")}`;
+  populateTicketCondominiumFilter();
+}
+
+function populateTicketCondominiumFilter() {
+  const companyId = $("#ticketCompanyFilter").value;
+  const condominiums = state.condominiums
+    .filter((condominium) => !companyId || sameId(condominium.company_id, companyId))
+    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || "")));
+  $("#ticketCondominiumFilter").innerHTML = `<option value="">Todos los condominios</option>${condominiums
+    .map((condominium) => `<option value="${escapeHtml(condominium.id)}">${escapeHtml(condominium.name || "Condominio")}</option>`)
+    .join("")}`;
+}
+
 async function ensureUserLookupsLoaded() {
   const [companies, condominiums, roles, units, users] = await Promise.all([
     apiFetch("/api/v1/companies/?page=1&page_size=200"),
@@ -961,7 +1221,7 @@ async function openGenericForm(id = null) {
   if (!resource?.fields) return;
 
   $("#genericFormError").hidden = true;
-  if (resource.fields.some((field) => ["company", "user"].includes(field.type))) {
+  if (resource.fields.some((field) => ["company", "condominium", "user"].includes(field.type))) {
     await ensureUserLookupsLoaded();
   }
 
@@ -978,6 +1238,7 @@ async function openGenericForm(id = null) {
 
 function renderGenericFormFields(resource, item) {
   $("#genericFormFields").innerHTML = resource.fields.map((field) => renderGenericField(field, item)).join("");
+  bindGenericFieldDependencies();
 }
 
 function renderGenericField(field, item) {
@@ -996,6 +1257,12 @@ function renderGenericField(field, item) {
   if (field.type === "company") {
     return `<label>${label}<select data-generic-field="${name}"${required}><option value="">Selecciona empresa</option>${state.companies
       .map((company) => `<option value="${escapeHtml(company.id)}"${value === company.id ? " selected" : ""}>${escapeHtml(company.name)}</option>`)
+      .join("")}</select></label>`;
+  }
+
+  if (field.type === "condominium") {
+    return `<label>${label}<select data-generic-field="${name}"><option value="">Ticket general empresa</option>${state.condominiums
+      .map((condominium) => `<option value="${escapeHtml(condominium.id)}" data-company-id="${escapeHtml(condominium.company_id || "")}"${value === condominium.id ? " selected" : ""}>${escapeHtml(condominium.name)}</option>`)
       .join("")}</select></label>`;
   }
 
@@ -1645,6 +1912,15 @@ $("#logoutButton").addEventListener("click", async () => {
   showLogin();
 });
 $("#refreshButton").addEventListener("click", loadTable);
+$("#pageSizeSelect").addEventListener("change", async () => {
+  state.tablePageSize = Number($("#pageSizeSelect").value) || 10;
+  state.tablePage = 1;
+  await loadTable();
+});
+$("#firstPageButton").addEventListener("click", () => goToTablePage(1));
+$("#prevPageButton").addEventListener("click", () => goToTablePage(state.tablePage - 1));
+$("#nextPageButton").addEventListener("click", () => goToTablePage(state.tablePage + 1));
+$("#lastPageButton").addEventListener("click", () => goToTablePage(state.tableMeta.pages || 1));
 $("#newCompanyButton").addEventListener("click", () => openCompanyForm());
 $("#newCondominiumButton").addEventListener("click", () => openCondominiumForm());
 $("#newUserButton").addEventListener("click", () => openUserForm());
@@ -1672,7 +1948,39 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !$("#confirmModal").hidden) closeConfirmModal(false);
 });
 $("#searchInput").addEventListener("keydown", (event) => {
-  if (event.key === "Enter") loadTable();
+  if (event.key === "Enter") {
+    clearTimeout(searchDebounceTimer);
+    state.tablePage = 1;
+    loadTable();
+  }
+});
+$("#searchInput").addEventListener("input", () => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    state.tablePage = 1;
+    loadTable();
+  }, 350);
+});
+$("#companyFilter").addEventListener("change", () => {
+  const resource = resources[state.currentView];
+  if (resource) {
+    renderTable(resource.columns, filteredTableItems());
+    renderPagination();
+  }
+});
+$("#ticketCompanyFilter").addEventListener("change", async () => {
+  populateTicketCondominiumFilter();
+  $("#ticketCondominiumFilter").value = "";
+  state.tablePage = 1;
+  await loadTable();
+});
+$("#ticketCondominiumFilter").addEventListener("change", async () => {
+  state.tablePage = 1;
+  await loadTable();
+});
+$("#ticketStatusFilter").addEventListener("change", async () => {
+  state.tablePage = 1;
+  await loadTable();
 });
 $("#audioForm").addEventListener("submit", uploadAudio);
 $("#sidebarToggle").addEventListener("click", toggleSidebar);
@@ -1699,6 +2007,25 @@ async function bootstrap() {
   } else {
     showLogin();
   }
+}
+
+function bindGenericFieldDependencies() {
+  const companySelect = $('[data-generic-field="company_id"]');
+  const condominiumSelect = $('[data-generic-field="condominium_id"]');
+  if (!companySelect || !condominiumSelect) return;
+
+  const syncCondominiumOptions = () => {
+    const selectedCompanyId = companySelect.value;
+    Array.from(condominiumSelect.options).forEach((option) => {
+      const optionCompanyId = option.dataset.companyId;
+      option.hidden = Boolean(optionCompanyId && selectedCompanyId && !sameId(optionCompanyId, selectedCompanyId));
+    });
+    const selectedOption = condominiumSelect.selectedOptions[0];
+    if (selectedOption?.hidden) condominiumSelect.value = "";
+  };
+
+  companySelect.addEventListener("change", syncCondominiumOptions);
+  syncCondominiumOptions();
 }
 
 bootstrap();

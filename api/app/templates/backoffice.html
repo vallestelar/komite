@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Komite Backoffice</title>
-    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260704-23" />
+    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260705-02" />
   </head>
   <body>
     <main id="app">
@@ -588,6 +588,12 @@
       <strong id="toastTitle">Operacion completada</strong>
       <span id="toastMessage">Los cambios se guardaron correctamente.</span>
     </div>
+    <div id="loadingOverlay" class="loading-overlay" role="status" aria-live="polite" aria-label="Cargando" hidden>
+      <div class="loading-card">
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <span>Cargando...</span>
+      </div>
+    </div>
     <svg class="svg-sprite" aria-hidden="true">
       <symbol id="icon-panel-left" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path><path d="M15 10l-3 2 3 2"></path></symbol>
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></symbol>
@@ -624,6 +630,6 @@
       <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path></symbol>
     </svg>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/static/js/backoffice.js?v=20260705-01"></script>
+    <script src="/static/js/backoffice.js?v=20260705-02"></script>
   </body>
 </html>

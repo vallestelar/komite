@@ -29,6 +29,7 @@ const state = {
 let ticketsStatusChart = null;
 let ticketsCompanyChart = null;
 let searchDebounceTimer = null;
+let pendingRequests = 0;
 
 const outerStackBorderPlugin = {
   id: "outerStackBorder",
@@ -307,38 +308,50 @@ const placeholders = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
+function setLoading(loading) {
+  pendingRequests = Math.max(0, pendingRequests + (loading ? 1 : -1));
+  const overlay = $("#loadingOverlay");
+  if (overlay) overlay.hidden = pendingRequests === 0;
+}
+
 async function apiFetch(path, options = {}) {
-  const headers = options.headers || {};
-  if (state.token) {
-    headers.Authorization = `Bearer ${state.token}`;
-  }
+  setLoading(true);
 
-  let response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
-
-  if (response.status === 401 && state.refreshToken && shouldAttemptRefresh(path)) {
-    const refreshed = await refreshSession();
-    if (refreshed) {
+  try {
+    const headers = options.headers || {};
+    if (state.token) {
       headers.Authorization = `Bearer ${state.token}`;
-      response = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers,
-      });
     }
-  }
 
-  if (response.status === 401) {
-    handleExpiredSession();
-  }
+    let response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `HTTP ${response.status}`);
-  }
+    if (response.status === 401 && state.refreshToken && shouldAttemptRefresh(path)) {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        headers.Authorization = `Bearer ${state.token}`;
+        response = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          headers,
+        });
+      }
+    }
 
-  return response.json();
+    if (response.status === 401) {
+      handleExpiredSession();
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  } finally {
+    setLoading(false);
+  }
 }
 
 function setSession(data) {

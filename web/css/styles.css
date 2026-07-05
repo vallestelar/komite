@@ -119,7 +119,17 @@ button:hover {
 .sidebar-logo {
   display: block;
   width: 160px;
+  margin: 0 auto 8px;
+}
+
+.sidebar-context {
+  display: block;
   margin: 0 auto 22px;
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .side-nav {
@@ -334,4 +344,3 @@ pre {
     flex-direction: column;
   }
 }
-

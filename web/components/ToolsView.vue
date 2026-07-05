@@ -45,6 +45,25 @@ type EdifitoResponse = {
   download_base64: string;
 };
 
+type EdifitoNeighborsImportResponse = {
+  condominium_id: string;
+  condominium_name: string;
+  summary: {
+    rows: number;
+    units_created: number;
+    units_updated: number;
+    contacts_created: number;
+    contacts_updated: number;
+    contacts_skipped: number;
+  };
+  items: Array<{
+    unit: string;
+    relationship_type: string;
+    full_name: string;
+    status: string;
+  }>;
+};
+
 const { request } = useApi();
 const { activeCondominium } = useAuth();
 
@@ -55,6 +74,13 @@ const tools = [
     targetView: "edifito",
     status: "Preparado",
     copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
+  },
+  {
+    title: "Carga vecinos Edifito",
+    icon: "users",
+    targetView: "edifito-neighbors-import",
+    status: "Preparado",
+    copy: "Importar informe de asignaciones para crear o actualizar unidades, copropietarios y residentes.",
   },
   {
     title: "Informe conciliación Comunidad Feliz",
@@ -100,10 +126,20 @@ const errorMessage = ref("");
 const result = ref<EdifitoResponse | null>(null);
 const selectedUcoFilter = ref("");
 const selectedStatusFilter = ref("");
+const importCondominiumId = ref(activeCondominium.value?.id || "");
+const importAssignmentsFile = ref<File | null>(null);
+const importFileInputKey = ref(0);
+const importProcessing = ref(false);
+const importErrorMessage = ref("");
+const importResult = ref<EdifitoNeighborsImportResponse | null>(null);
 
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
 const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && assignmentsFile.value && chargeDetailFile.value && !processing.value));
 const isEdifito = computed(() => props.view === "edifito");
+const isEdifitoImport = computed(() => props.view === "edifito-neighbors-import");
+const isCatalog = computed(() => !isEdifito.value && !isEdifitoImport.value);
+const canImportNeighbors = computed(() => Boolean(importCondominiumId.value && importAssignmentsFile.value && !importProcessing.value));
+const importCondominiumOptions = computed(() => activeCondominium.value ? [activeCondominium.value] : []);
 const filteredTools = computed(() => {
   const query = toolSearch.value.trim().toLowerCase();
   if (!query) return tools;
@@ -160,6 +196,12 @@ const setFile = (event: Event, target: "bank" | "assignments" | "detail") => {
   errorMessage.value = "";
 };
 
+const setImportAssignmentsFile = (event: Event) => {
+  importAssignmentsFile.value = (event.target as HTMLInputElement).files?.[0] || null;
+  importResult.value = null;
+  importErrorMessage.value = "";
+};
+
 const resetEdifito = () => {
   const santander = banks.value.find((bank) => `${bank.name} ${bank.code || ""}`.toLowerCase().includes("santander"));
   selectedBankKey.value = bankKey(santander || banks.value[0]);
@@ -172,6 +214,15 @@ const resetEdifito = () => {
   errorMessage.value = "";
   result.value = null;
   fileInputKey.value += 1;
+};
+
+const resetImportNeighbors = () => {
+  importCondominiumId.value = activeCondominium.value?.id || "";
+  importAssignmentsFile.value = null;
+  importProcessing.value = false;
+  importErrorMessage.value = "";
+  importResult.value = null;
+  importFileInputKey.value += 1;
 };
 
 const processEdifito = async () => {
@@ -199,6 +250,29 @@ const processEdifito = async () => {
     errorMessage.value = parseError(error);
   } finally {
     processing.value = false;
+  }
+};
+
+const importEdifitoNeighbors = async () => {
+  if (!canImportNeighbors.value) return;
+
+  const form = new FormData();
+  form.append("condominium_id", importCondominiumId.value);
+  form.append("assignments_file", importAssignmentsFile.value as File);
+
+  importProcessing.value = true;
+  importErrorMessage.value = "";
+  importResult.value = null;
+
+  try {
+    importResult.value = await request<EdifitoNeighborsImportResponse>("/api/v1/edifito/import-neighbors", {
+      method: "POST",
+      body: form,
+    });
+  } catch (error) {
+    importErrorMessage.value = parseError(error);
+  } finally {
+    importProcessing.value = false;
   }
 };
 
@@ -243,6 +317,14 @@ watch(isEdifito, (active) => {
   if (active && !banks.value.length) loadBanks();
 }, { immediate: true });
 
+watch(isEdifitoImport, (active) => {
+  if (active && !importCondominiumId.value) resetImportNeighbors();
+}, { immediate: true });
+
+watch(activeCondominium, (condominium) => {
+  importCondominiumId.value = condominium?.id || "";
+});
+
 watch(toolSearch, () => {
   toolsPage.value = 1;
 });
@@ -253,7 +335,7 @@ watch(toolsPages, (pages) => {
 </script>
 
 <template>
-  <section v-if="view !== 'edifito'" class="panel placeholder-panel">
+  <section v-if="isCatalog" class="panel placeholder-panel">
     <p class="eyebrow">Herramientas</p>
     <h2>Centro de apoyo para la administradora</h2>
     <p class="placeholder-copy">
@@ -299,7 +381,7 @@ watch(toolsPages, (pages) => {
     </div>
   </section>
 
-  <section v-else class="panel edifito-panel">
+  <section v-else-if="isEdifito" class="panel edifito-panel">
     <div class="edifito-header">
       <div>
         <p class="eyebrow">Herramientas</p>
@@ -411,6 +493,81 @@ watch(toolsPages, (pages) => {
             </tr>
             <tr v-if="!filteredRows.length">
               <td class="empty-row" colspan="11">Sin movimientos para los filtros seleccionados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section v-else class="panel edifito-panel">
+    <div class="edifito-header">
+      <div>
+        <p class="eyebrow">Herramientas</p>
+        <h2>Carga vecinos Edifito</h2>
+        <p class="placeholder-copy">Importa unidades, copropietarios y residentes desde el informe de asignaciones.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="button ghost" type="button" @click="resetImportNeighbors">
+          <svg class="icon" aria-hidden="true"><use href="#icon-settings" /></svg>
+          <span>Reset</span>
+        </button>
+        <button class="button orange" type="button" :disabled="!canImportNeighbors" @click="importEdifitoNeighbors">
+          <svg class="icon" aria-hidden="true"><use href="#icon-checks" /></svg>
+          <span>{{ importProcessing ? "Procesando" : "Procesar carga" }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div :key="importFileInputKey" class="edifito-form">
+      <label>
+        Comunidad
+        <select v-model="importCondominiumId" disabled>
+          <option v-if="!activeCondominium" value="">Selecciona comunidad arriba</option>
+          <option v-for="condominium in importCondominiumOptions" :key="condominium.id" :value="condominium.id">
+            {{ condominium.name }}
+          </option>
+        </select>
+      </label>
+      <label>
+        Informe asignaciones Edifito XLSX
+        <input type="file" accept=".xlsx" @change="setImportAssignmentsFile" />
+      </label>
+    </div>
+
+    <p v-if="importErrorMessage" class="form-error result-message">{{ importErrorMessage }}</p>
+
+    <div v-if="importResult" class="edifito-results">
+      <div class="edifito-summary">
+        <article><span>Filas</span><strong>{{ importResult.summary.rows }}</strong></article>
+        <article><span>Unidades nuevas</span><strong>{{ importResult.summary.units_created }}</strong></article>
+        <article><span>Unidades actualizadas</span><strong>{{ importResult.summary.units_updated }}</strong></article>
+        <article><span>Contactos nuevos</span><strong>{{ importResult.summary.contacts_created }}</strong></article>
+        <article><span>Contactos actualizados</span><strong>{{ importResult.summary.contacts_updated }}</strong></article>
+        <article><span>Omitidos</span><strong>{{ importResult.summary.contacts_skipped }}</strong></article>
+      </div>
+
+      <p class="success-message">Carga aplicada en {{ importResult.condominium_name }}.</p>
+
+      <div class="edifito-table-wrap">
+        <table class="edifito-table">
+          <thead>
+            <tr>
+              <th>Unidad</th>
+              <th>Relacion</th>
+              <th>Nombre</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, index) in importResult.items" :key="`${item.unit}-${item.relationship_type}-${item.full_name}-${index}`">
+              <td>{{ item.unit }}</td>
+              <td>{{ item.relationship_type }}</td>
+              <td>{{ item.full_name }}</td>
+              <td>{{ item.status }}</td>
+            </tr>
+            <tr v-if="!importResult.items.length">
+              <td class="empty-row" colspan="4">No hay detalle para mostrar.</td>
             </tr>
           </tbody>
         </table>

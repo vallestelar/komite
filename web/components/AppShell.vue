@@ -16,8 +16,9 @@ const SIDEBAR_KEY = "komite_sidebar_collapsed";
 const NAV_GROUPS_KEY = "komite_nav_groups_collapsed";
 
 const config = useRuntimeConfig();
-const { activeCondominium, company, user, clearSession, refreshToken } = useAuth();
+const { activeCondominium, company, condominiums, user, clearSession, refreshToken, setActiveCondominium } = useAuth();
 const currentView = ref("dashboard");
+const viewRefreshKey = ref(0);
 const sidebarCollapsed = ref(false);
 const collapsedGroups = ref<string[]>([]);
 const workspaceRef = ref<HTMLElement | null>(null);
@@ -26,15 +27,14 @@ const menuGroups: MenuGroup[] = [
   {
     id: "inicio",
     label: "Inicio",
-    items: [{ id: "dashboard", label: "Panel operativo", icon: "dashboard", view: "dashboard" }],
+    items: [{ id: "dashboard", label: "Dashboard", icon: "dashboard", view: "dashboard" }],
   },
   {
-    id: "cartera",
-    label: "Cartera",
+    id: "comunidades",
+    label: "Comunidades",
     items: [
-      { id: "condominiums", label: "Condominios", icon: "building", view: "condominiums" },
-      { id: "maintenance", label: "Mantenciones", icon: "checks", view: "maintenance" },
-      { id: "history", label: "Historial", icon: "file-text", view: "history" },
+      { id: "neighbors", label: "Vecinos y unidades", icon: "home", view: "neighbors" },
+      { id: "committee", label: "Comite", icon: "users", view: "committee" },
     ],
   },
   {
@@ -44,7 +44,7 @@ const menuGroups: MenuGroup[] = [
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
-      { id: "evidence", label: "Evidencias", icon: "file-text", view: "evidence" },
+      { id: "files", label: "Archivos", icon: "file-text", view: "files" },
     ],
   },
   {
@@ -53,8 +53,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { id: "reports", label: "Informes", icon: "file-text", view: "reports" },
       { id: "communications", label: "Comunicados", icon: "message", view: "communications" },
-      { id: "recipients", label: "Destinatarios", icon: "users", view: "recipients" },
-      { id: "publication-rules", label: "Reglas de publicacion", icon: "shield", view: "publication-rules" },
     ],
   },
   {
@@ -62,21 +60,15 @@ const menuGroups: MenuGroup[] = [
     label: "Herramientas",
     items: [
       { id: "tools", label: "Centro de herramientas", icon: "tool", view: "tools" },
-    ],
-  },
-  {
-    id: "gestion",
-    label: "Gestion interna",
-    items: [
-      { id: "team", label: "Equipo", icon: "user", view: "team" },
-      { id: "accesses", label: "Accesos operativos", icon: "shield", view: "accesses" },
-      { id: "settings", label: "Preferencias", icon: "settings", view: "settings" },
+      { id: "audio", label: "Audio IA", icon: "mic", view: "audio" },
+      { id: "support", label: "Soporte Komite", icon: "help-circle", view: "support" },
     ],
   },
 ];
 
 const toolViewTitles: Record<string, string> = {
   edifito: "Edifito",
+  "edifito-neighbors-import": "Carga vecinos Edifito",
   "comunidad-feliz": "Comunidad Feliz",
   audio: "Procesar audio",
   "spreadsheet-tools": "Importar planillas",
@@ -91,6 +83,18 @@ const currentTitle = computed(() => {
 const userName = computed(() => user.value?.full_name || user.value?.email || "Usuario");
 const contextLabel = computed(() => activeCondominium.value?.name || "Sin condominio");
 const tenantLabel = computed(() => company.value?.name || "Empresa administradora");
+const activeCondominiumId = computed({
+  get: () => activeCondominium.value?.id || "",
+  set: (id: string) => {
+    const selected = condominiums.value.find((condominium) => condominium.id === id);
+    if (!selected) return;
+    setActiveCondominium(selected);
+    viewRefreshKey.value += 1;
+    nextTick(() => {
+      workspaceRef.value?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    });
+  },
+});
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
@@ -189,10 +193,14 @@ onMounted(() => {
           <h1>{{ currentTitle }}</h1>
         </div>
         <div class="user-chip">
-          <span class="context-chip" :title="tenantLabel">
+          <label class="context-chip" :title="tenantLabel">
             <svg class="icon" aria-hidden="true"><use href="#icon-building" /></svg>
-            <span>{{ contextLabel }}</span>
-          </span>
+            <select v-model="activeCondominiumId" :aria-label="`Condominio activo: ${contextLabel}`">
+              <option v-for="condominium in condominiums" :key="condominium.id" :value="condominium.id">
+                {{ condominium.name }}
+              </option>
+            </select>
+          </label>
           <span>{{ userName }}</span>
           <button class="button orange" type="button" @click="logout">
             <svg class="icon" aria-hidden="true"><use href="#icon-log-out" /></svg>
@@ -201,10 +209,11 @@ onMounted(() => {
         </div>
       </header>
 
-      <DashboardView v-if="currentView === 'dashboard'" @open-view="selectView" />
-      <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" />
-      <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :view="currentView" @open-view="selectView" />
-      <PlaceholderView v-else :title="currentTitle" :view="currentView" />
+      <DashboardView v-if="currentView === 'dashboard'" :key="`dashboard-${activeCondominiumId}-${viewRefreshKey}`" @open-view="selectView" />
+      <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}`" />
+      <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
+      <ToolsView v-else-if="['tools', 'edifito', 'edifito-neighbors-import'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
+      <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />
     </section>
 
     <SvgSprite />

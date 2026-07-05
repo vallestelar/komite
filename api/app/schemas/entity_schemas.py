@@ -179,9 +179,15 @@ class UnitCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: UUID
     building_id: Optional[UUID] = None
-    identifier: str = Field(..., max_length=80)
+    identifier: str
     floor: Optional[str] = Field(default=None, max_length=20)
     unit_type: str = Field(default="apartment", max_length=30)
+    external_code: Optional[str] = None
+    allocation_number: Optional[int] = None
+    allocation_identifier: Optional[str] = None
+    proration_total: Optional[Decimal] = None
+    proration: Optional[Decimal] = None
+    assignment_date: Optional[date] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -189,9 +195,15 @@ class UnitUpdate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     building_id: Optional[UUID] = None
-    identifier: Optional[str] = Field(default=None, max_length=80)
+    identifier: Optional[str] = None
     floor: Optional[str] = Field(default=None, max_length=20)
     unit_type: Optional[str] = Field(default=None, max_length=30)
+    external_code: Optional[str] = None
+    allocation_number: Optional[int] = None
+    allocation_identifier: Optional[str] = None
+    proration_total: Optional[Decimal] = None
+    proration: Optional[Decimal] = None
+    assignment_date: Optional[date] = None
     metadata: Optional[dict[str, Any]] = None
 
 
@@ -203,11 +215,83 @@ class UnitOut(AuditOut):
     identifier: str
     floor: Optional[str] = None
     unit_type: str
+    external_code: Optional[str] = None
+    allocation_number: Optional[int] = None
+    allocation_identifier: Optional[str] = None
+    proration_total: Optional[Decimal] = None
+    proration: Optional[Decimal] = None
+    assignment_date: Optional[date] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class UnitPage(BaseModel):
     items: list[UnitOut]
+    meta: PageMeta
+
+
+class UnitContactCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    unit_id: UUID
+    user_id: Optional[UUID] = None
+    relationship_type: str = Field(default="residente", max_length=40)
+    full_name: str = Field(..., max_length=150)
+    email: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    document_type: Optional[str] = Field(default=None, max_length=30)
+    document_number: Optional[str] = Field(default=None, max_length=40)
+    address: Optional[str] = Field(default=None, max_length=255)
+    is_primary_contact: bool = False
+    receives_notifications: bool = True
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class UnitContactUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
+    relationship_type: Optional[str] = Field(default=None, max_length=40)
+    full_name: Optional[str] = Field(default=None, max_length=150)
+    email: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    document_type: Optional[str] = Field(default=None, max_length=30)
+    document_number: Optional[str] = Field(default=None, max_length=40)
+    address: Optional[str] = Field(default=None, max_length=255)
+    is_primary_contact: Optional[bool] = None
+    receives_notifications: Optional[bool] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class UnitContactOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    unit_id: UUID
+    user_id: Optional[UUID] = None
+    relationship_type: str
+    full_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    document_type: Optional[str] = None
+    document_number: Optional[str] = None
+    address: Optional[str] = None
+    is_primary_contact: bool
+    receives_notifications: bool
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class UnitContactPage(BaseModel):
+    items: list[UnitContactOut]
     meta: PageMeta
 
 

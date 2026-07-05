@@ -60,8 +60,11 @@ export const useAuth = () => {
     const rawActiveCondominium = localStorage.getItem(ACTIVE_CONDOMINIUM_KEY) || sessionStorage.getItem(ACTIVE_CONDOMINIUM_KEY);
     user.value = rawUser ? safeJsonParse<KomiteUser>(rawUser) : null;
     company.value = rawCompany ? safeJsonParse<KomiteCompany>(rawCompany) : null;
-    condominiums.value = rawCondominiums ? safeJsonParse<KomiteCondominium[]>(rawCondominiums) || [] : [];
+    condominiums.value = uniqueCondominiumsById(rawCondominiums ? safeJsonParse<KomiteCondominium[]>(rawCondominiums) || [] : []);
     activeCondominium.value = rawActiveCondominium ? safeJsonParse<KomiteCondominium>(rawActiveCondominium) : null;
+    if (activeCondominium.value && !condominiums.value.some((condominium) => condominium.id === activeCondominium.value?.id)) {
+      activeCondominium.value = condominiums.value[0] || null;
+    }
   };
 
   const setSession = (session: LoginResponse, selectedCondominium: KomiteCondominium) => {
@@ -69,14 +72,15 @@ export const useAuth = () => {
     refreshToken.value = session.refresh_token || refreshToken.value;
     user.value = session.user;
     company.value = session.company || null;
-    condominiums.value = session.condominiums || [];
-    activeCondominium.value = selectedCondominium;
+    const uniqueCondominiums = uniqueCondominiumsById(session.condominiums || []);
+    condominiums.value = uniqueCondominiums;
+    activeCondominium.value = uniqueCondominiums.find((condominium) => condominium.id === selectedCondominium.id) || selectedCondominium;
 
     if (!import.meta.client) return;
     const userPayload = JSON.stringify(session.user || null);
     const companyPayload = JSON.stringify(session.company || null);
-    const condominiumsPayload = JSON.stringify(session.condominiums || []);
-    const activeCondominiumPayload = JSON.stringify(selectedCondominium);
+    const condominiumsPayload = JSON.stringify(uniqueCondominiums);
+    const activeCondominiumPayload = JSON.stringify(activeCondominium.value);
     localStorage.setItem(TOKEN_KEY, session.access_token);
     if (refreshToken.value) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken.value);
     localStorage.setItem(USER_KEY, userPayload);
@@ -94,6 +98,16 @@ export const useAuth = () => {
       document.cookie = `${REFRESH_TOKEN_KEY}=${encodeURIComponent(refreshToken.value)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
     }
     document.cookie = `${USER_KEY}=${encodeURIComponent(userPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+    document.cookie = `${ACTIVE_CONDOMINIUM_KEY}=${encodeURIComponent(activeCondominiumPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+  };
+
+  const setActiveCondominium = (selectedCondominium: KomiteCondominium) => {
+    activeCondominium.value = selectedCondominium;
+
+    if (!import.meta.client) return;
+    const activeCondominiumPayload = JSON.stringify(selectedCondominium);
+    localStorage.setItem(ACTIVE_CONDOMINIUM_KEY, activeCondominiumPayload);
+    sessionStorage.setItem(ACTIVE_CONDOMINIUM_KEY, activeCondominiumPayload);
     document.cookie = `${ACTIVE_CONDOMINIUM_KEY}=${encodeURIComponent(activeCondominiumPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
   };
 
@@ -134,6 +148,7 @@ export const useAuth = () => {
     isAuthenticated: computed(() => Boolean((token.value || refreshToken.value) && activeCondominium.value)),
     hydrate,
     setSession,
+    setActiveCondominium,
     clearSession,
   };
 };
@@ -158,4 +173,13 @@ function isJwtExpired(token: string): boolean {
 function base64UrlToBase64(value: string): string {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   return base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+}
+
+function uniqueCondominiumsById(items: KomiteCondominium[]): KomiteCondominium[] {
+  const byId = new Map<string, KomiteCondominium>();
+  for (const item of items) {
+    if (!item?.id || byId.has(item.id)) continue;
+    byId.set(item.id, item);
+  }
+  return [...byId.values()];
 }

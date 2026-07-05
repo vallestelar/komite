@@ -187,6 +187,24 @@ textarea:focus {
   box-shadow: 0 10px 22px rgba(247, 148, 29, 0.22);
 }
 
+.button.navy {
+  color: var(--white);
+  background: var(--navy);
+}
+
+.button.navy:hover {
+  background: var(--navy-2);
+}
+
+.button.danger {
+  color: var(--white);
+  background: var(--danger);
+}
+
+.button.danger:hover {
+  background: #912018;
+}
+
 .button.ghost {
   color: var(--navy);
   background: var(--white);
@@ -202,6 +220,12 @@ textarea:focus {
 .button.icon-only {
   width: 38px;
   padding: 0;
+}
+
+.button.compact {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
 }
 
 .form-error {
@@ -420,7 +444,29 @@ textarea:focus {
   font-weight: 800;
 }
 
-.context-chip span {
+.context-chip select {
+  width: auto;
+  max-width: 260px;
+  min-height: auto;
+  border: 0;
+  padding: 0 22px 0 0;
+  color: var(--navy);
+  background-color: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.context-chip select:focus {
+  outline: 0;
+}
+
+.context-chip:focus-within {
+  outline: 2px solid rgba(247, 148, 29, 0.28);
+  border-color: var(--orange);
+}
+
+.context-chip span,
+.context-chip select {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -525,6 +571,11 @@ h3 {
   margin-top: 8px;
   color: var(--navy);
   font-size: 30px;
+}
+
+.metric .metric-name {
+  font-size: 20px;
+  line-height: 1.2;
 }
 
 .metric small {
@@ -834,8 +885,194 @@ h3 {
 }
 
 .empty-row {
+  padding: 24px;
   color: var(--muted);
   text-align: center;
+}
+
+.entity-panel,
+.entity-list {
+  display: grid;
+  gap: 16px;
+}
+
+.entity-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.entity-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.entity-toolbar input {
+  width: min(360px, 100%);
+}
+
+.entity-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.entity-table-wrap {
+  background: var(--white);
+}
+
+.entity-table {
+  min-width: 860px;
+}
+
+.entity-table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.mono-cell,
+.record-id {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.boolean-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d6e0ec;
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #526272;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.boolean-chip .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.boolean-chip.is-on {
+  border-color: #b7e4c7;
+  color: #027a48;
+  background: #ecfdf3;
+}
+
+.boolean-chip.is-off {
+  border-color: #e2e8f0;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.entity-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagination-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pagination-controls select {
+  width: auto;
+  min-height: 34px;
+  padding: 6px 26px 6px 8px;
+}
+
+.entity-form {
+  display: grid;
+  gap: 16px;
+}
+
+.entity-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.span-all {
+  grid-column: 1 / -1;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 800;
+}
+
+.checkbox-field input {
+  width: auto;
+  min-height: auto;
+}
+
+.record-id {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: var(--muted);
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.success-message {
+  margin: 0;
+  color: #027a48;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(16, 36, 55, 0.36);
+}
+
+.confirm-modal {
+  width: min(440px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  background: var(--white);
+  box-shadow: 0 22px 60px rgba(16, 36, 55, 0.22);
 }
 
 @media (max-width: 1100px) {

@@ -122,6 +122,18 @@ async def _with_tenant_data(
         data["company_id"] = request.state.company_id
 
     if not await user_is_komite_employee(request.state.user):
+        if data.get("condominium_id"):
+            allowed_condominium_ids = {
+                str(item.get("id"))
+                for item in getattr(request.state, "condominiums", [])
+                if isinstance(item, dict) and item.get("id")
+            }
+            if str(data["condominium_id"]) not in allowed_condominium_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="El condominio no esta permitido para este usuario",
+                )
+
         if not request.state.company_id or str(data.get("company_id")) != str(request.state.company_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -141,6 +153,7 @@ def create_crud_router(
     response_schema: Type[BaseModel],
     page_schema: Type[BaseModel],
     search_fields: Sequence[str] = (),
+    write_requires_komite: bool = True,
 ) -> APIRouter:
     router = APIRouter(prefix=prefix, tags=[tag])
 
@@ -235,6 +248,16 @@ def create_crud_router(
         svc=Depends(get_service),
     ):
         try:
+            filters = await _read_filters(model, request)
+            pk_name = model._meta.pk_attr
+            if filters:
+                existing = await svc.list(limit=1, **{**filters, pk_name: obj_id})
+                if not existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"{tag} no encontrado",
+                    )
+
             data = await _with_tenant_data(
                 model,
                 payload.model_dump(exclude_unset=True),
@@ -255,7 +278,17 @@ def create_crud_router(
             )
         return response_schema(**serialize_model(obj))
 
-    async def delete_item(obj_id: UUID, svc=Depends(get_service)):
+    async def delete_item(request: Request, obj_id: UUID, svc=Depends(get_service)):
+        filters = await _read_filters(model, request)
+        pk_name = model._meta.pk_attr
+        if filters:
+            existing = await svc.list(limit=1, **{**filters, pk_name: obj_id})
+            if not existing:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{tag} no encontrado",
+                )
+
         deleted = await svc.delete(obj_id)
         if deleted == 0:
             raise HTTPException(
@@ -271,7 +304,7 @@ def create_crud_router(
     update_item.__annotations__["payload"] = update_schema
     update_item.__annotations__["return"] = response_schema
 
-    write_dependencies = [Depends(require_komite_employee())]
+    write_dependencies = [Depends(require_komite_employee())] if write_requires_komite else [Depends(require_access_token())]
     read_dependencies = [Depends(require_access_token())]
 
     router.add_api_route("/", create_item, methods=["POST"], response_model=response_schema, status_code=status.HTTP_201_CREATED, dependencies=write_dependencies)

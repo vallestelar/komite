@@ -1,7 +1,17 @@
 <template>
   <svg class="svg-sprite" aria-hidden="true">
     <symbol id="icon-panel-left" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /><path d="M15 10l-3 2 3 2" /></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14" /><path d="M5 12h14" /></symbol>
     <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol>
+    <symbol id="icon-chevrons-left" viewBox="0 0 24 24"><path d="m11 17-5-5 5-5" /><path d="m18 17-5-5 5-5" /></symbol>
+    <symbol id="icon-chevrons-right" viewBox="0 0 24 24"><path d="m6 17 5-5-5-5" /><path d="m13 17 5-5-5-5" /></symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" /><path d="M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16" /><path d="M20 20v-4h-4" /></symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></symbol>
+    <symbol id="icon-pencil" viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" /></symbol>
+    <symbol id="icon-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8" /><path d="M7 3v5h8" /></symbol>
     <symbol id="icon-log-out" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 3v18h-6" /></symbol>
     <symbol id="icon-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="15" width="7" height="6" rx="1" /></symbol>
     <symbol id="icon-building" viewBox="0 0 24 24"><path d="M4 21h16" /><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" /><path d="M9 8h1" /><path d="M14 8h1" /><path d="M9 12h1" /><path d="M14 12h1" /><path d="M10 21v-4h4v4" /></symbol>

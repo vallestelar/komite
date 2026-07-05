@@ -4,9 +4,9 @@ const emit = defineEmits<{
 }>();
 
 const { request } = useApi();
+const { activeCondominium } = useAuth();
 
 const metrics = reactive({
-  condominiums: 0,
   incidents: 0,
   tasks: 0,
   reports: 0,
@@ -35,8 +35,7 @@ const fetchPage = async (path: string) => {
 
 const loadDashboard = async () => {
   loading.value = true;
-  const [condominiums, incidents, tasks, reports, communications, ai] = await Promise.all([
-    fetchPage("/api/v1/condominiums/?page=1&page_size=5"),
+  const [incidents, tasks, reports, communications, ai] = await Promise.all([
     fetchPage("/api/v1/incidents/?page=1&page_size=5"),
     fetchPage("/api/v1/tasks/?page=1&page_size=5"),
     fetchPage("/api/v1/reports/?page=1&page_size=5"),
@@ -44,7 +43,6 @@ const loadDashboard = async () => {
     fetchPage("/api/v1/ai-requests/?page=1&page_size=5"),
   ]);
 
-  metrics.condominiums = condominiums.total;
   metrics.incidents = incidents.total;
   metrics.tasks = tasks.total;
   metrics.reports = reports.total;
@@ -81,7 +79,7 @@ const textValue = (item: Record<string, unknown>, key: string, fallback = "") =>
     </div>
 
     <div class="metrics-grid" aria-busy="loading">
-      <article class="metric"><span>Condominios activos</span><strong>{{ metrics.condominiums }}</strong><small>Comunidades gestionadas</small></article>
+      <article class="metric"><span>Condominio activo</span><strong class="metric-name">{{ activeCondominium?.name || "Sin contexto" }}</strong><small>Contexto de consulta actual</small></article>
       <article class="metric"><span>Incidencias</span><strong>{{ metrics.incidents }}</strong><small>Registros operativos</small></article>
       <article class="metric"><span>Tareas</span><strong>{{ metrics.tasks }}</strong><small>Trabajo del equipo</small></article>
       <article class="metric"><span>Informes</span><strong>{{ metrics.reports }}</strong><small>Borradores y publicados</small></article>

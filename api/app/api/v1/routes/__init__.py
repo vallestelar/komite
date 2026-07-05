@@ -4,6 +4,7 @@ from .backoffice_router import router as backoffice_router
 from .comunidad_feliz_router import router as comunidad_feliz_router
 from .edifito_router import router as edifito_router
 from .entities_router import entity_routers
+from .portal_neighbors_router import router as portal_neighbors_router
 from .user_router import router as user_router
 
 all_routers = [
@@ -12,6 +13,7 @@ all_routers = [
     backoffice_router,
     comunidad_feliz_router,
     edifito_router,
+    portal_neighbors_router,
     user_router,
     *entity_routers,
 ]

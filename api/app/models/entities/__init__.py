@@ -2,6 +2,7 @@ from app.models.entities.company import Company
 from app.models.entities.condominium import Condominium
 from app.models.entities.building import Building
 from app.models.entities.unit import Unit
+from app.models.entities.unit_contact import UnitContact
 from app.models.entities.role import Role
 from app.models.entities.bank import Bank
 from app.models.entities.user import User
@@ -29,6 +30,7 @@ __all__ = [
     "Condominium",
     "Building",
     "Unit",
+    "UnitContact",
     "Role",
     "Bank",
     "User",

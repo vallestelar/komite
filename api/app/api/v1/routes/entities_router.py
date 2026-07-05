@@ -22,6 +22,7 @@ from app.models.entities import (
     TaskChecklist,
     SupportTicket,
     Unit,
+    UnitContact,
     UserCondominium,
 )
 from app.schemas.entity_schemas import (
@@ -110,6 +111,10 @@ from app.schemas.entity_schemas import (
     SupportTicketPage,
     SupportTicketUpdate,
     UnitCreate,
+    UnitContactCreate,
+    UnitContactOut,
+    UnitContactPage,
+    UnitContactUpdate,
     UnitOut,
     UnitPage,
     UnitUpdate,
@@ -124,7 +129,8 @@ entity_routers = [
     create_crud_router(model=Bank, prefix="/api/v1/banks", tag="Banks", create_schema=BankCreate, update_schema=BankUpdate, response_schema=BankOut, page_schema=BankPage, search_fields=("name", "code", "country")),
     create_crud_router(model=Condominium, prefix="/api/v1/condominiums", tag="Condominiums", create_schema=CondominiumCreate, update_schema=CondominiumUpdate, response_schema=CondominiumOut, page_schema=CondominiumPage, search_fields=("name", "address")),
     create_crud_router(model=Building, prefix="/api/v1/buildings", tag="Buildings", create_schema=BuildingCreate, update_schema=BuildingUpdate, response_schema=BuildingOut, page_schema=BuildingPage, search_fields=("name",)),
-    create_crud_router(model=Unit, prefix="/api/v1/units", tag="Units", create_schema=UnitCreate, update_schema=UnitUpdate, response_schema=UnitOut, page_schema=UnitPage, search_fields=("identifier",)),
+    create_crud_router(model=Unit, prefix="/api/v1/units", tag="Units", create_schema=UnitCreate, update_schema=UnitUpdate, response_schema=UnitOut, page_schema=UnitPage, search_fields=("identifier",), write_requires_komite=False),
+    create_crud_router(model=UnitContact, prefix="/api/v1/unit-contacts", tag="Unit contacts", create_schema=UnitContactCreate, update_schema=UnitContactUpdate, response_schema=UnitContactOut, page_schema=UnitContactPage, search_fields=("full_name", "email", "phone", "document_number", "relationship_type"), write_requires_komite=False),
     create_crud_router(model=Role, prefix="/api/v1/roles", tag="Roles", create_schema=RoleCreate, update_schema=RoleUpdate, response_schema=RoleOut, page_schema=RolePage, search_fields=("code", "name")),
     create_crud_router(model=UserCondominium, prefix="/api/v1/user-condominiums", tag="User condominiums", create_schema=UserCondominiumCreate, update_schema=UserCondominiumUpdate, response_schema=UserCondominiumOut, page_schema=UserCondominiumPage),
     create_crud_router(model=Incident, prefix="/api/v1/incidents", tag="Incidents", create_schema=IncidentCreate, update_schema=IncidentUpdate, response_schema=IncidentOut, page_schema=IncidentPage, search_fields=("category", "original_description", "ai_description")),

@@ -298,6 +298,10 @@ const placeholders = {
     title: "Configuracion",
     text: "Aqui se centralizaran parametros del sistema, integraciones, proveedores de IA y reglas operativas.",
   },
+  integrations: {
+    title: "Integraciones",
+    text: "Aqui se gestionaran conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajeria.",
+  },
 };
 
 const $ = (selector) => document.querySelector(selector);

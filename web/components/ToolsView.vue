@@ -50,14 +50,14 @@ const { activeCondominium } = useAuth();
 
 const tools = [
   {
-    title: "Edifito",
+    title: "Informe conciliación Edifito",
     icon: "table",
     targetView: "edifito",
     status: "Preparado",
     copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
   },
   {
-    title: "Comunidad Feliz",
+    title: "Informe conciliación Comunidad Feliz",
     icon: "home",
     targetView: "comunidad-feliz",
     status: "Preparado",
@@ -87,6 +87,9 @@ const tools = [
 ];
 
 const banks = ref<BankOption[]>([]);
+const toolSearch = ref("");
+const toolsPage = ref(1);
+const toolsPageSize = 6;
 const selectedBankKey = ref("name:Santander");
 const bankStatementFile = ref<File | null>(null);
 const assignmentsFile = ref<File | null>(null);
@@ -101,6 +104,17 @@ const selectedStatusFilter = ref("");
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
 const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && assignmentsFile.value && chargeDetailFile.value && !processing.value));
 const isEdifito = computed(() => props.view === "edifito");
+const filteredTools = computed(() => {
+  const query = toolSearch.value.trim().toLowerCase();
+  if (!query) return tools;
+
+  return tools.filter((tool) => `${tool.title} ${tool.copy} ${tool.status}`.toLowerCase().includes(query));
+});
+const toolsPages = computed(() => Math.max(1, Math.ceil(filteredTools.value.length / toolsPageSize)));
+const paginatedTools = computed(() => {
+  const start = (toolsPage.value - 1) * toolsPageSize;
+  return filteredTools.value.slice(start, start + toolsPageSize);
+});
 const ucoOptions = computed(() => {
   const values = new Set((result.value?.rows || []).map((row) => row.uco).filter(Boolean));
   return [...values].sort((a, b) => a.localeCompare(b));
@@ -119,6 +133,10 @@ const filteredRows = computed(() => {
 });
 
 const bankKey = (bank: BankOption) => bank.id || `name:${bank.name}`;
+
+const goToolsPage = (page: number) => {
+  toolsPage.value = Math.min(Math.max(page, 1), toolsPages.value);
+};
 
 const loadBanks = async () => {
   try {
@@ -224,6 +242,14 @@ const actionIcon = (status: string) => {
 watch(isEdifito, (active) => {
   if (active && !banks.value.length) loadBanks();
 }, { immediate: true });
+
+watch(toolSearch, () => {
+  toolsPage.value = 1;
+});
+
+watch(toolsPages, (pages) => {
+  if (toolsPage.value > pages) toolsPage.value = pages;
+});
 </script>
 
 <template>
@@ -234,8 +260,16 @@ watch(isEdifito, (active) => {
       Funciones pensadas para reducir trabajo repetitivo del equipo del cliente: procesar informacion, ordenar evidencias y preparar borradores antes de publicar o enviar.
     </p>
 
-    <div class="tool-grid" style="margin-top: 18px">
-      <button v-for="tool in tools" :key="tool.title" class="tool-card tool-card-link" type="button" @click="emit('openView', tool.targetView)">
+    <div class="tools-catalog-toolbar">
+      <label class="tools-search">
+        Buscar herramienta
+        <input v-model="toolSearch" type="search" placeholder="Buscar por nombre o funcion" />
+      </label>
+      <span class="tools-count">{{ filteredTools.length }} herramientas</span>
+    </div>
+
+    <div v-if="paginatedTools.length" class="tool-grid">
+      <button v-for="tool in paginatedTools" :key="tool.title" class="tool-card tool-card-link" type="button" @click="emit('openView', tool.targetView)">
         <span class="tool-icon">
           <svg class="icon" aria-hidden="true"><use :href="`#icon-${tool.icon}`" /></svg>
         </span>
@@ -250,6 +284,17 @@ watch(isEdifito, (active) => {
             <svg class="icon" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
           </span>
         </span>
+      </button>
+    </div>
+    <p v-else class="tools-empty">No hay herramientas que coincidan con la busqueda.</p>
+
+    <div v-if="filteredTools.length" class="tools-pagination">
+      <button class="button ghost icon-only" type="button" title="Pagina anterior" :disabled="toolsPage === 1" @click="goToolsPage(toolsPage - 1)">
+        <svg class="icon prev-icon" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
+      </button>
+      <span class="tools-page-label">Pagina {{ toolsPage }} de {{ toolsPages }}</span>
+      <button class="button ghost icon-only" type="button" title="Pagina siguiente" :disabled="toolsPage === toolsPages" @click="goToolsPage(toolsPage + 1)">
+        <svg class="icon next-icon" aria-hidden="true"><use href="#icon-chevron-down" /></svg>
       </button>
     </div>
   </section>

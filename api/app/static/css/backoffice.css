@@ -900,6 +900,23 @@ tbody tr:hover {
   margin-bottom: 18px;
 }
 
+.record-id {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: 8px 0 0;
+  padding: 5px 9px;
+  color: var(--muted);
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .entity-form {
   display: grid;
   gap: 16px;

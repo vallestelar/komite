@@ -62,11 +62,6 @@ const menuGroups: MenuGroup[] = [
     label: "Herramientas",
     items: [
       { id: "tools", label: "Centro de herramientas", icon: "tool", view: "tools" },
-      { id: "edifito", label: "Edifito", icon: "table", view: "edifito" },
-      { id: "comunidad-feliz", label: "Comunidad Feliz", icon: "home", view: "comunidad-feliz" },
-      { id: "audio", label: "Procesar audio", icon: "mic", view: "audio" },
-      { id: "spreadsheet-tools", label: "Importar planillas", icon: "table", view: "spreadsheet-tools" },
-      { id: "monthly-summary", label: "Resumen mensual", icon: "spark", view: "monthly-summary" },
     ],
   },
   {
@@ -80,9 +75,17 @@ const menuGroups: MenuGroup[] = [
   },
 ];
 
+const toolViewTitles: Record<string, string> = {
+  edifito: "Edifito",
+  "comunidad-feliz": "Comunidad Feliz",
+  audio: "Procesar audio",
+  "spreadsheet-tools": "Importar planillas",
+  "monthly-summary": "Resumen mensual",
+};
+
 const currentTitle = computed(() => {
   const item = menuGroups.flatMap((group) => group.items).find((entry) => entry.view === currentView.value);
-  return item?.label || "Modulo";
+  return item?.label || toolViewTitles[currentView.value] || "Modulo";
 });
 
 const userName = computed(() => user.value?.full_name || user.value?.email || "Usuario");
@@ -200,7 +203,7 @@ onMounted(() => {
 
       <DashboardView v-if="currentView === 'dashboard'" @open-view="selectView" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" />
-      <ToolsView v-else-if="['tools', 'edifito', 'audio', 'spreadsheet-tools', 'monthly-summary'].includes(currentView)" :view="currentView" @open-view="selectView" />
+      <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :title="currentTitle" :view="currentView" />
     </section>
 

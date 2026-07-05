@@ -118,7 +118,7 @@ const resources = {
   condominiums: {
     title: "Condominios",
     endpoint: "/api/v1/condominiums/",
-    columns: ["id", "name", "address", "status", "units_count"],
+    columns: ["id", "company_id", "name", "address", "status", "units_count"],
   },
   incidents: {
     title: "Incidencias",
@@ -128,7 +128,7 @@ const resources = {
   supportTickets: {
     title: "Tickets",
     endpoint: "/api/v1/support-tickets/",
-    columns: ["company_id", "condominium_id", "subject", "category", "priority", "status", "due_date"],
+    columns: ["id", "company_id", "condominium_id", "subject", "priority", "status", "due_date"],
     createLabel: "Nuevo ticket",
     singular: "ticket",
     fields: [
@@ -325,6 +325,10 @@ async function apiFetch(path, options = {}) {
     }
   }
 
+  if (response.status === 401) {
+    handleExpiredSession();
+  }
+
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || `HTTP ${response.status}`);
@@ -354,6 +358,13 @@ function clearSession() {
   state.refreshToken = null;
   state.user = null;
   purgeStoredSession();
+}
+
+function handleExpiredSession() {
+  clearSession();
+  showLogin();
+  $("#loginError").textContent = "Tu sesion ha caducado. Vuelve a entrar para continuar.";
+  $("#loginError").hidden = false;
 }
 
 function purgeStoredSession() {
@@ -1230,10 +1241,18 @@ async function openGenericForm(id = null) {
   $("#viewTitle").textContent = item ? `Editar ${resource.singular}` : resource.createLabel;
   $("#genericFormEyebrow").textContent = resource.title;
   $("#genericFormTitle").textContent = item ? `Editar ${resource.singular}` : resource.createLabel;
+  setRecordId("#genericRecordId", item?.id);
   $("#saveGenericButton span").textContent = `Guardar ${resource.singular}`;
   $("#deleteGenericButton").hidden = !item;
   renderGenericFormFields(resource, item);
   showPanel("genericForm");
+}
+
+function setRecordId(selector, id) {
+  const element = $(selector);
+  if (!element) return;
+  element.hidden = !id;
+  element.textContent = id ? `ID: ${id}` : "";
 }
 
 function renderGenericFormFields(resource, item) {
@@ -1371,6 +1390,7 @@ async function openCondominiumForm(id = null) {
     const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/condominiums/${id}`)) : null;
     $("#viewTitle").textContent = item ? "Editar condominio" : "Nuevo condominio";
     $("#condominiumFormTitle").textContent = item ? "Editar condominio" : "Nuevo condominio";
+    setRecordId("#condominiumRecordId", item?.id);
     $("#deleteCondominiumButton").hidden = !item;
     fillCondominiumForm(item);
     showPanel("condominiumForm");
@@ -1387,6 +1407,7 @@ async function openCompanyForm(id = null, returnContext = null) {
   const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/companies/${id}`)) : null;
   $("#viewTitle").textContent = item ? "Editar empresa" : "Nueva empresa";
   $("#companyFormTitle").textContent = item ? "Editar empresa" : "Nueva empresa";
+  setRecordId("#companyRecordId", item?.id);
   $("#deleteCompanyButton").hidden = !item;
   fillCompanyForm(item);
   showPanel("companyForm");
@@ -1499,6 +1520,7 @@ async function openUserForm(id = null) {
   const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/users/${id}`)) : null;
   $("#viewTitle").textContent = item ? "Editar usuario" : "Nuevo usuario";
   $("#userFormTitle").textContent = item ? "Editar usuario" : "Nuevo usuario";
+  setRecordId("#userRecordId", item?.id);
   $("#deleteUserButton").hidden = !item;
   $("#userPassword").required = !item;
   fillUserForm(item);
@@ -1882,8 +1904,14 @@ async function uploadAudio(event) {
     });
     $("#audioResult").textContent = data.transcription_text || data.error_message || "Sin transcripcion.";
   } catch (error) {
-    $("#audioResult").textContent = "No se pudo procesar el audio.";
+    $("#audioResult").textContent = isUnauthorizedError(error)
+      ? "Tu sesion ha caducado. Vuelve a entrar y procesa el audio de nuevo."
+      : "No se pudo procesar el audio.";
   }
+}
+
+function isUnauthorizedError(error) {
+  return String(error?.message || error || "").includes("401");
 }
 
 function escapeHtml(value) {

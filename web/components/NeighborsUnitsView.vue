@@ -73,6 +73,10 @@ type NeighborForm = {
   metadata: string;
 };
 
+const props = defineProps<{
+  focusNeighborId?: string;
+}>();
+
 const { request } = useApi();
 const { activeCondominium } = useAuth();
 
@@ -266,6 +270,22 @@ const openEditNeighbor = async (neighbor: NeighborRecord) => {
   neighborForm.metadata = JSON.stringify(neighbor.metadata || {}, null, 2);
   formError.value = "";
   mode.value = "neighborForm";
+};
+
+const openNeighborById = async (neighborId: string) => {
+  if (!neighborId) return;
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    const neighbor = await request<NeighborRecord>(`/api/v1/portal/neighbors/${neighborId}`);
+    activeTab.value = "neighbors";
+    await openEditNeighbor(neighbor);
+  } catch (error) {
+    errorMessage.value = readableError(error);
+    mode.value = "list";
+  } finally {
+    loading.value = false;
+  }
 };
 
 const openCreateUnit = () => {
@@ -484,7 +504,17 @@ const emptyToNumber = (value: string) => {
 const relationshipLabel = (value: string) => relationshipOptions.find(([key]) => key === value)?.[1] || value;
 const unitTypeLabel = (value: string) => unitTypeOptions.find(([key]) => key === value)?.[1] || value;
 
-onMounted(loadActiveTab);
+onMounted(async () => {
+  if (props.focusNeighborId) {
+    await openNeighborById(props.focusNeighborId);
+    return;
+  }
+  await loadActiveTab();
+});
+
+watch(() => props.focusNeighborId, async (neighborId) => {
+  if (neighborId) await openNeighborById(neighborId);
+});
 </script>
 
 <template>

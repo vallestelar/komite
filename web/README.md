@@ -2,7 +2,7 @@
 
 Front web de Komite construido con Nuxt 3.
 
-Esta aplicacion es el portal operativo para las empresas administradoras que son clientes de Komite. La usaran principalmente usuarios con perfil de Portal Administrador: project managers y ejecutivos/as, segun permisos.
+Esta aplicacion es el portal operativo para las empresas administradoras que son clientes de Komite. La usaran principalmente usuarios con perfil de Portal Administrador: project managers, supervisores y ejecutivos/as, segun permisos.
 
 No es el backoffice interno de Komite como empresa. El backoffice interno debe quedar reservado para que Komite controle clientes, configuraciones globales, permisos de plataforma, usuarios de tenants, auditoria SaaS y parametros generales del servicio.
 
@@ -114,7 +114,7 @@ El backend debe validar que el usuario tenga permiso sobre ese condominio y usar
 
 El menu esta organizado para usuarios de la empresa administradora cliente:
 
-- `company_profile` define el perfil del Portal Administrador: `project_manager` o `ejecutivo`.
+- `company_profile` define el perfil del Portal Administrador: `project_manager`, `supervisor` o `ejecutivo`.
 - Los roles mobile (`vecino`, `comite`, `supervisor`, `conserje`) determinan el acceso por condominio.
 - Un acceso mobile con condominio `Todos` permite ver todos los condominios activos de la empresa del usuario.
 

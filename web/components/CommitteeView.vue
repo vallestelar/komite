@@ -26,6 +26,9 @@ type CommitteeMember = {
 
 const { request } = useApi();
 const { activeCondominium } = useAuth();
+const emit = defineEmits<{
+  openNeighbor: [neighborId: string];
+}>();
 
 const members = ref<CommitteeMember[]>([]);
 const meta = reactive<PageMeta>({ total: 0, page: 1, page_size: 100, pages: 1 });
@@ -66,6 +69,11 @@ const statusBadgeClass = (status: string | null | undefined) => {
 };
 
 const notificationLabel = (value: boolean) => value ? "Recibe notificaciones" : "No recibe notificaciones";
+
+const openNeighbor = (member: CommitteeMember) => {
+  if (!member.unit_contact_id) return;
+  emit("openNeighbor", member.unit_contact_id);
+};
 
 const periodLabel = (member: CommitteeMember) => {
   if (member.start_date && member.end_date) return `${formatDate(member.start_date)} - ${formatDate(member.end_date)}`;
@@ -116,7 +124,17 @@ watch(() => activeCondominium.value?.id, loadCommittee, { immediate: true });
     <p v-if="errorMessage" class="form-error result-message">{{ errorMessage }}</p>
 
     <div v-if="sortedMembers.length" class="committee-grid">
-      <article v-for="member in sortedMembers" :key="member.id" class="committee-card">
+      <article
+        v-for="member in sortedMembers"
+        :key="member.id"
+        class="committee-card"
+        :class="{ 'is-clickable': member.unit_contact_id }"
+        :tabindex="member.unit_contact_id ? 0 : undefined"
+        :role="member.unit_contact_id ? 'button' : undefined"
+        @click="openNeighbor(member)"
+        @keydown.enter.prevent="openNeighbor(member)"
+        @keydown.space.prevent="openNeighbor(member)"
+      >
         <div class="committee-card-header">
           <span class="committee-avatar" aria-hidden="true">
             <svg class="icon"><use href="#icon-shield" /></svg>
@@ -151,6 +169,14 @@ watch(() => activeCondominium.value?.id, loadCommittee, { immediate: true });
         </div>
 
         <p v-if="member.notes" class="committee-notes">{{ member.notes }}</p>
+
+        <div v-if="member.unit_contact_id" class="committee-card-actions">
+          <button class="button compact ghost" type="button" @click.stop="openNeighbor(member)">
+            <svg class="icon" aria-hidden="true"><use href="#icon-user" /></svg>
+            <span>Ver vecino</span>
+            <svg class="icon" aria-hidden="true"><use href="#icon-chevron-right" /></svg>
+          </button>
+        </div>
       </article>
     </div>
 

@@ -144,7 +144,7 @@ KOMITE usa una unica base de datos compartida. La tabla `companies` representa e
 
 El modelo de acceso se mantiene intencionalmente reducido:
 
-- `users.company_profile`: perfil del Portal Administrador: `project_manager` o `ejecutivo`.
+- `users.company_profile`: perfil del Portal Administrador: `project_manager`, `supervisor` o `ejecutivo`.
 - `roles`: accesos mobile por condominio: `vecino`, `comite`, `supervisor` y `conserje`.
 - En `user_condominiums`, `condominium_id = null` representa acceso a todos los condominios activos de la empresa del usuario.
 - El backoffice de Komite exige usuario activo perteneciente a la empresa `Komite`.

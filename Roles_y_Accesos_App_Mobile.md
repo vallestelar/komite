@@ -36,6 +36,7 @@ Valores actuales:
 | Perfil Portal Administrador | Uso esperado |
 |---|---|
 | `project_manager` | Gestion y coordinacion de la operacion de la empresa administradora. |
+| `supervisor` | Supervision operativa desde el Portal Administrador, seguimiento de trabajo en terreno y control de actividades. |
 | `ejecutivo` | Gestion operativa administrativa, seguimiento, consultas y tareas. |
 | Sin perfil | El usuario no tiene acceso funcional al Portal Administrador por perfil. |
 
@@ -44,7 +45,8 @@ Importante:
 - Este perfil aplica a la web app administrativa.
 - No es un rol mobile.
 - No debe confundirse con `vecino`, `comite`, `supervisor` o `conserje`.
-- Supervisor y conserje pertenecen al ambito mobile/operativo, no al perfil del portal.
+- El perfil Portal Administrador `supervisor` no debe confundirse con el rol mobile `supervisor`; comparten nombre funcional, pero viven en campos distintos.
+- Conserje pertenece al ambito mobile/operativo, no al perfil del portal.
 
 ## Backoffice interno Komite
 
@@ -488,6 +490,7 @@ App mobile:
 | Usuario | Portal Administrador | App mobile Comunidad | App mobile Operacion | Backoffice |
 |---|---:|---:|---:|---:|
 | `project_manager` | Si | Solo si tiene rol mobile `vecino` o `comite` | Solo si tiene rol mobile `supervisor` o `conserje` | No, salvo que pertenezca a Komite |
+| `supervisor` | Si | Solo si tiene rol mobile `vecino` o `comite` | Solo si tiene rol mobile `supervisor` o `conserje` | No, salvo que pertenezca a Komite |
 | `ejecutivo` | Si | Solo si tiene rol mobile `vecino` o `comite` | Solo si tiene rol mobile `supervisor` o `conserje` | No, salvo que pertenezca a Komite |
 | `vecino` | No por rol mobile | Si | No | No |
 | `comite` | No por rol mobile | Si | No | No |
@@ -502,7 +505,7 @@ App mobile:
 ```text
 Usuario: antoniomanuelvergara@gmail.com
 Empresa: Administradora cliente
-Perfil Portal Administrador: project_manager o ejecutivo, si debe entrar al portal
+Perfil Portal Administrador: project_manager, supervisor o ejecutivo, si debe entrar al portal
 Accesos mobile:
   - Todos / supervisor / Sin unidad
 ```
@@ -574,7 +577,7 @@ Backoffice:
 ## Reglas finales
 
 - No existe rol global.
-- El Portal Administrador usa `company_profile`: `project_manager` o `ejecutivo`.
+- El Portal Administrador usa `company_profile`: `project_manager`, `supervisor` o `ejecutivo`.
 - La app mobile usa roles por condominio: `vecino`, `comite`, `supervisor`, `conserje`.
 - Comunidad se decide por `vecino` y `comite`.
 - Operacion se decide por `supervisor` y `conserje`.

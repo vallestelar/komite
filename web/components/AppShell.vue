@@ -19,6 +19,7 @@ const config = useRuntimeConfig();
 const { activeCondominium, company, condominiums, user, clearSession, refreshToken, setActiveCondominium } = useAuth();
 const currentView = ref("dashboard");
 const viewRefreshKey = ref(0);
+const selectedNeighborId = ref("");
 const sidebarCollapsed = ref(false);
 const collapsedGroups = ref<string[]>([]);
 const workspaceRef = ref<HTMLElement | null>(null);
@@ -111,12 +112,22 @@ const toggleGroup = (groupId: string) => {
 const isGroupCollapsed = (groupId: string) => collapsedGroups.value.includes(groupId);
 
 const selectView = (view: string) => {
+  if (view !== "neighbors") selectedNeighborId.value = "";
   currentView.value = view;
   nextTick(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
     workspaceRef.value?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
+  });
+};
+
+const openNeighborFromCommittee = (neighborId: string) => {
+  selectedNeighborId.value = neighborId;
+  currentView.value = "neighbors";
+  nextTick(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    workspaceRef.value?.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   });
 };
 
@@ -210,8 +221,8 @@ onMounted(() => {
       </header>
 
       <DashboardView v-if="currentView === 'dashboard'" :key="`dashboard-${activeCondominiumId}-${viewRefreshKey}`" @open-view="selectView" />
-      <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}`" />
-      <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" />
+      <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}-${selectedNeighborId}`" :focus-neighbor-id="selectedNeighborId" />
+      <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" @open-neighbor="openNeighborFromCommittee" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
       <ToolsView v-else-if="['tools', 'edifito', 'edifito-neighbors-import'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />

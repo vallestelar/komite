@@ -24,7 +24,7 @@ router = APIRouter(
     dependencies=[Depends(require_komite_employee())],
 )
 
-COMPANY_PROFILES = {"project_manager", "ejecutivo"}
+COMPANY_PROFILES = {"project_manager", "ejecutivo", "supervisor"}
 COMMUNITY_ROLES = {"vecino", "comite", "supervisor", "conserje"}
 
 

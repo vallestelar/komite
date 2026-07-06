@@ -245,6 +245,14 @@ async def list_neighbors(
     )
 
 
+@router.get("/{contact_id}", response_model=NeighborOut)
+async def get_neighbor(contact_id: UUID, request: Request) -> NeighborOut:
+    contact = await _base_query(request).filter(id=contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contacto no encontrado")
+    return await _neighbor_out(contact)
+
+
 @router.post("/", response_model=NeighborOut, status_code=status.HTTP_201_CREATED)
 async def create_neighbor(payload: NeighborCreate, request: Request) -> NeighborOut:
     unit = await _unit_or_404(payload.unit_id, request)

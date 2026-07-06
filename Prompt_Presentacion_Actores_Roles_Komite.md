@@ -245,7 +245,7 @@ Crear una matriz visual:
 Notas:
 
 - El Backoffice queda reservado a empleados de Komite.
-- El Portal Administrador queda reservado a usuarios de la empresa administradora con perfil `project_manager` o `ejecutivo`.
+- El Portal Administrador queda reservado a usuarios de la empresa administradora con perfil `project_manager`, `supervisor` o `ejecutivo`.
 - La App mobile depende de accesos por condominio.
 
 ### Slide 12: Separacion de datos por tenant
@@ -274,7 +274,7 @@ Mostrar un flujo:
 
 1. Usuario inicia sesion.
 2. API valida credenciales y empresa.
-3. Si es Portal Administrador, revisa perfil `project_manager` o `ejecutivo`.
+3. Si es Portal Administrador, revisa perfil `project_manager`, `supervisor` o `ejecutivo`.
 4. Si es mobile, carga condominios asignados.
 5. Si tiene acceso a "Todos", se expanden los condominios activos de su empresa.
 6. El usuario elige condominio cuando corresponde.

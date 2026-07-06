@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--password", required=True)
     parser.add_argument("--full-name", required=True)
     parser.add_argument("--company-name", default="Komite")
-    parser.add_argument("--company-profile", default=None, choices=("project_manager", "ejecutivo"))
+    parser.add_argument("--company-profile", default=None, choices=("project_manager", "supervisor", "ejecutivo"))
     parser.add_argument("--status", default="active")
     parser.add_argument("--condominium-id", default=None)
     parser.add_argument("--all-condominiums", action="store_true")

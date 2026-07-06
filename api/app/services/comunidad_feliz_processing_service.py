@@ -11,6 +11,8 @@ from typing import Any
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 
+from app.services.edifito_processing_service import EdifitoProcessingService
+
 try:
     import xlrd
 except ImportError:  # pragma: no cover - dependency is declared for runtime
@@ -25,11 +27,13 @@ class ChileBankMovement:
     documento: str
     sucursal: str
     saldo: str
+    rut: str = ""
 
 
 @dataclass
 class ComunidadFelizCharge:
     uco: str
+    rut: str
     nombre: str
     cobro: str
     pago: str
@@ -56,10 +60,14 @@ class ComunidadFelizProcessingService:
     ]
 
     def process(self, *, bank_name: str, bank_statement: bytes, bank_filename: str, charges_file: bytes) -> dict[str, Any]:
-        if "chile" not in (bank_name or "").casefold():
-            raise ValueError("Comunidad Feliz solo procesa cartolas Banco de Chile.")
+        normalized_bank = (bank_name or "").casefold()
+        if "santander" in normalized_bank:
+            movements = self._read_santander(bank_statement)
+        elif "chile" in normalized_bank:
+            movements = self._read_bank_chile(bank_statement, bank_filename)
+        else:
+            raise ValueError("Comunidad Feliz procesa cartolas Santander o Banco de Chile.")
 
-        movements = self._read_bank_chile(bank_statement, bank_filename)
         charges = self._read_charges(charges_file)
         rows = self._build_rows(movements, charges)
 
@@ -173,12 +181,32 @@ class ComunidadFelizProcessingService:
                     documento=self._cell(row, document_col),
                     sucursal=self._cell(row, branch_col) or "BC",
                     saldo=self._cell(row, balance_col),
+                    rut="",
                 )
             )
 
         if not movements:
             raise ValueError("No se encontraron transferencias positivas en la cartola Banco de Chile.")
         return movements
+
+    def _read_santander(self, content: bytes) -> list[ChileBankMovement]:
+        try:
+            movements = EdifitoProcessingService()._read_santander_pdf(content)
+        except ValueError as exc:
+            raise ValueError(str(exc).replace("Santander.", "Santander para Comunidad Feliz."))
+
+        return [
+            ChileBankMovement(
+                monto=movement.monto,
+                rut=movement.rut,
+                nombre=movement.nombre,
+                fecha=movement.fecha,
+                documento=movement.documento,
+                sucursal=movement.sucursal,
+                saldo="",
+            )
+            for movement in movements
+        ]
 
     def _read_charges(self, content: bytes) -> list[ComunidadFelizCharge]:
         rows = self._read_workbook_rows(content, "charges.xlsx")
@@ -193,6 +221,7 @@ class ComunidadFelizProcessingService:
             return None
 
         uco_col = col("Unidad", "Propiedad")
+        rut_col = col("Rut", "RUT", "Documento")
         resident_col = col("Residente", "Copropietario")
         charge_col = col("Total cobrado", "Cobro", "Monto")
         paid_col = col("Abonos", "Pagado", "Pago")
@@ -219,6 +248,7 @@ class ComunidadFelizProcessingService:
             charges.append(
                 ComunidadFelizCharge(
                     uco=uco,
+                    rut=self._cell(row, rut_col) if rut_col is not None else "",
                     nombre=resident,
                     cobro=charge,
                     pago=paid,
@@ -231,19 +261,22 @@ class ComunidadFelizProcessingService:
 
     def _build_rows(self, movements: list[ChileBankMovement], charges: list[ComunidadFelizCharge]) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
+        charges_by_rut = {self._normalize_rut(charge.rut): charge for charge in charges if charge.rut}
         for movement in movements:
-            best_charge: ComunidadFelizCharge | None = None
-            best_score = 0.0
+            normalized_rut = self._normalize_rut(movement.rut)
+            best_charge: ComunidadFelizCharge | None = charges_by_rut.get(normalized_rut) if normalized_rut else None
+            best_score = 1.0 if best_charge else 0.0
 
-            for charge in charges:
-                score = self._name_similarity(movement.nombre, charge.nombre)
-                if score >= 0.60 and score > best_score:
-                    best_score = score
-                    best_charge = charge
+            if not best_charge:
+                for charge in charges:
+                    score = self._name_similarity(movement.nombre, charge.nombre)
+                    if score >= 0.60 and score > best_score:
+                        best_score = score
+                        best_charge = charge
 
             row = {
                 "monto": movement.monto,
-                "rut": "",
+                "rut": movement.rut,
                 "nombre": movement.nombre,
                 "fecha": movement.fecha,
                 "documento": movement.documento,
@@ -260,6 +293,7 @@ class ComunidadFelizProcessingService:
 
             if best_charge:
                 row["uco"] = best_charge.uco
+                row["match_rut"] = best_charge.rut if normalized_rut and self._normalize_rut(best_charge.rut) == normalized_rut else ""
                 row["match_nombre"] = f"{round(best_score * 100):.0f}% {best_charge.nombre}".strip()
                 row["cobro"] = best_charge.cobro
                 row["pago"] = best_charge.pago
@@ -354,6 +388,10 @@ class ComunidadFelizProcessingService:
     def _amount_int(self, value: str) -> int:
         clean = re.sub(r"\D", "", value or "")
         return int(clean) if clean else 0
+
+    def _normalize_rut(self, value: str) -> str:
+        clean = re.sub(r"[^0-9kK]", "", value or "").upper()
+        return clean.lstrip("0")
 
     def _normalize_header(self, value: Any) -> str:
         text = "" if value is None else str(value)

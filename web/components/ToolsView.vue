@@ -74,18 +74,18 @@ const { activeCondominium } = useAuth();
 
 const tools = [
   {
-    title: "Informe conciliación Edifito",
+    title: "Informe conciliacion Edifito",
     icon: "table",
     targetView: "edifito",
     status: "Preparado",
     copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
   },
   {
-    title: "Informe conciliación Comunidad Feliz",
+    title: "Informe conciliacion Comunidad Feliz",
     icon: "home",
     targetView: "comunidad-feliz",
     status: "Preparado",
-    copy: "Cruzar cartolas Banco de Chile con boletas Comunidad Feliz y generar archivos de carga automatica.",
+    copy: "Cruzar cartolas Santander o Banco de Chile con gastos comunes Comunidad Feliz y generar archivos de carga automatica.",
   },
   {
     title: "Procesar audio",
@@ -141,10 +141,25 @@ const importPreview = ref<EdifitoNeighborsImportResponse | null>(null);
 const showImportConfirm = ref(false);
 
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
-const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && assignmentsFile.value && chargeDetailFile.value && !processing.value));
+const selectedBankText = computed(() => `${selectedBank.value?.name || ""} ${selectedBank.value?.code || ""}`.toLowerCase());
+const isSantanderBank = computed(() => selectedBankText.value.includes("santander"));
+const bankStatementLabel = computed(() => {
+  if (isComunidadFeliz.value && !isSantanderBank.value) return "Cartola Banco de Chile XLS/XLSX";
+  return "Cartola banco Santander PDF";
+});
+const bankStatementAccept = computed(() => {
+  if (isComunidadFeliz.value && !isSantanderBank.value) return ".xls,.xlsx";
+  return ".pdf";
+});
 const isEdifito = computed(() => props.view === "edifito");
+const isComunidadFeliz = computed(() => props.view === "comunidad-feliz");
+const isConciliation = computed(() => isEdifito.value || isComunidadFeliz.value);
 const isEdifitoImport = computed(() => props.view === "edifito-neighbors-import");
-const isCatalog = computed(() => !isEdifito.value && !isEdifitoImport.value);
+const isCatalog = computed(() => !isConciliation.value && !isEdifitoImport.value);
+const canProcess = computed(() => {
+  if (!selectedBank.value || !bankStatementFile.value || !assignmentsFile.value || processing.value) return false;
+  return isComunidadFeliz.value || Boolean(chargeDetailFile.value);
+});
 const canImportNeighbors = computed(() => Boolean(importCondominiumId.value && importAssignmentsFile.value && !importProcessing.value));
 const importCondominiumOptions = computed(() => activeCondominium.value ? [activeCondominium.value] : []);
 const filteredTools = computed(() => {
@@ -203,6 +218,13 @@ const setFile = (event: Event, target: "bank" | "assignments" | "detail") => {
   errorMessage.value = "";
 };
 
+const handleBankChange = () => {
+  bankStatementFile.value = null;
+  result.value = null;
+  errorMessage.value = "";
+  fileInputKey.value += 1;
+};
+
 const setImportAssignmentsFile = (event: Event) => {
   importAssignmentsFile.value = (event.target as HTMLInputElement).files?.[0] || null;
   importResult.value = null;
@@ -241,22 +263,28 @@ const resetImportNeighbors = () => {
   importFileInputKey.value += 1;
 };
 
-const processEdifito = async () => {
+const processConciliation = async () => {
   if (!canProcess.value || !selectedBank.value) return;
 
   const form = new FormData();
   form.append("bank_statement", bankStatementFile.value as File);
-  form.append("assignments_file", assignmentsFile.value as File);
-  form.append("charge_detail_file", chargeDetailFile.value as File);
   if (selectedBank.value.id) form.append("bank_id", selectedBank.value.id);
   form.append("bank_name", selectedBank.value.name);
+  const endpoint = isComunidadFeliz.value ? "/api/v1/comunidad-feliz/process" : "/api/v1/edifito/process";
+
+  if (isComunidadFeliz.value) {
+    form.append("charges_file", assignmentsFile.value as File);
+  } else {
+    form.append("assignments_file", assignmentsFile.value as File);
+    form.append("charge_detail_file", chargeDetailFile.value as File);
+  }
 
   processing.value = true;
   errorMessage.value = "";
   result.value = null;
 
   try {
-    result.value = await request<EdifitoResponse>("/api/v1/edifito/process", {
+    result.value = await request<EdifitoResponse>(endpoint, {
       method: "POST",
       body: form,
     });
@@ -689,11 +717,11 @@ watch(toolsPages, (pages) => {
     </div>
   </section>
 
-  <section v-else-if="isEdifito" class="panel edifito-panel">
+  <section v-else-if="isConciliation" class="panel edifito-panel">
     <div class="edifito-header">
       <div>
         <p class="eyebrow">Herramientas</p>
-        <h2>Edifito</h2>
+        <h2>{{ isComunidadFeliz ? "Comunidad Feliz" : "Edifito" }}</h2>
         <p class="placeholder-copy">Condominio activo: {{ activeCondominium?.name || "Sin condominio seleccionado" }}</p>
       </div>
       <div class="hero-actions">
@@ -701,7 +729,7 @@ watch(toolsPages, (pages) => {
           <svg class="icon" aria-hidden="true"><use href="#icon-settings" /></svg>
           <span>Reset</span>
         </button>
-        <button class="button orange" type="button" :disabled="!canProcess" @click="processEdifito">
+        <button class="button orange" type="button" :disabled="!canProcess" @click="processConciliation">
           <svg class="icon" aria-hidden="true"><use href="#icon-checks" /></svg>
           <span>{{ processing ? "Procesando" : "Procesar" }}</span>
         </button>
@@ -711,21 +739,21 @@ watch(toolsPages, (pages) => {
     <div :key="fileInputKey" class="edifito-form">
       <label>
         Banco
-        <select v-model="selectedBankKey">
+        <select v-model="selectedBankKey" @change="handleBankChange">
           <option v-for="bank in banks" :key="bankKey(bank)" :value="bankKey(bank)">
             {{ bank.name }}
           </option>
         </select>
       </label>
       <label>
-        Cartola banco Santander PDF
-        <input type="file" accept=".pdf" @change="setFile($event, 'bank')" />
+        {{ bankStatementLabel }}
+        <input type="file" :accept="bankStatementAccept" @change="setFile($event, 'bank')" />
       </label>
       <label>
-        Informe asignaciones Edifito XLSX
+        {{ isComunidadFeliz ? "Informe gastos comunes Comunidad Feliz XLSX" : "Informe asignaciones Edifito XLSX" }}
         <input type="file" accept=".xlsx" @change="setFile($event, 'assignments')" />
       </label>
-      <label>
+      <label v-if="isEdifito">
         Informe en detalle cobros y pagos por UCO XLSX
         <input type="file" accept=".xlsx" @change="setFile($event, 'detail')" />
       </label>
@@ -915,7 +943,7 @@ watch(toolsPages, (pages) => {
           <thead>
             <tr>
               <th>Unidad</th>
-              <th>Relación</th>
+              <th>Relacion</th>
               <th>Nombre</th>
               <th>Estado</th>
             </tr>

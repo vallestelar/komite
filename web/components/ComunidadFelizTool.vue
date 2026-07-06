@@ -55,6 +55,10 @@ const selectedStatusFilter = ref("");
 
 const bankKey = (bank: BankOption) => bank.id || `name:${bank.name}`;
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
+const selectedBankText = computed(() => `${selectedBank.value?.name || ""} ${selectedBank.value?.code || ""}`.toLowerCase());
+const isSantanderBank = computed(() => selectedBankText.value.includes("santander"));
+const bankStatementLabel = computed(() => isSantanderBank.value ? "Cartola banco Santander PDF" : "Cartola Banco XLS/XLSX");
+const bankStatementAccept = computed(() => isSantanderBank.value ? ".pdf" : ".xls,.xlsx");
 const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && chargesFile.value && !processing.value));
 const ucoOptions = computed(() => {
   const values = new Set((result.value?.rows || []).map((row) => row.uco).filter(Boolean));
@@ -103,6 +107,13 @@ const setFile = (event: Event, target: "bank" | "charges") => {
   if (target === "charges") chargesFile.value = file;
   result.value = null;
   errorMessage.value = "";
+};
+
+const handleBankChange = () => {
+  bankStatementFile.value = null;
+  result.value = null;
+  errorMessage.value = "";
+  fileInputKey.value += 1;
 };
 
 const resetTool = () => {
@@ -232,15 +243,15 @@ onMounted(loadBanks);
     <div :key="fileInputKey" class="comunidad-form">
       <label>
         Banco
-        <select v-model="selectedBankKey">
+        <select v-model="selectedBankKey" @change="handleBankChange">
           <option v-for="bank in banks" :key="bankKey(bank)" :value="bankKey(bank)">
             {{ bank.name }}
           </option>
         </select>
       </label>
       <label>
-        Cartola Banco XLS/XLSX
-        <input type="file" accept=".xls,.xlsx" @change="setFile($event, 'bank')" />
+        {{ bankStatementLabel }}
+        <input type="file" :accept="bankStatementAccept" @change="setFile($event, 'bank')" />
       </label>
       <label>
         Gasto Común Comunidad Feliz XLSX

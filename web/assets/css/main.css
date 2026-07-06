@@ -1042,7 +1042,7 @@ h3 {
 
 .edifito-toolbar {
   display: grid;
-  grid-template-columns: minmax(170px, 220px) minmax(170px, 220px) max-content;
+  grid-template-columns: minmax(170px, 220px) minmax(170px, 220px) max-content max-content;
   align-items: end;
   justify-content: end;
   gap: 10px;
@@ -1337,6 +1337,46 @@ h3 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.bulk-payments-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.bulk-payments-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(220px, 1fr);
+  gap: 14px;
+}
+
+.bulk-payments-notice {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(2, 122, 72, 0.22);
+  border-radius: 8px;
+  padding: 12px;
+  color: #075e45;
+  background: #ecfdf3;
+}
+
+.bulk-payments-notice strong {
+  display: block;
+  font-size: 14px;
+}
+
+.bulk-payments-notice p {
+  margin: 4px 0 0;
+  color: #366c5a;
+  font-size: 13px;
+}
+
+.bulk-payments-notice ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -1354,6 +1394,7 @@ h3 {
   .edifito-form,
   .comunidad-form,
   .comunidad-toolbar,
+  .bulk-payments-form,
   .edifito-toolbar,
   .edifito-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));

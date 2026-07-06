@@ -45,6 +45,8 @@ type EdifitoResponse = {
   download_base64: string;
 };
 
+type BulkPaymentMode = "both" | "process" | "analyze";
+
 type EdifitoNeighborsImportResponse = {
   condominium_id: string;
   condominium_name: string;
@@ -129,6 +131,13 @@ const errorMessage = ref("");
 const result = ref<EdifitoResponse | null>(null);
 const selectedUcoFilter = ref("");
 const selectedStatusFilter = ref("");
+const showBulkPaymentsModal = ref(false);
+const bulkPaymentsTemplateFile = ref<File | null>(null);
+const bulkPaymentsMode = ref<BulkPaymentMode>("both");
+const bulkPaymentsError = ref("");
+const bulkPaymentsNotice = ref("");
+const bulkPaymentsGeneratedFiles = ref<string[]>([]);
+const bulkPaymentsInputKey = ref(0);
 const importCondominiumId = ref(activeCondominium.value?.id || "");
 const importAssignmentsFile = ref<File | null>(null);
 const importFileInputKey = ref(0);
@@ -218,6 +227,13 @@ const resetEdifito = () => {
   processing.value = false;
   errorMessage.value = "";
   result.value = null;
+  showBulkPaymentsModal.value = false;
+  bulkPaymentsTemplateFile.value = null;
+  bulkPaymentsMode.value = "both";
+  bulkPaymentsError.value = "";
+  bulkPaymentsNotice.value = "";
+  bulkPaymentsGeneratedFiles.value = [];
+  bulkPaymentsInputKey.value += 1;
   fileInputKey.value += 1;
 };
 
@@ -315,6 +331,15 @@ const cancelImportConfirmation = () => {
   showImportConfirm.value = false;
 };
 
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
 const downloadResult = () => {
   if (!result.value) return;
 
@@ -327,12 +352,248 @@ const downloadResult = () => {
   const blob = new Blob([bytes], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = result.value.download_filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, result.value.download_filename);
+};
+
+const openBulkPaymentsModal = () => {
+  bulkPaymentsTemplateFile.value = null;
+  bulkPaymentsMode.value = "both";
+  bulkPaymentsError.value = "";
+  bulkPaymentsNotice.value = "";
+  bulkPaymentsGeneratedFiles.value = [];
+  bulkPaymentsInputKey.value += 1;
+  showBulkPaymentsModal.value = true;
+};
+
+const closeBulkPaymentsModal = () => {
+  showBulkPaymentsModal.value = false;
+  bulkPaymentsNotice.value = "";
+  bulkPaymentsGeneratedFiles.value = [];
+};
+
+const setBulkPaymentsTemplateFile = (event: Event) => {
+  bulkPaymentsTemplateFile.value = (event.target as HTMLInputElement).files?.[0] || null;
+  bulkPaymentsError.value = "";
+  bulkPaymentsNotice.value = "";
+  bulkPaymentsGeneratedFiles.value = [];
+};
+
+const readTextFile = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result || ""));
+  reader.onerror = () => reject(new Error("No se pudo leer la plantilla CSV."));
+  reader.readAsText(file, "utf-8");
+});
+
+const parseCsvLine = (line: string) => {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      current += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === ";" && !quoted) {
+      cells.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  cells.push(current);
+  return cells;
+};
+
+const stringifyCsvValue = (value: string) => {
+  const text = value ?? "";
+  if (!/[;"\r\n]/.test(text)) return text;
+  return `"${text.replaceAll('"', '""')}"`;
+};
+
+const normalizeMatchValue = (value: string) => value
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-zA-Z0-9]/g, "")
+  .toUpperCase();
+
+const normalizePaymentDate = (value: string) => {
+  const text = (value || "").trim();
+  const match = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (!match) return { display: text, transaction: text.replace(/\D/g, "") };
+
+  const day = match[1].padStart(2, "0");
+  const month = match[2].padStart(2, "0");
+  const year = match[3];
+  return {
+    display: `${day}/${month}/${year}`,
+    transaction: `${day}${month}${year}`,
+  };
+};
+
+const allowedBulkStatuses = () => {
+  if (bulkPaymentsMode.value === "process") return new Set(["Procesar Pago"]);
+  if (bulkPaymentsMode.value === "analyze") return new Set(["Analizar"]);
+  return new Set(["Procesar Pago", "Analizar"]);
+};
+
+const parseMoneyValue = (value: string) => {
+  let clean = (value || "").replace(/[^\d,.-]/g, "").trim();
+  if (!clean) return Number.NaN;
+
+  if (clean.includes(",")) {
+    clean = clean.replace(/\./g, "").replace(",", ".");
+  } else if ((clean.match(/\./g) || []).length > 1 || /\.\d{3}$/.test(clean)) {
+    clean = clean.replace(/\./g, "");
+  }
+
+  return Number(clean);
+};
+
+const isFullPaymentAmount = (paidValue: string, expectedValue: string) => {
+  const paid = parseMoneyValue(paidValue);
+  const expected = parseMoneyValue(expectedValue);
+  return Number.isFinite(paid) && Number.isFinite(expected) && Math.abs(paid - expected) <= 0.5;
+};
+
+const bulkPaymentObservation = (row: EdifitoRow, paymentUcos: Set<string>) => {
+  const status = (row.status || "").trim().toLowerCase();
+  if (status !== "analizar") return "PAGO GG.CC";
+  if (paymentUcos.has(normalizeMatchValue(row.uco))) {
+    return "PAGO GG.CC";
+  }
+  if (isFullPaymentAmount(row.monto, row.cobro)) {
+    return "PAGO GG.CC";
+  }
+
+  return "ABONO GG.CC";
+};
+
+const findBulkPaymentRows = (templateUnitName: string, candidatesByUco: Map<string, EdifitoRow[]>) => {
+  const normalizedUnitName = normalizeMatchValue(templateUnitName);
+  const matchingUco = [...candidatesByUco.keys()]
+    .sort((first, second) => second.length - first.length)
+    .find((uco) => normalizedUnitName.includes(uco));
+  return matchingUco ? candidatesByUco.get(matchingUco) || [] : [];
+};
+
+const generateBulkPaymentsFile = async () => {
+  if (!result.value || !bulkPaymentsTemplateFile.value) {
+    bulkPaymentsError.value = "Selecciona la plantilla CSV de carga masiva.";
+    return;
+  }
+
+  try {
+    bulkPaymentsError.value = "";
+    bulkPaymentsNotice.value = "";
+    bulkPaymentsGeneratedFiles.value = [];
+
+    const templateText = await readTextFile(bulkPaymentsTemplateFile.value);
+    const lines = templateText.replace(/^\uFEFF/, "").split(/\r\n|\n|\r/).filter((line) => line.length);
+    if (!lines.length) throw new Error("La plantilla CSV esta vacia.");
+
+    const header = parseCsvLine(lines[0]);
+    const headerMap = new Map(header.map((cell, index) => [normalizeMatchValue(cell), index]));
+    const unitNameIndex = headerMap.get(normalizeMatchValue("nombre de unidad"));
+    const paymentDateIndex = headerMap.get(normalizeMatchValue("fecha pago(dd-mm-yyyy o dd/mm/yyyy)"));
+    const amountIndex = headerMap.get(normalizeMatchValue("monto"));
+    const bankIndex = headerMap.get(normalizeMatchValue("banco"));
+    const transactionIndex = headerMap.get(normalizeMatchValue("no. transaccion"));
+    const notesIndex = headerMap.get(normalizeMatchValue("observaciones"));
+
+    if (
+      unitNameIndex === undefined
+      || paymentDateIndex === undefined
+      || amountIndex === undefined
+      || transactionIndex === undefined
+      || notesIndex === undefined
+    ) {
+      throw new Error("La plantilla no tiene las columnas esperadas de carga masiva.");
+    }
+
+    const statuses = allowedBulkStatuses();
+    const candidates = result.value.rows.filter((row) => row.uco && statuses.has(row.status));
+    const paymentUcos = new Set(
+      result.value.rows
+        .filter((row) => row.uco && (row.status || "").trim().toLowerCase() === "procesar pago")
+        .map((row) => normalizeMatchValue(row.uco)),
+    );
+    if (!candidates.length) {
+      throw new Error("No hay movimientos para generar la carga masiva con el alcance seleccionado.");
+    }
+
+    const candidatesByUco = new Map<string, EdifitoRow[]>();
+    for (const candidate of candidates) {
+      const key = normalizeMatchValue(candidate.uco);
+      if (!key) continue;
+      const rows = candidatesByUco.get(key) || [];
+      rows.push(candidate);
+      candidatesByUco.set(key, rows);
+    }
+
+    const maxFiles = Math.max(...[...candidatesByUco.values()].map((rows) => rows.length));
+    const bodyLines = lines.slice(1);
+    const generatedFiles: Array<{ filename: string; csv: string }> = [];
+    const today = new Date();
+    const suffix = `${String(today.getDate()).padStart(2, "0")}_${String(today.getMonth() + 1).padStart(2, "0")}_${today.getFullYear()}`;
+
+    for (let fileIndex = 0; fileIndex < maxFiles; fileIndex += 1) {
+      const outputRows = [header];
+      let filledRows = 0;
+
+      for (const line of bodyLines) {
+        const templateRow = parseCsvLine(line).slice(0, header.length);
+        while (templateRow.length < header.length) templateRow.push("");
+
+        const paymentRows = findBulkPaymentRows(templateRow[unitNameIndex] || "", candidatesByUco);
+        const paymentRow = paymentRows[fileIndex];
+        if (paymentRow) {
+          const date = normalizePaymentDate(paymentRow.fecha);
+          templateRow[paymentDateIndex] = date.display;
+          templateRow[amountIndex] = paymentRow.monto;
+          if (bankIndex !== undefined) templateRow[bankIndex] = "";
+          templateRow[transactionIndex] = date.transaction;
+          templateRow[notesIndex] = bulkPaymentObservation(paymentRow, paymentUcos);
+          filledRows += 1;
+        }
+
+        outputRows.push(templateRow);
+      }
+
+      if (filledRows > 0) {
+        const csv = outputRows.map((row) => row.map(stringifyCsvValue).join(";")).join("\r\n");
+        const fileNumber = maxFiles > 1 ? `_${String(fileIndex + 1).padStart(2, "0")}` : "";
+        generatedFiles.push({
+          filename: `pagos_masivos_edifito_${suffix}${fileNumber}.csv`,
+          csv,
+        });
+      }
+    }
+
+    if (!generatedFiles.length) {
+      throw new Error("No se encontro ningun match entre la plantilla CSV y los movimientos seleccionados.");
+    }
+
+    generatedFiles.forEach((file) => {
+      const blob = new Blob([`\uFEFF${file.csv}`], { type: "text/csv;charset=utf-8" });
+      downloadBlob(blob, file.filename);
+    });
+
+    if (generatedFiles.length > 1) {
+      bulkPaymentsNotice.value = `Se han generado ${generatedFiles.length} ficheros de carga porque hay mas de un pago para una misma UCO.`;
+    } else {
+      bulkPaymentsNotice.value = "Se ha generado 1 fichero de carga masiva.";
+    }
+
+    bulkPaymentsGeneratedFiles.value = generatedFiles.map((file) => file.filename);
+  } catch (error) {
+    bulkPaymentsError.value = error instanceof Error ? error.message : "No se pudo generar el CSV de carga masiva.";
+  }
 };
 
 const parseError = (error: unknown) => {
@@ -506,7 +767,11 @@ watch(toolsPages, (pages) => {
         </label>
         <button class="button ghost" type="button" @click="downloadResult">
           <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
-          <span>Descargar Excel</span>
+          <span>Descargar Analisis</span>
+        </button>
+        <button class="button ghost" type="button" @click="openBulkPaymentsModal">
+          <svg class="icon" aria-hidden="true"><use href="#icon-table" /></svg>
+          <span>Descargar ficheros para carga masiva</span>
         </button>
       </div>
 
@@ -550,6 +815,53 @@ watch(toolsPages, (pages) => {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="showBulkPaymentsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="bulk-payments-title">
+      <div class="confirm-modal import-confirm-modal bulk-payments-modal">
+        <p class="eyebrow">Carga masiva</p>
+        <h3 id="bulk-payments-title">Descargar ficheros para carga masiva</h3>
+        <p class="placeholder-copy">
+          Sube la plantilla CSV del condominio. El sistema completara las unidades encontradas en la conciliacion segun el alcance seleccionado.
+        </p>
+
+        <div :key="bulkPaymentsInputKey" class="bulk-payments-form">
+          <label>
+            Plantilla CSV de carga masiva
+            <input type="file" accept=".csv,text/csv" @change="setBulkPaymentsTemplateFile" />
+          </label>
+          <label>
+            Movimientos a incluir
+            <select v-model="bulkPaymentsMode">
+              <option value="both">Procesar Pago y Analizar</option>
+              <option value="process">Solo Procesar Pago</option>
+              <option value="analyze">Solo Analizar</option>
+            </select>
+          </label>
+        </div>
+
+        <p v-if="bulkPaymentsError" class="form-error result-message">{{ bulkPaymentsError }}</p>
+
+        <div v-if="bulkPaymentsNotice" class="bulk-payments-notice">
+          <div>
+            <strong>{{ bulkPaymentsNotice }}</strong>
+            <p>Archivos descargados:</p>
+          </div>
+          <ul>
+            <li v-for="filename in bulkPaymentsGeneratedFiles" :key="filename">{{ filename }}</li>
+          </ul>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" @click="closeBulkPaymentsModal">
+            {{ bulkPaymentsNotice ? "Cerrar" : "Cancelar" }}
+          </button>
+          <button class="button orange" type="button" @click="generateBulkPaymentsFile">
+            <svg class="icon" aria-hidden="true"><use href="#icon-table" /></svg>
+            <span>Generar CSV</span>
+          </button>
+        </div>
       </div>
     </div>
   </section>

@@ -105,7 +105,7 @@ watch(() => activeCondominium.value?.id, loadCommittee, { immediate: true });
   <section class="panel committee-panel">
     <div class="dashboard-hero committee-hero">
       <div>
-        <p class="eyebrow">Comite</p>
+        <p class="eyebrow">Comité</p>
         <h2>Miembros del comite</h2>
         <p class="hero-copy">{{ activeCondominium?.name || "Condominio activo" }}</p>
       </div>

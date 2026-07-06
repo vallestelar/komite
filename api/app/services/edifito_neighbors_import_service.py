@@ -1,9 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from typing import Any
+import unicodedata
 
 from openpyxl import load_workbook
 
@@ -124,7 +125,7 @@ class EdifitoNeighborsImportService:
                         "unit": identifier,
                         "relationship_type": relationship,
                         "full_name": full_name,
-                        "status": "creado" if contact_status == "created" else "actualizado",
+                        "status": "se va a crear" if contact_status == "created" else "se va a actualizar",
                     }
                 )
 
@@ -294,7 +295,7 @@ class EdifitoNeighborsImportService:
             normalized = {self._normalize_header(self._cell_text(cell.value)) for cell in row}
             if {"uco", "tipounidad", "copropietario"}.issubset(normalized):
                 return index
-        raise ValueError("No se encontro la cabecera del informe de asignaciones.")
+        raise ValueError("No se encontr\u00f3 la cabecera del informe de asignaciones.")
 
     def _build_indexes(self, headers: list[str]) -> dict[str, int | None]:
         groups: dict[str, list[int]] = {}
@@ -317,13 +318,13 @@ class EdifitoNeighborsImportService:
             "owner_rut": idx("Rut", 0),
             "owner_name": idx("Copropietario"),
             "owner_email": idx("Email", 0),
-            "owner_address": idx("Direccion", 0),
-            "owner_phone": idx("Telefono", 0),
+            "owner_address": idx("Direcci\u00f3n", 0),
+            "owner_phone": idx("Tel\u00e9fono", 0),
             "resident_rut": idx("Rut", 1),
             "resident_name": idx("Residente"),
             "resident_email": idx("Email", 1),
-            "resident_address": idx("Direccion", 1),
-            "resident_phone": idx("Telefono", 1),
+            "resident_address": idx("Direcci\u00f3n", 1),
+            "resident_phone": idx("Tel\u00e9fono", 1),
         }
 
     def _value(self, row: tuple[Any, ...], index: int | None) -> Any:
@@ -339,8 +340,8 @@ class EdifitoNeighborsImportService:
         return str(value).strip()
 
     def _normalize_header(self, value: str) -> str:
-        replacements = str.maketrans("áéíóúÁÉÍÓÚñÑ°º.%", "aeiouAEIOUnN    ")
-        return "".join(ch for ch in value.translate(replacements).casefold() if ch.isalnum())
+        text = unicodedata.normalize("NFKD", value)
+        return "".join(ch for ch in text.casefold() if ch.isalnum() and not unicodedata.combining(ch))
 
     def _clean(self, value: Any) -> str | None:
         text = self._cell_text(value)

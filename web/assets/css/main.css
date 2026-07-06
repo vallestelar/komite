@@ -902,6 +902,12 @@ h3 {
   transform: translateY(-1px);
 }
 
+.tool-card-link:hover .tool-icon,
+.tool-card-link:focus-visible .tool-icon {
+  color: var(--white);
+  background: var(--orange);
+}
+
 .tool-icon {
   width: 42px;
   height: 42px;

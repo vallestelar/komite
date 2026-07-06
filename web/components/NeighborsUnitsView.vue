@@ -576,11 +576,11 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           <thead>
             <tr>
               <th>Nombre</th>
-              <th>Relacion</th>
+              <th>Relación</th>
               <th>Unidad</th>
               <th>Documento</th>
               <th>Email</th>
-              <th>Telefono</th>
+              <th>Teléfono</th>
               <th>Principal</th>
               <th>Notifica</th>
               <th>Estado</th>
@@ -635,7 +635,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
             <tr>
               <th>ID</th>
               <th>Unidad</th>
-              <th>Codigo</th>
+              <th>Código</th>
               <th>Piso</th>
               <th>Tipo</th>
               <th>Prorrateo</th>
@@ -710,7 +710,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           <input v-model="neighborForm.email" type="email" maxlength="255" />
         </label>
         <label>
-          Telefono
+          Teléfono
           <input v-model="neighborForm.phone" maxlength="40" />
         </label>
         <label>
@@ -721,7 +721,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           </select>
         </label>
         <label>
-          Relacion con la unidad
+          Relación con la unidad
           <select v-model="neighborForm.relationship_type">
             <option v-for="[value, label] in relationshipOptions" :key="value" :value="value">{{ label }}</option>
           </select>
@@ -737,7 +737,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           <input v-model="neighborForm.document_number" maxlength="40" />
         </label>
         <label class="span-all">
-          Direccion
+          Dirección
           <input v-model="neighborForm.address" maxlength="255" />
         </label>
         <label>
@@ -794,15 +794,15 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           </select>
         </label>
         <label>
-          Codigo externo
+          Código externo
           <input v-model="unitForm.external_code" />
         </label>
         <label>
-          N asignacion
+          N asignación
           <input v-model="unitForm.allocation_number" type="number" step="1" />
         </label>
         <label>
-          Asignacion
+          Asignación
           <textarea v-model="unitForm.allocation_identifier" rows="3" />
         </label>
         <label>
@@ -814,7 +814,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           <input v-model="unitForm.proration" inputmode="decimal" />
         </label>
         <label>
-          Fecha asignacion
+          Fecha asignación
           <input v-model="unitForm.assignment_date" type="date" />
         </label>
         <label class="span-all">
@@ -836,7 +836,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
     <div class="confirm-modal">
       <p class="eyebrow">Confirmacion</p>
       <h2 id="delete-title">Borrar {{ deleteCandidate.type === "neighbor" ? "vecino" : "unidad" }}</h2>
-      <p>Esta accion eliminara {{ deleteCandidate.label }} del condominio activo.</p>
+      <p>Esta acción eliminará {{ deleteCandidate.label }} del condominio activo.</p>
       <div class="form-actions">
         <button class="button ghost" type="button" @click="cancelDelete">Cancelar</button>
         <button class="button danger" type="button" @click="confirmDelete">Borrar</button>

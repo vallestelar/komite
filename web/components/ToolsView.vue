@@ -81,13 +81,6 @@ const tools = [
     copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
   },
   {
-    title: "Carga vecinos Edifito",
-    icon: "users",
-    targetView: "edifito-neighbors-import",
-    status: "Preparado",
-    copy: "Importar informe de asignaciones para crear o actualizar unidades, copropietarios y residentes.",
-  },
-  {
     title: "Informe conciliación Comunidad Feliz",
     icon: "home",
     targetView: "comunidad-feliz",
@@ -922,7 +915,7 @@ watch(toolsPages, (pages) => {
           <thead>
             <tr>
               <th>Unidad</th>
-              <th>Relacion</th>
+              <th>Relación</th>
               <th>Nombre</th>
               <th>Estado</th>
             </tr>

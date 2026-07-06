@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
@@ -377,7 +378,7 @@ class EdifitoProcessingService:
             row_headers = {self._normalize_header(self._cell_text(cell.value)) for cell in row}
             if required_headers.issubset(row_headers):
                 return row[0].row
-        raise ValueError("No se encontro la cabecera esperada en el informe de asignaciones.")
+        raise ValueError("No se encontró la cabecera esperada en el informe de asignaciones.")
 
     def _cell_text(self, value: Any) -> str:
         if value is None:
@@ -395,7 +396,8 @@ class EdifitoProcessingService:
         return self._normalize_date(text)
 
     def _normalize_header(self, value: str) -> str:
-        return re.sub(r"[^a-z0-9]", "", value.casefold())
+        text = unicodedata.normalize("NFKD", value)
+        return "".join(ch for ch in text.casefold() if ch.isalnum() and not unicodedata.combining(ch))
 
     def _normalize_rut(self, value: str) -> str:
         clean = re.sub(r"[^0-9kK]", "", value or "").upper()

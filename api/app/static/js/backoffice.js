@@ -23,6 +23,8 @@ const state = {
   unitContacts: [],
   roles: [],
   usersLookup: [],
+  edifitoNeighborsPreview: null,
+  comunidadFelizNeighborsPreview: null,
   companyReturnContext: null,
   confirmResolver: null,
 };
@@ -110,8 +112,8 @@ const resources = {
     singular: "banco",
     fields: [
       { name: "name", label: "Nombre", required: true, maxLength: 120 },
-      { name: "code", label: "Codigo", maxLength: 40 },
-      { name: "country", label: "Pais", defaultValue: "Chile", maxLength: 80 },
+      { name: "code", label: "Código", maxLength: 40 },
+      { name: "country", label: "País", defaultValue: "Chile", maxLength: 80 },
       { name: "website", label: "Web", maxLength: 255 },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
       { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
@@ -123,7 +125,7 @@ const resources = {
     columns: ["company_id", "name", "address", "status", "units_count"],
   },
   committeeMembers: {
-    title: "Comite",
+    title: "Comité",
     endpoint: "/api/v1/committee-members/",
     columns: ["company_id", "condominium_id", "position", "full_name", "email", "phone", "status"],
     createLabel: "Nuevo miembro",
@@ -137,7 +139,7 @@ const resources = {
       { name: "position", label: "Cargo", type: "select", options: [["presidente", "Presidente"], ["tesorero", "Tesorero"], ["secretario", "Secretario"], ["vocal", "Vocal"], ["administrador", "Administrador"], ["otro", "Otro"]], defaultValue: "vocal", required: true },
       { name: "full_name", label: "Nombre completo", required: true, maxLength: 150 },
       { name: "email", label: "Email", type: "email", maxLength: 255 },
-      { name: "phone", label: "Telefono", maxLength: 40 },
+      { name: "phone", label: "Teléfono", maxLength: 40 },
       { name: "start_date", label: "Inicio periodo", type: "date" },
       { name: "end_date", label: "Fin periodo", type: "date" },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"]], defaultValue: "active" },
@@ -162,10 +164,10 @@ const resources = {
       { name: "company_id", label: "Empresa", type: "company", required: true },
       { name: "condominium_id", label: "Condominio", type: "condominium" },
       { name: "subject", label: "Asunto", required: true, maxLength: 180 },
-      { name: "description", label: "Descripcion", type: "textarea" },
+      { name: "description", label: "Descripción", type: "textarea" },
       { name: "requester_name", label: "Solicitante", maxLength: 150 },
       { name: "requester_email", label: "Email solicitante", type: "email", maxLength: 255 },
-      { name: "category", label: "Categoria", defaultValue: "general", maxLength: 80 },
+      { name: "category", label: "Categoría", defaultValue: "general", maxLength: 80 },
       { name: "priority", label: "Prioridad", type: "select", options: [["low", "Baja"], ["medium", "Media"], ["high", "Alta"], ["urgent", "Urgente"]], defaultValue: "medium" },
       { name: "status", label: "Estado", type: "select", options: [["open", "Abierto"], ["pending", "Pendiente"], ["in_progress", "En curso"], ["resolved", "Resuelto"], ["closed", "Cerrado"]], defaultValue: "open" },
       { name: "assigned_to_id", label: "Asignado a", type: "user" },
@@ -210,7 +212,7 @@ const resources = {
     columns: ["file_name", "file_type", "mime_type", "created_at"],
   },
   audit: {
-    title: "Auditoria",
+    title: "Auditoría",
     endpoint: "/api/v1/audit-logs/",
     columns: ["action", "entity_type", "entity_id", "created_at"],
   },
@@ -227,47 +229,47 @@ const columnLabels = {
   rut: "RUT",
   email: "Email",
   status: "Estado",
-  address: "Direccion",
+  address: "Dirección",
   company_id: "Empresa",
   condominium_id: "Condominio",
-  code: "Codigo",
-  country: "Pais",
+  code: "Código",
+  country: "País",
   website: "Web",
   units_count: "Unidades",
-  category: "Categoria",
+  category: "Categoría",
   priority: "Prioridad",
   created_at: "Creado",
   title: "Titulo",
   due_date: "Vencimiento",
   report_type: "Tipo de informe",
   published_at: "Publicado",
-  communication_type: "Tipo de comunicacion",
+  communication_type: "Tipo de comunicación",
   audience: "Audiencia",
-  inspection_type: "Tipo de inspeccion",
+  inspection_type: "Tipo de inspección",
   started_at: "Inicio",
   finished_at: "Fin",
   full_name: "Nombre completo",
   company_profile: "Perfil Portal Administrador",
   role_code: "Rol",
-  scope: "Ambito",
+  scope: "Ámbito",
   is_system: "Sistema",
   file_name: "Archivo",
   file_type: "Tipo",
   mime_type: "MIME",
-  action: "Accion",
+  action: "Acción",
   entity_type: "Entidad",
   entity_id: "ID entidad",
   provider: "Proveedor",
   model: "Modelo",
   purpose: "Uso",
   subject: "Asunto",
-  description: "Descripcion",
+  description: "Descripción",
   requester_name: "Solicitante",
   requester_email: "Email solicitante",
   assigned_to_id: "Asignado a",
   resolved_at: "Resuelto el",
   position: "Cargo",
-  phone: "Telefono",
+  phone: "Teléfono",
   unit_id: "Unidad",
   unit_contact_id: "Contacto vecino",
   user_id: "Usuario",
@@ -319,7 +321,7 @@ const roleLabels = {
   supervisor: "Supervisor",
   conserje: "Conserje",
   vecino: "Vecino",
-  comite: "Comite",
+  comite: "Comité",
 };
 
 const positionLabels = {
@@ -333,20 +335,20 @@ const positionLabels = {
 
 const placeholders = {
   committee: {
-    title: "Comite",
-    text: "Aqui quedara la gestion de miembros del comite, cargos, vigencias y relaciones con condominios.",
+    title: "Comité",
+    text: "Aquí quedará la gestión de miembros del comité, cargos, vigencias y relaciones con condominios.",
   },
   neighbors: {
     title: "Vecinos",
-    text: "Aqui se preparara la administracion de vecinos, unidades, datos de contacto y preferencias de comunicacion.",
+    text: "Aquí se preparará la administración de vecinos, unidades, datos de contacto y preferencias de comunicación.",
   },
   settings: {
-    title: "Configuracion",
-    text: "Aqui se centralizaran parametros del sistema, integraciones, proveedores de IA y reglas operativas.",
+    title: "Configuración",
+    text: "Aquí se centralizarán parámetros del sistema, integraciones, proveedores de IA y reglas operativas.",
   },
   integrations: {
     title: "Integraciones",
-    text: "Aqui se gestionaran conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajeria.",
+    text: "Aquí se gestionarán conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajería.",
   },
 };
 
@@ -915,6 +917,7 @@ function showPanel(panel) {
   $("#userFormPanel").hidden = panel !== "userForm";
   $("#genericFormPanel").hidden = panel !== "genericForm";
   $("#audioPanel").hidden = panel !== "audio";
+  $("#toolsPanel").hidden = panel !== "tools";
   $("#placeholderPanel").hidden = panel !== "placeholder";
 }
 
@@ -936,6 +939,13 @@ async function openView(view) {
     return;
   }
 
+  if (view === "tools") {
+    $("#viewTitle").textContent = "Herramientas";
+    showPanel("tools");
+    showToolsCatalog();
+    return;
+  }
+
   if (placeholders[view]) {
     $("#viewTitle").textContent = placeholders[view].title;
     $("#placeholderTitle").textContent = placeholders[view].title;
@@ -947,7 +957,7 @@ async function openView(view) {
   if (!resources[view]) {
     $("#viewTitle").textContent = "Modulo";
     $("#placeholderTitle").textContent = "Modulo no disponible";
-    $("#placeholderText").textContent = "Esta opcion aun no tiene una ruta asociada en el backoffice.";
+    $("#placeholderText").textContent = "Esta opción aún no tiene una ruta asociada en el backoffice.";
     showPanel("placeholder");
     return;
   }
@@ -1025,7 +1035,7 @@ function buildTableQueryParams() {
     if (status) params.set("filter_status", status);
   }
 
-  if (["committeeMembers", "users"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) params.set("filter_company_id", companyId);
   }
@@ -1079,7 +1089,7 @@ function renderPagination() {
   const start = meta.total ? (meta.page - 1) * meta.page_size + 1 : 0;
   const end = Math.min(meta.page * meta.page_size, meta.total);
   $("#paginationSummary").textContent = meta.total ? `${start}-${end} de ${meta.total} registros` : "Sin registros";
-  $("#pageIndicator").textContent = `Pagina ${meta.page} de ${meta.pages}`;
+  $("#pageIndicator").textContent = `Página ${meta.page} de ${meta.pages}`;
   $("#pageSizeSelect").value = String(state.tablePageSize);
 
   const isFirst = meta.page <= 1;
@@ -1150,6 +1160,30 @@ function renderStatusBadge(status) {
     return `<span class="status-badge is-ticket-status" style="--badge-bg: ${palette.background}; --badge-color: ${palette.color}; --badge-accent: ${palette.accent};"><span aria-hidden="true"></span>${escapeHtml(label)}</span>`;
   }
   const className = normalized === "active" ? "is-active" : normalized === "inactive" ? "is-inactive" : "is-neutral";
+  return `<span class="status-badge ${className}"><span aria-hidden="true"></span>${escapeHtml(label)}</span>`;
+}
+
+function renderImportStatusBadge(status, preview) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (!preview) return renderStatusBadge(status);
+
+  const previewLabels = {
+    creado: "se va a crear",
+    "se va a crear": "se va a crear",
+    updated: "se va a actualizar",
+    actualizado: "se va a actualizar",
+    "se va a actualizar": "se va a actualizar",
+    created: "se va a crear",
+    skipped: "se va a omitir",
+    omitido: "se va a omitir",
+    "se va a omitir": "se va a omitir",
+  };
+  const label = previewLabels[normalized] || `se va a ${formatCell(status)}`;
+  const className = ["creado", "created", "se va a crear"].includes(normalized)
+    ? "is-active"
+    : ["skipped", "omitido", "se va a omitir"].includes(normalized)
+      ? "is-inactive"
+      : "is-neutral";
   return `<span class="status-badge ${className}"><span aria-hidden="true"></span>${escapeHtml(label)}</span>`;
 }
 
@@ -1501,8 +1535,8 @@ async function saveGenericEntity(event) {
     const payload = buildGenericPayload(resource);
     if (state.currentView === "committeeMembers" && payload.status !== "inactive") {
       const confirmed = await confirmAction({
-        title: "Asignar rol Comite",
-        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirira automaticamente el rol Comite para el condominio seleccionado.",
+        title: "Asignar rol Comité",
+        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirirá automáticamente el rol Comité para el condominio seleccionado.",
         acceptLabel: "Guardar y asignar rol",
       });
       if (!confirmed) return;
@@ -1528,7 +1562,7 @@ async function deleteGenericEntity(id = $("#genericId").value) {
   if (!resource?.fields || !id) return;
   const confirmed = await confirmAction({
     title: `Borrar ${resource.singular}`,
-    message: `Esta accion eliminara el ${resource.singular} seleccionado.`,
+    message: `Esta acción eliminará el ${resource.singular} seleccionado.`,
     acceptLabel: `Borrar ${resource.singular}`,
   });
   if (!confirmed) return;
@@ -1647,7 +1681,7 @@ async function deleteCurrentCompany() {
 async function deleteCompany(id) {
   const confirmed = await confirmAction({
     title: "Borrar empresa",
-    message: "Esta accion eliminara la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
+    message: "Esta acción eliminará la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
     acceptLabel: "Borrar empresa",
   });
   if (!confirmed) return;
@@ -1883,7 +1917,7 @@ async function deleteCurrentUser() {
 async function deleteUser(id) {
   const confirmed = await confirmAction({
     title: "Borrar usuario",
-    message: "Esta accion eliminara el usuario seleccionado. No se puede deshacer desde el backoffice.",
+    message: "Esta acción eliminará el usuario seleccionado. No se puede deshacer desde el backoffice.",
     acceptLabel: "Borrar usuario",
   });
   if (!confirmed) return;
@@ -1993,7 +2027,7 @@ async function deleteCurrentCondominium() {
 async function deleteCondominium(id) {
   const confirmed = await confirmAction({
     title: "Borrar condominio",
-    message: "Esta accion eliminara el condominio seleccionado. No se puede deshacer desde el backoffice.",
+    message: "Esta acción eliminará el condominio seleccionado. No se puede deshacer desde el backoffice.",
     acceptLabel: "Borrar condominio",
   });
   if (!confirmed) return;
@@ -2061,6 +2095,284 @@ function showToast({ title, message }) {
   toastTimer = window.setTimeout(() => {
     $("#toast").hidden = true;
   }, 3200);
+}
+
+function showToolsCatalog() {
+  $("#toolsCatalog").hidden = false;
+  $("#edifitoNeighborsTool").hidden = true;
+  $("#comunidadFelizNeighborsTool").hidden = true;
+  resetEdifitoNeighborsTool(false);
+  resetComunidadFelizNeighborsTool(false);
+}
+
+async function openEdifitoNeighborsTool() {
+  $("#toolsCatalog").hidden = true;
+  $("#edifitoNeighborsTool").hidden = false;
+  $("#comunidadFelizNeighborsTool").hidden = true;
+  $("#viewTitle").textContent = "Carga vecinos Edifito";
+  $("#edifitoNeighborsError").hidden = true;
+  $("#edifitoNeighborsPreview").hidden = true;
+  state.edifitoNeighborsPreview = null;
+
+  try {
+    await ensureBackofficeToolLookupsLoaded();
+    populateToolCompanySelect();
+    populateToolCondominiumSelect();
+  } catch (error) {
+    $("#edifitoNeighborsError").textContent = readableError(error);
+    $("#edifitoNeighborsError").hidden = false;
+  }
+}
+
+async function openComunidadFelizNeighborsTool() {
+  $("#toolsCatalog").hidden = true;
+  $("#edifitoNeighborsTool").hidden = true;
+  $("#comunidadFelizNeighborsTool").hidden = false;
+  $("#viewTitle").textContent = "Carga vecinos Comunidad Feliz";
+  $("#comunidadFelizNeighborsError").hidden = true;
+  $("#comunidadFelizNeighborsPreview").hidden = true;
+  state.comunidadFelizNeighborsPreview = null;
+
+  try {
+    await ensureBackofficeToolLookupsLoaded();
+    populateCfToolCompanySelect();
+    populateCfToolCondominiumSelect();
+  } catch (error) {
+    $("#comunidadFelizNeighborsError").textContent = readableError(error);
+    $("#comunidadFelizNeighborsError").hidden = false;
+  }
+}
+
+async function ensureBackofficeToolLookupsLoaded() {
+  const data = await apiFetch("/api/v1/backoffice/dashboard");
+  state.companies = data.companies || [];
+  state.condominiums = data.condominiums || [];
+}
+
+function populateToolCompanySelect() {
+  const select = $("#toolCompanySelect");
+  const companies = state.companies
+    .filter((company) => !isInternalKomiteCompany(company))
+    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || "")));
+
+  select.innerHTML = companies.length
+    ? companies
+    .map((company) => `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name || "Empresa")}</option>`)
+      .join("")
+    : `<option value="">No hay empresas cliente</option>`;
+}
+
+function populateCfToolCompanySelect() {
+  const select = $("#cfToolCompanySelect");
+  const companies = state.companies
+    .filter((company) => !isInternalKomiteCompany(company))
+    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || "")));
+
+  select.innerHTML = companies.length
+    ? companies
+      .map((company) => `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name || "Empresa")}</option>`)
+      .join("")
+    : `<option value="">No hay empresas cliente</option>`;
+}
+
+function populateToolCondominiumSelect(selectedId = "") {
+  const companyId = $("#toolCompanySelect").value;
+  const condominiums = state.condominiums
+    .filter((condominium) => companyId && sameId(condominium.company_id, companyId))
+    .filter((condominium) => !condominium.status || condominium.status === "active")
+    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || "")));
+  $("#toolCondominiumSelect").innerHTML = condominiums.length
+    ? condominiums
+      .map((condominium) => `<option value="${escapeHtml(condominium.id)}"${sameId(condominium.id, selectedId) ? " selected" : ""}>${escapeHtml(condominium.name || "Condominio")}</option>`)
+      .join("")
+    : `<option value="">Sin condominios para esta empresa</option>`;
+}
+
+function populateCfToolCondominiumSelect(selectedId = "") {
+  const companyId = $("#cfToolCompanySelect").value;
+  const condominiums = state.condominiums
+    .filter((condominium) => companyId && sameId(condominium.company_id, companyId))
+    .filter((condominium) => !condominium.status || condominium.status === "active")
+    .sort((left, right) => String(left.name || "").localeCompare(String(right.name || "")));
+  $("#cfToolCondominiumSelect").innerHTML = condominiums.length
+    ? condominiums
+      .map((condominium) => `<option value="${escapeHtml(condominium.id)}"${sameId(condominium.id, selectedId) ? " selected" : ""}>${escapeHtml(condominium.name || "Condominio")}</option>`)
+      .join("")
+    : `<option value="">Sin condominios para esta empresa</option>`;
+}
+
+function resetEdifitoNeighborsTool(clearFile = true) {
+  $("#edifitoNeighborsError").hidden = true;
+  $("#edifitoNeighborsPreview").hidden = true;
+  $("#edifitoNeighborsSummary").innerHTML = "";
+  $("#edifitoNeighborsItems").innerHTML = "";
+  state.edifitoNeighborsPreview = null;
+  if (clearFile) $("#toolAssignmentsFile").value = "";
+}
+
+function resetComunidadFelizNeighborsTool(clearFile = true) {
+  $("#comunidadFelizNeighborsError").hidden = true;
+  $("#comunidadFelizNeighborsPreview").hidden = true;
+  $("#comunidadFelizNeighborsSummary").innerHTML = "";
+  $("#comunidadFelizNeighborsItems").innerHTML = "";
+  state.comunidadFelizNeighborsPreview = null;
+  if (clearFile) $("#cfToolChargesFile").value = "";
+}
+
+function edifitoImportFormData() {
+  const file = $("#toolAssignmentsFile").files[0];
+  const condominiumId = $("#toolCondominiumSelect").value;
+  if (!condominiumId) throw new Error("Selecciona un condominio.");
+  if (!file) throw new Error("Selecciona el informe XLSX de asignaciones.");
+
+  const form = new FormData();
+  form.append("condominium_id", condominiumId);
+  form.append("assignments_file", file);
+  return form;
+}
+
+function comunidadFelizImportFormData() {
+  const file = $("#cfToolChargesFile").files[0];
+  const condominiumId = $("#cfToolCondominiumSelect").value;
+  if (!condominiumId) throw new Error("Selecciona un condominio.");
+  if (!file) throw new Error("Selecciona el informe XLSX de gastos comunes.");
+
+  const form = new FormData();
+  form.append("condominium_id", condominiumId);
+  form.append("charges_file", file);
+  return form;
+}
+
+async function previewEdifitoNeighborsTool(event) {
+  event.preventDefault();
+  resetEdifitoNeighborsTool(false);
+
+  try {
+    const data = await apiFetch("/api/v1/edifito/import-neighbors/preview", {
+      method: "POST",
+      body: edifitoImportFormData(),
+    });
+    state.edifitoNeighborsPreview = data;
+    renderEdifitoNeighborsResult(data, true);
+  } catch (error) {
+    $("#edifitoNeighborsError").textContent = readableError(error);
+    $("#edifitoNeighborsError").hidden = false;
+  }
+}
+
+async function applyEdifitoNeighborsTool() {
+  try {
+    const data = await apiFetch("/api/v1/edifito/import-neighbors", {
+      method: "POST",
+      body: edifitoImportFormData(),
+    });
+    state.edifitoNeighborsPreview = null;
+    renderEdifitoNeighborsResult(data, false);
+    showToast({
+      title: "Carga aplicada",
+      message: `Vecinos cargados en ${data.condominium_name || "el condominio"}.`,
+    });
+  } catch (error) {
+    $("#edifitoNeighborsError").textContent = readableError(error);
+    $("#edifitoNeighborsError").hidden = false;
+  }
+}
+
+async function previewComunidadFelizNeighborsTool(event) {
+  event.preventDefault();
+  resetComunidadFelizNeighborsTool(false);
+
+  try {
+    const data = await apiFetch("/api/v1/comunidad-feliz/import-neighbors/preview", {
+      method: "POST",
+      body: comunidadFelizImportFormData(),
+    });
+    state.comunidadFelizNeighborsPreview = data;
+    renderComunidadFelizNeighborsResult(data, true);
+  } catch (error) {
+    $("#comunidadFelizNeighborsError").textContent = readableError(error);
+    $("#comunidadFelizNeighborsError").hidden = false;
+  }
+}
+
+async function applyComunidadFelizNeighborsTool() {
+  try {
+    const data = await apiFetch("/api/v1/comunidad-feliz/import-neighbors", {
+      method: "POST",
+      body: comunidadFelizImportFormData(),
+    });
+    state.comunidadFelizNeighborsPreview = null;
+    renderComunidadFelizNeighborsResult(data, false);
+    showToast({
+      title: "Carga aplicada",
+      message: `Vecinos cargados en ${data.condominium_name || "el condominio"}.`,
+    });
+  } catch (error) {
+    $("#comunidadFelizNeighborsError").textContent = readableError(error);
+    $("#comunidadFelizNeighborsError").hidden = false;
+  }
+}
+
+function renderEdifitoNeighborsResult(data, preview) {
+  const summary = data.summary || {};
+  $("#edifitoNeighborsPreviewTitle").textContent = preview
+    ? `Resumen previo en ${data.condominium_name || "condominio"}`
+    : `Carga aplicada en ${data.condominium_name || "condominio"}`;
+  $("#applyEdifitoNeighborsImport").hidden = !preview;
+  $("#edifitoNeighborsSummary").innerHTML = [
+    ["Unidades leídas", summary.rows],
+    ["Unidades nuevas", summary.units_created],
+    ["Unidades existentes", summary.units_updated],
+    ["Contactos nuevos", summary.contacts_created],
+    ["Contactos actualizados", summary.contacts_updated],
+    ["Usuarios nuevos", summary.users_created],
+    ["Usuarios actualizados", summary.users_updated],
+    ["Sin usuario", summary.users_skipped],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? 0)}</strong></article>`).join("");
+  $("#edifitoNeighborsSummaryNote").textContent = "Las unidades se cuentan una vez por fila del informe. Los contactos y usuarios se calculan por copropietario y residente, por eso pueden ser mayores que las unidades.";
+
+  const items = data.items || [];
+  $("#edifitoNeighborsItems").innerHTML = items.length
+    ? items.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.unit || "")}</td>
+        <td>${escapeHtml(item.relationship_type || "")}</td>
+        <td>${escapeHtml(item.full_name || "")}</td>
+        <td>${renderImportStatusBadge(item.status, preview)}</td>
+      </tr>
+    `).join("")
+    : `<tr><td colspan="4" class="empty-table">Sin detalle para mostrar.</td></tr>`;
+  $("#edifitoNeighborsPreview").hidden = false;
+}
+
+function renderComunidadFelizNeighborsResult(data, preview) {
+  const summary = data.summary || {};
+  $("#comunidadFelizNeighborsPreviewTitle").textContent = preview
+    ? `Resumen previo en ${data.condominium_name || "condominio"}`
+    : `Carga aplicada en ${data.condominium_name || "condominio"}`;
+  $("#applyComunidadFelizNeighborsImport").hidden = !preview;
+  $("#comunidadFelizNeighborsSummary").innerHTML = [
+    ["Unidades leídas", summary.rows],
+    ["Unidades nuevas", summary.units_created],
+    ["Unidades existentes", summary.units_updated],
+    ["Contactos nuevos", summary.contacts_created],
+    ["Contactos actualizados", summary.contacts_updated],
+    ["Sin usuario", summary.users_skipped],
+  ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? 0)}</strong></article>`).join("");
+  $("#comunidadFelizNeighborsSummaryNote").textContent = "Comunidad Feliz no incluye email, RUT ni teléfono en este formato. Se cargan unidades y residentes; no se crean usuarios de acceso.";
+
+  const items = data.items || [];
+  $("#comunidadFelizNeighborsItems").innerHTML = items.length
+    ? items.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.unit || "")}</td>
+        <td>${escapeHtml(item.relationship_type || "")}</td>
+        <td>${escapeHtml(item.full_name || "")}</td>
+        <td>${renderImportStatusBadge(item.status, preview)}</td>
+      </tr>
+    `).join("")
+    : `<tr><td colspan="4" class="empty-table">Sin detalle para mostrar.</td></tr>`;
+  $("#comunidadFelizNeighborsPreview").hidden = false;
 }
 
 async function uploadAudio(event) {
@@ -2170,7 +2482,7 @@ $("#searchInput").addEventListener("input", () => {
 $("#companyFilter").addEventListener("change", () => {
   const resource = resources[state.currentView];
   if (resource) {
-    if (state.currentView === "committeeMembers") {
+    if (["condominiums", "committeeMembers", "users"].includes(state.currentView)) {
       state.tablePage = 1;
       loadTable();
       return;
@@ -2194,6 +2506,34 @@ $("#ticketStatusFilter").addEventListener("change", async () => {
   await loadTable();
 });
 $("#audioForm").addEventListener("submit", uploadAudio);
+$("#openEdifitoNeighborsTool").addEventListener("click", openEdifitoNeighborsTool);
+$("#openComunidadFelizNeighborsTool").addEventListener("click", openComunidadFelizNeighborsTool);
+$("#backToToolsCatalog").addEventListener("click", () => {
+  $("#viewTitle").textContent = "Herramientas";
+  showToolsCatalog();
+});
+$("#backToToolsCatalogFromComunidadFeliz").addEventListener("click", () => {
+  $("#viewTitle").textContent = "Herramientas";
+  showToolsCatalog();
+});
+$("#toolCompanySelect").addEventListener("change", () => {
+  populateToolCondominiumSelect();
+  resetEdifitoNeighborsTool(false);
+});
+$("#toolCondominiumSelect").addEventListener("change", () => resetEdifitoNeighborsTool(false));
+$("#toolAssignmentsFile").addEventListener("change", () => resetEdifitoNeighborsTool(false));
+$("#toolResetButton").addEventListener("click", () => resetEdifitoNeighborsTool(true));
+$("#edifitoNeighborsForm").addEventListener("submit", previewEdifitoNeighborsTool);
+$("#applyEdifitoNeighborsImport").addEventListener("click", applyEdifitoNeighborsTool);
+$("#cfToolCompanySelect").addEventListener("change", () => {
+  populateCfToolCondominiumSelect();
+  resetComunidadFelizNeighborsTool(false);
+});
+$("#cfToolCondominiumSelect").addEventListener("change", () => resetComunidadFelizNeighborsTool(false));
+$("#cfToolChargesFile").addEventListener("change", () => resetComunidadFelizNeighborsTool(false));
+$("#cfToolResetButton").addEventListener("click", () => resetComunidadFelizNeighborsTool(true));
+$("#comunidadFelizNeighborsForm").addEventListener("submit", previewComunidadFelizNeighborsTool);
+$("#applyComunidadFelizNeighborsImport").addEventListener("click", applyComunidadFelizNeighborsTool);
 $("#sidebarToggle").addEventListener("click", toggleSidebar);
 document.addEventListener("click", (event) => {
   const groupToggle = event.target.closest("[data-nav-group]");

@@ -11,7 +11,6 @@ from app.services.edifito_processing_service import EdifitoProcessingService
 router = APIRouter(
     prefix="/api/v1/edifito",
     tags=["Edifito"],
-    dependencies=[Depends(require_access_token(require_condominium=True))],
 )
 
 
@@ -43,6 +42,7 @@ def _validate_assignments_file(assignments_file: UploadFile) -> None:
 @router.post("/process")
 async def process_edifito_files(
     request: Request,
+    _: None = Depends(require_access_token(require_condominium=True)),
     bank_statement: UploadFile = File(...),
     assignments_file: UploadFile = File(...),
     charge_detail_file: UploadFile = File(...),
@@ -87,6 +87,7 @@ async def process_edifito_files(
 @router.post("/import-neighbors/preview")
 async def preview_edifito_neighbors_import(
     request: Request,
+    _: None = Depends(require_access_token()),
     condominium_id: str = Form(...),
     assignments_file: UploadFile = File(...),
 ) -> dict:
@@ -111,6 +112,7 @@ async def preview_edifito_neighbors_import(
 @router.post("/import-neighbors")
 async def import_edifito_neighbors(
     request: Request,
+    _: None = Depends(require_access_token()),
     condominium_id: str = Form(...),
     assignments_file: UploadFile = File(...),
 ) -> dict:

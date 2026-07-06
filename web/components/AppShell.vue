@@ -35,12 +35,12 @@ const menuGroups: MenuGroup[] = [
     label: "Comunidades",
     items: [
       { id: "neighbors", label: "Vecinos y unidades", icon: "home", view: "neighbors" },
-      { id: "committee", label: "Comite", icon: "users", view: "committee" },
+      { id: "committee", label: "Comité", icon: "users", view: "committee" },
     ],
   },
   {
     id: "operacion",
-    label: "Operacion diaria",
+    label: "Operación diaria",
     items: [
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
@@ -50,7 +50,7 @@ const menuGroups: MenuGroup[] = [
   },
   {
     id: "comunicacion",
-    label: "Informes y comunicacion",
+    label: "Informes y comunicación",
     items: [
       { id: "reports", label: "Informes", icon: "file-text", view: "reports" },
       { id: "communications", label: "Comunicados", icon: "message", view: "communications" },
@@ -69,7 +69,6 @@ const menuGroups: MenuGroup[] = [
 
 const toolViewTitles: Record<string, string> = {
   edifito: "Edifito",
-  "edifito-neighbors-import": "Carga vecinos Edifito",
   "comunidad-feliz": "Comunidad Feliz",
   audio: "Procesar audio",
   "spreadsheet-tools": "Importar planillas",
@@ -198,7 +197,7 @@ onMounted(() => {
     <section ref="workspaceRef" class="workspace">
       <header class="topbar">
         <div class="title-row">
-          <button class="button ghost icon-only" type="button" :title="sidebarCollapsed ? 'Expandir menu' : 'Contraer menu'" @click="toggleSidebar">
+          <button class="button ghost icon-only" type="button" :title="sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'" @click="toggleSidebar">
             <svg class="icon" aria-hidden="true"><use href="#icon-panel-left" /></svg>
           </button>
           <h1>{{ currentTitle }}</h1>
@@ -224,7 +223,7 @@ onMounted(() => {
       <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}-${selectedNeighborId}`" :focus-neighbor-id="selectedNeighborId" />
       <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" @open-neighbor="openNeighborFromCommittee" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
-      <ToolsView v-else-if="['tools', 'edifito', 'edifito-neighbors-import'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
+      <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />
     </section>
 

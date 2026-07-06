@@ -3,6 +3,7 @@ from app.models.entities.condominium import Condominium
 from app.models.entities.building import Building
 from app.models.entities.unit import Unit
 from app.models.entities.unit_contact import UnitContact
+from app.models.entities.committee_member import CommitteeMember
 from app.models.entities.role import Role
 from app.models.entities.bank import Bank
 from app.models.entities.user import User
@@ -31,6 +32,7 @@ __all__ = [
     "Building",
     "Unit",
     "UnitContact",
+    "CommitteeMember",
     "Role",
     "Bank",
     "User",

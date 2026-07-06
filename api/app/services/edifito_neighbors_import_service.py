@@ -29,6 +29,9 @@ class EdifitoNeighborsImportService:
             "contacts_created": 0,
             "contacts_updated": 0,
             "contacts_skipped": 0,
+            "users_created": 0,
+            "users_updated": 0,
+            "users_skipped": 0,
         }
         details: list[dict[str, str]] = []
 
@@ -45,6 +48,10 @@ class EdifitoNeighborsImportService:
                     summary["contacts_skipped"] += 1
                     continue
 
+                user_status = await self._classify_user(
+                    company_id=company_id,
+                    email=self._clean_email(row.get(f"{prefix}_email")),
+                )
                 contact, created_contact = await self._upsert_contact(
                     company_id=company_id,
                     condominium_id=condominium_id,
@@ -57,12 +64,67 @@ class EdifitoNeighborsImportService:
                     address=self._clean(row.get(f"{prefix}_address")),
                 )
                 summary["contacts_created" if created_contact else "contacts_updated"] += 1
+                summary[f"users_{user_status}"] += 1
                 details.append(
                     {
                         "unit": unit.identifier,
                         "relationship_type": contact.relationship_type,
                         "full_name": contact.full_name,
                         "status": "creado" if created_contact else "actualizado",
+                    }
+                )
+
+        return {"summary": summary, "items": details[:200]}
+
+    async def preview_assignments(
+        self,
+        *,
+        company_id: str | None,
+        condominium_id: str,
+        content: bytes,
+    ) -> dict[str, Any]:
+        rows = self._read_rows(content)
+        summary = {
+            "rows": len(rows),
+            "units_created": 0,
+            "units_updated": 0,
+            "contacts_created": 0,
+            "contacts_updated": 0,
+            "contacts_skipped": 0,
+            "users_created": 0,
+            "users_updated": 0,
+            "users_skipped": 0,
+        }
+        details: list[dict[str, str]] = []
+
+        for row in rows:
+            identifier = self._clean(row["uco"]) or "Sin identificador"
+            unit = await Unit.get_or_none(condominium_id=condominium_id, identifier=identifier)
+            summary["units_updated" if unit else "units_created"] += 1
+
+            for relationship, prefix in (
+                (self.relationship_owner, "owner"),
+                (self.relationship_resident, "resident"),
+            ):
+                full_name = self._clean(row.get(f"{prefix}_name"))
+                if not full_name:
+                    summary["contacts_skipped"] += 1
+                    continue
+
+                email = self._clean_email(row.get(f"{prefix}_email"))
+                document_number = self._clean(row.get(f"{prefix}_rut"))
+                existing_contact = await self._find_contact(unit, relationship, email, document_number, full_name) if unit else None
+                contact_status = "updated" if existing_contact else "created"
+                summary[f"contacts_{contact_status}"] += 1
+
+                user_status = await self._classify_user(company_id=company_id, email=email)
+                summary[f"users_{user_status}"] += 1
+                details.append(
+                    {
+                        "unit": identifier,
+                        "relationship_type": relationship,
+                        "full_name": full_name,
+                        "status": "creado" if contact_status == "created" else "actualizado",
                     }
                 )
 
@@ -183,6 +245,16 @@ class EdifitoNeighborsImportService:
         if document_number:
             return await base.filter(document_number=document_number).first()
         return await base.filter(full_name=full_name).first()
+
+    async def _classify_user(self, company_id: str | None, email: str | None) -> str:
+        if not email:
+            return "skipped"
+        user = await User.get_or_none(email=email)
+        if not user:
+            return "created"
+        if company_id and str(user.company_id) == str(company_id):
+            return "updated"
+        return "skipped"
 
     async def _sync_user(
         self,

@@ -295,6 +295,69 @@ class UnitContactPage(BaseModel):
     meta: PageMeta
 
 
+class CommitteeMemberCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    user_id: Optional[UUID] = None
+    unit_contact_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    position: str = Field(..., max_length=80)
+    full_name: str = Field(..., max_length=150)
+    email: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: str = Field(default="active", max_length=30)
+    receives_notifications: bool = True
+    display_order: int = 0
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommitteeMemberUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
+    unit_contact_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    position: Optional[str] = Field(default=None, max_length=80)
+    full_name: Optional[str] = Field(default=None, max_length=150)
+    email: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    receives_notifications: Optional[bool] = None
+    display_order: Optional[int] = None
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CommitteeMemberOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    user_id: Optional[UUID] = None
+    unit_contact_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    position: str
+    full_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: str
+    receives_notifications: bool
+    display_order: int
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommitteeMemberPage(BaseModel):
+    items: list[CommitteeMemberOut]
+    meta: PageMeta
+
+
 class RoleCreate(BaseModel):
     code: str = Field(..., max_length=60)
     name: str = Field(..., max_length=100)

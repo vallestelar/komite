@@ -940,6 +940,21 @@ tbody tr:hover {
   grid-column: span 1;
 }
 
+.searchable-select-field {
+  display: grid;
+  gap: 8px;
+}
+
+.select-search-input {
+  min-height: 38px;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.select-search-input:focus {
+  background: #fff;
+}
+
 .form-actions {
   display: flex;
   align-items: center;

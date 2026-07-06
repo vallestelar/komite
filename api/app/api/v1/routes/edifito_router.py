@@ -15,6 +15,31 @@ router = APIRouter(
 )
 
 
+async def _get_allowed_import_condominium(request: Request, condominium_id: str) -> Condominium:
+    condominium = await Condominium.get_or_none(id=condominium_id)
+    if not condominium:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comunidad no encontrada")
+
+    is_komite = await user_is_komite_employee(request.state.user)
+    allowed_condominium_ids = {
+        str(item.get("id"))
+        for item in getattr(request.state, "condominiums", [])
+        if isinstance(item, dict) and item.get("id")
+    }
+    if not is_komite:
+        if str(condominium_id) not in allowed_condominium_ids:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Comunidad no permitida para este usuario")
+        if not await user_has_condominium(str(request.state.user_id), str(condominium_id)):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no pertenece a esta comunidad")
+
+    return condominium
+
+
+def _validate_assignments_file(assignments_file: UploadFile) -> None:
+    if not (assignments_file.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe cargar un archivo XLSX de asignaciones")
+
+
 @router.post("/process")
 async def process_edifito_files(
     request: Request,
@@ -59,30 +84,38 @@ async def process_edifito_files(
     return result
 
 
+@router.post("/import-neighbors/preview")
+async def preview_edifito_neighbors_import(
+    request: Request,
+    condominium_id: str = Form(...),
+    assignments_file: UploadFile = File(...),
+) -> dict:
+    condominium = await _get_allowed_import_condominium(request, condominium_id)
+    _validate_assignments_file(assignments_file)
+
+    service = EdifitoNeighborsImportService()
+    try:
+        result = await service.preview_assignments(
+            company_id=str(condominium.company_id),
+            condominium_id=str(condominium.id),
+            content=await assignments_file.read(),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    result["condominium_id"] = str(condominium.id)
+    result["condominium_name"] = condominium.name
+    return result
+
+
 @router.post("/import-neighbors")
 async def import_edifito_neighbors(
     request: Request,
     condominium_id: str = Form(...),
     assignments_file: UploadFile = File(...),
 ) -> dict:
-    condominium = await Condominium.get_or_none(id=condominium_id)
-    if not condominium:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comunidad no encontrada")
-
-    is_komite = await user_is_komite_employee(request.state.user)
-    allowed_condominium_ids = {
-        str(item.get("id"))
-        for item in getattr(request.state, "condominiums", [])
-        if isinstance(item, dict) and item.get("id")
-    }
-    if not is_komite:
-        if str(condominium_id) not in allowed_condominium_ids:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Comunidad no permitida para este usuario")
-        if not await user_has_condominium(str(request.state.user_id), str(condominium_id)):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario no pertenece a esta comunidad")
-
-    if not (assignments_file.filename or "").lower().endswith(".xlsx"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Debe cargar un archivo XLSX de asignaciones")
+    condominium = await _get_allowed_import_condominium(request, condominium_id)
+    _validate_assignments_file(assignments_file)
 
     service = EdifitoNeighborsImportService()
     try:

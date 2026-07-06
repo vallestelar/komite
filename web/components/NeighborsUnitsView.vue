@@ -166,6 +166,18 @@ const title = computed(() => {
   return "Vecinos y unidades";
 });
 
+const statusLabel = (status: string | null | undefined) => {
+  if (status === "active") return "Activo";
+  if (status === "inactive") return "Inactivo";
+  return status || "Sin estado";
+};
+
+const statusBadgeClass = (status: string | null | undefined) => {
+  if (status === "active") return "is-active";
+  if (status === "inactive") return "is-inactive";
+  return "is-neutral";
+};
+
 const loadUnits = async () => {
   const params = new URLSearchParams({
     page: String(unitsMeta.page),
@@ -565,7 +577,12 @@ onMounted(loadActiveTab);
                   <span>{{ neighbor.receives_notifications ? "Si" : "No" }}</span>
                 </span>
               </td>
-              <td>{{ neighbor.status === "active" ? "Activo" : "Inactivo" }}</td>
+              <td>
+                <span class="status-badge" :class="statusBadgeClass(neighbor.status)">
+                  <span aria-hidden="true"></span>
+                  {{ statusLabel(neighbor.status) }}
+                </span>
+              </td>
               <td class="actions-cell">
                 <button class="button compact navy" type="button" @click="openEditNeighbor(neighbor)">
                   <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>

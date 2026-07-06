@@ -666,6 +666,154 @@ h3 {
   min-height: 260px;
 }
 
+.committee-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.committee-hero {
+  margin-bottom: 0;
+}
+
+.committee-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.committee-summary article {
+  min-width: 96px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--white);
+}
+
+.committee-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.committee-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--navy);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.committee-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.committee-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfe;
+}
+
+.committee-card-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.committee-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--orange);
+  background: #fff7ed;
+  flex: 0 0 auto;
+}
+
+.committee-avatar.large {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto;
+}
+
+.committee-avatar.large .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.committee-position {
+  margin: 0 0 4px;
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.committee-card h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.committee-details {
+  display: grid;
+  gap: 9px;
+}
+
+.committee-details p {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.committee-details .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--navy);
+  flex: 0 0 auto;
+}
+
+.committee-details span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.committee-notes {
+  margin: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.committee-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-height: 260px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 46px 18px;
+  text-align: center;
+  background: #fbfcfe;
+}
+
+.committee-empty h2 {
+  margin: 8px 0 0;
+}
+
 .tools-catalog-toolbar {
   display: flex;
   align-items: flex-end;
@@ -753,6 +901,41 @@ h3 {
   background: var(--white);
   font-size: 12px;
   font-weight: 800;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-badge span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.status-badge.is-active {
+  color: #067647;
+  background: #ecfdf3;
+}
+
+.status-badge.is-inactive {
+  color: #b42318;
+  background: #fff4f2;
+}
+
+.status-badge.is-neutral {
+  color: #475467;
+  background: #f2f4f7;
 }
 
 .tool-card-footer {
@@ -1125,7 +1308,24 @@ h3 {
   box-shadow: 0 22px 60px rgba(16, 36, 55, 0.22);
 }
 
+.import-confirm-modal {
+  width: min(760px, 100%);
+}
+
+.import-preview-summary {
+  margin: 18px 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 1100px) {
+  .committee-grid,
   .metrics-grid,
   .tool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1218,6 +1418,7 @@ h3 {
   }
 
   .dashboard-grid,
+  .committee-grid,
   .edifito-form,
   .comunidad-form,
   .comunidad-toolbar,
@@ -1226,5 +1427,18 @@ h3 {
   .metrics-grid,
   .tool-grid {
     grid-template-columns: 1fr;
+  }
+
+  .committee-summary {
+    width: 100%;
+  }
+
+  .committee-card-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .committee-card-header .status-badge {
+    grid-column: 2;
+    justify-self: start;
   }
 }

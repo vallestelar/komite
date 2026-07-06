@@ -20,6 +20,7 @@ const state = {
   companies: [],
   condominiums: [],
   units: [],
+  unitContacts: [],
   roles: [],
   usersLookup: [],
   companyReturnContext: null,
@@ -99,7 +100,7 @@ const resources = {
   companies: {
     title: "Empresas",
     endpoint: "/api/v1/companies/",
-    columns: ["id", "name", "rut", "email", "status"],
+    columns: ["name", "rut", "email", "status"],
   },
   banks: {
     title: "Bancos",
@@ -119,17 +120,42 @@ const resources = {
   condominiums: {
     title: "Condominios",
     endpoint: "/api/v1/condominiums/",
-    columns: ["id", "company_id", "name", "address", "status", "units_count"],
+    columns: ["company_id", "name", "address", "status", "units_count"],
+  },
+  committeeMembers: {
+    title: "Comite",
+    endpoint: "/api/v1/committee-members/",
+    columns: ["company_id", "condominium_id", "position", "full_name", "email", "phone", "status"],
+    createLabel: "Nuevo miembro",
+    singular: "miembro",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company", required: true },
+      { name: "condominium_id", label: "Condominio", type: "condominium", required: true, emptyLabel: "Selecciona condominio" },
+      { name: "unit_id", label: "Unidad", type: "unit" },
+      { name: "unit_contact_id", label: "Contacto vecino", type: "unit_contact" },
+      { name: "user_id", label: "Usuario asociado", type: "user" },
+      { name: "position", label: "Cargo", type: "select", options: [["presidente", "Presidente"], ["tesorero", "Tesorero"], ["secretario", "Secretario"], ["vocal", "Vocal"], ["administrador", "Administrador"], ["otro", "Otro"]], defaultValue: "vocal", required: true },
+      { name: "full_name", label: "Nombre completo", required: true, maxLength: 150 },
+      { name: "email", label: "Email", type: "email", maxLength: 255 },
+      { name: "phone", label: "Telefono", maxLength: 40 },
+      { name: "start_date", label: "Inicio periodo", type: "date" },
+      { name: "end_date", label: "Fin periodo", type: "date" },
+      { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"]], defaultValue: "active" },
+      { name: "receives_notifications", label: "Recibe notificaciones", type: "checkbox", defaultValue: true },
+      { name: "display_order", label: "Orden", type: "number", defaultValue: 0 },
+      { name: "notes", label: "Notas", type: "textarea" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
   },
   incidents: {
     title: "Incidencias",
     endpoint: "/api/v1/incidents/",
-    columns: ["id", "category", "priority", "status", "created_at"],
+    columns: ["category", "priority", "status", "created_at"],
   },
   supportTickets: {
     title: "Tickets",
     endpoint: "/api/v1/support-tickets/",
-    columns: ["id", "company_id", "condominium_id", "subject", "priority", "status", "due_date"],
+    columns: ["company_id", "condominium_id", "subject", "priority", "status", "due_date"],
     createLabel: "Nuevo ticket",
     singular: "ticket",
     fields: [
@@ -151,47 +177,47 @@ const resources = {
   tasks: {
     title: "Tareas",
     endpoint: "/api/v1/tasks/",
-    columns: ["id", "title", "priority", "status", "due_date"],
+    columns: ["title", "priority", "status", "due_date"],
   },
   reports: {
     title: "Informes",
     endpoint: "/api/v1/reports/",
-    columns: ["id", "title", "report_type", "status", "published_at"],
+    columns: ["title", "report_type", "status", "published_at"],
   },
   communications: {
     title: "Comunicaciones",
     endpoint: "/api/v1/communications/",
-    columns: ["id", "title", "communication_type", "audience", "status"],
+    columns: ["title", "communication_type", "audience", "status"],
   },
   inspections: {
     title: "Inspecciones",
     endpoint: "/api/v1/inspections/",
-    columns: ["id", "inspection_type", "status", "started_at", "finished_at"],
+    columns: ["inspection_type", "status", "started_at", "finished_at"],
   },
   users: {
     title: "Usuarios",
     endpoint: "/api/v1/users/",
-    columns: ["id", "email", "full_name", "company_profile", "role_code", "status"],
+    columns: ["company_id", "email", "full_name", "company_profile", "role_code", "status"],
   },
   roles: {
     title: "Roles",
     endpoint: "/api/v1/roles/",
-    columns: ["id", "code", "name", "is_system"],
+    columns: ["code", "name", "is_system"],
   },
   attachments: {
     title: "Archivos",
     endpoint: "/api/v1/attachments/",
-    columns: ["id", "file_name", "file_type", "mime_type", "created_at"],
+    columns: ["file_name", "file_type", "mime_type", "created_at"],
   },
   audit: {
     title: "Auditoria",
     endpoint: "/api/v1/audit-logs/",
-    columns: ["id", "action", "entity_type", "entity_id", "created_at"],
+    columns: ["action", "entity_type", "entity_id", "created_at"],
   },
   ai: {
     title: "IA",
     endpoint: "/api/v1/ai-requests/",
-    columns: ["id", "provider", "model", "purpose", "status"],
+    columns: ["provider", "model", "purpose", "status"],
   },
 };
 
@@ -240,6 +266,16 @@ const columnLabels = {
   requester_email: "Email solicitante",
   assigned_to_id: "Asignado a",
   resolved_at: "Resuelto el",
+  position: "Cargo",
+  phone: "Telefono",
+  unit_id: "Unidad",
+  unit_contact_id: "Contacto vecino",
+  user_id: "Usuario",
+  start_date: "Inicio",
+  end_date: "Fin",
+  receives_notifications: "Notifica",
+  display_order: "Orden",
+  notes: "Notas",
 };
 
 const statusLabels = {
@@ -284,6 +320,15 @@ const roleLabels = {
   conserje: "Conserje",
   vecino: "Vecino",
   comite: "Comite",
+};
+
+const positionLabels = {
+  presidente: "Presidente",
+  tesorero: "Tesorero",
+  secretario: "Secretario",
+  vocal: "Vocal",
+  administrador: "Administrador",
+  otro: "Otro",
 };
 
 const placeholders = {
@@ -913,7 +958,7 @@ async function openView(view) {
   $("#ticketCondominiumFilter").value = "";
   $("#ticketStatusFilter").value = "";
   state.tablePage = 1;
-  $("#companyFilter").hidden = view !== "condominiums";
+  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users"].includes(view);
   $("#ticketCompanyFilter").hidden = view !== "supportTickets";
   $("#ticketCondominiumFilter").hidden = view !== "supportTickets";
   $("#ticketStatusFilter").hidden = view !== "supportTickets";
@@ -924,8 +969,12 @@ async function openView(view) {
   if (resources[view].fields) {
     $("#newGenericButtonLabel").textContent = resources[view].createLabel || "Nuevo";
   }
-  if (view === "condominiums") {
+  if (["condominiums", "users"].includes(view)) {
     await ensureCompaniesLoaded();
+    populateCompanyFilter();
+  }
+  if (view === "committeeMembers") {
+    await ensureUserLookupsLoaded();
     populateCompanyFilter();
   }
   if (view === "supportTickets") {
@@ -975,12 +1024,17 @@ function buildTableQueryParams() {
     if (status) params.set("filter_status", status);
   }
 
+  if (["committeeMembers", "users"].includes(state.currentView)) {
+    const companyId = $("#companyFilter").value;
+    if (companyId) params.set("filter_company_id", companyId);
+  }
+
   return params.toString();
 }
 
 function filteredTableItems() {
   let items = state.currentItems || [];
-  if (state.currentView === "condominiums") {
+  if (["condominiums", "committeeMembers", "users"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) {
       items = items.filter((item) => sameId(item.company_id, companyId));
@@ -1047,9 +1101,13 @@ function labelForColumn(column) {
 
 function formatTableCell(column, value) {
   if (column === "status") return renderStatusBadge(value);
-  if (column === "is_system") return renderBooleanBadge(value);
+  if (["is_system", "receives_notifications"].includes(column)) return renderBooleanBadge(value);
   if (column === "company_id") return escapeHtml(companyName(value));
   if (column === "condominium_id") return escapeHtml(condominiumName(value));
+  if (column === "unit_id") return escapeHtml(unitName(value));
+  if (column === "unit_contact_id") return escapeHtml(unitContactName(value));
+  if (column === "user_id") return escapeHtml(userName(value));
+  if (column === "position") return escapeHtml(positionLabels[value] || formatCell(value));
   if (["company_profile", "role_code"].includes(column)) return escapeHtml(roleLabels[value] || formatCell(value));
   return escapeHtml(formatCell(value));
 }
@@ -1063,6 +1121,24 @@ function condominiumName(condominiumId) {
   if (!condominiumId) return "";
   const condominium = state.condominiums.find((item) => sameId(item.id, condominiumId));
   return condominium?.name || formatCell(condominiumId);
+}
+
+function unitName(unitId) {
+  if (!unitId) return "";
+  const unit = state.units.find((item) => sameId(item.id, unitId));
+  return unit?.identifier || formatCell(unitId);
+}
+
+function unitContactName(contactId) {
+  if (!contactId) return "";
+  const contact = state.unitContacts.find((item) => sameId(item.id, contactId));
+  return contact?.full_name || formatCell(contactId);
+}
+
+function userName(userId) {
+  if (!userId) return "";
+  const user = state.usersLookup.find((item) => sameId(item.id, userId));
+  return user?.full_name || user?.email || formatCell(userId);
 }
 
 function renderStatusBadge(status) {
@@ -1230,18 +1306,20 @@ function populateTicketCondominiumFilter() {
 }
 
 async function ensureUserLookupsLoaded() {
-  const [companies, condominiums, roles, units, users] = await Promise.all([
+  const [companies, condominiums, roles, units, users, unitContacts] = await Promise.all([
     apiFetch("/api/v1/companies/?page=1&page_size=200"),
     apiFetch("/api/v1/condominiums/?page=1&page_size=200"),
     apiFetch("/api/v1/roles/?page=1&page_size=200"),
     apiFetch("/api/v1/units/?page=1&page_size=200"),
     apiFetch("/api/v1/users/?page=1&page_size=200"),
+    apiFetch("/api/v1/unit-contacts/?page=1&page_size=200"),
   ]);
   state.companies = companies.items || [];
   state.condominiums = condominiums.items || [];
   state.roles = (roles.items || []).filter((role) => ["vecino", "comite", "supervisor", "conserje"].includes(role.code));
   state.units = units.items || [];
   state.usersLookup = users.items || [];
+  state.unitContacts = unitContacts.items || [];
 }
 
 async function openGenericForm(id = null) {
@@ -1249,7 +1327,7 @@ async function openGenericForm(id = null) {
   if (!resource?.fields) return;
 
   $("#genericFormError").hidden = true;
-  if (resource.fields.some((field) => ["company", "condominium", "user"].includes(field.type))) {
+  if (resource.fields.some((field) => ["company", "condominium", "user", "unit", "unit_contact"].includes(field.type))) {
     await ensureUserLookupsLoaded();
   }
 
@@ -1274,6 +1352,7 @@ function setRecordId(selector, id) {
 
 function renderGenericFormFields(resource, item) {
   $("#genericFormFields").innerHTML = resource.fields.map((field) => renderGenericField(field, item)).join("");
+  bindSearchableSelects();
   bindGenericFieldDependencies();
 }
 
@@ -1291,21 +1370,34 @@ function renderGenericField(field, item) {
   }
 
   if (field.type === "company") {
-    return `<label>${label}<select data-generic-field="${name}"${required}><option value="">Selecciona empresa</option>${state.companies
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"${required}><option value="">Selecciona empresa</option>${state.companies
       .map((company) => `<option value="${escapeHtml(company.id)}"${value === company.id ? " selected" : ""}>${escapeHtml(company.name)}</option>`)
-      .join("")}</select></label>`;
+      .join("")}</select>`, "Buscar empresa");
   }
 
   if (field.type === "condominium") {
-    return `<label>${label}<select data-generic-field="${name}"><option value="">Ticket general empresa</option>${state.condominiums
+    const emptyLabel = field.emptyLabel || "Sin condominio";
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"${required}><option value="">${escapeHtml(emptyLabel)}</option>${state.condominiums
       .map((condominium) => `<option value="${escapeHtml(condominium.id)}" data-company-id="${escapeHtml(condominium.company_id || "")}"${value === condominium.id ? " selected" : ""}>${escapeHtml(condominium.name)}</option>`)
-      .join("")}</select></label>`;
+      .join("")}</select>`, "Buscar condominio");
+  }
+
+  if (field.type === "unit") {
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"><option value="">Sin unidad</option>${state.units
+      .map((unit) => `<option value="${escapeHtml(unit.id)}" data-condominium-id="${escapeHtml(unit.condominium_id || "")}"${value === unit.id ? " selected" : ""}>${escapeHtml(unit.identifier || unit.id)}</option>`)
+      .join("")}</select>`, "Buscar unidad");
+  }
+
+  if (field.type === "unit_contact") {
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"><option value="">Sin contacto asociado</option>${state.unitContacts
+      .map((contact) => `<option value="${escapeHtml(contact.id)}" data-condominium-id="${escapeHtml(contact.condominium_id || "")}" data-unit-id="${escapeHtml(contact.unit_id || "")}" data-full-name="${escapeHtml(contact.full_name || "")}" data-email="${escapeHtml(contact.email || "")}" data-phone="${escapeHtml(contact.phone || "")}"${value === contact.id ? " selected" : ""}>${escapeHtml(contact.full_name || contact.email || contact.id)}</option>`)
+      .join("")}</select>`, "Buscar vecino");
   }
 
   if (field.type === "user") {
-    return `<label>${label}<select data-generic-field="${name}"><option value="">Sin asignar</option>${state.usersLookup
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"><option value="">Sin asignar</option>${state.usersLookup
       .map((user) => `<option value="${escapeHtml(user.id)}"${value === user.id ? " selected" : ""}>${escapeHtml(user.full_name || user.email)}</option>`)
-      .join("")}</select></label>`;
+      .join("")}</select>`, "Buscar usuario");
   }
 
   if (field.type === "textarea" || field.type === "json") {
@@ -1313,9 +1405,60 @@ function renderGenericField(field, item) {
     return `<label class="span-2">${label}<textarea data-generic-field="${name}" data-field-type="${field.type}" rows="4"${required}>${escapeHtml(textareaValue)}</textarea></label>`;
   }
 
+  if (field.type === "checkbox") {
+    const checked = value === true || value === "true" ? " checked" : "";
+    return `<label class="checkbox-row"><input data-generic-field="${name}" type="checkbox"${checked} />${label}</label>`;
+  }
+
   const inputType = field.type === "datetime" ? "datetime-local" : field.type || "text";
   const inputValue = field.type === "datetime" && value ? String(value).slice(0, 16) : value;
-  return `<label>${label}<input data-generic-field="${name}" type="${inputType}" value="${escapeHtml(inputValue || "")}"${required}${maxlength} /></label>`;
+  return `<label>${label}<input data-generic-field="${name}" type="${inputType}" value="${escapeHtml(inputValue ?? "")}"${required}${maxlength} /></label>`;
+}
+
+function renderSearchableSelect(label, name, selectHtml, placeholder) {
+  return `<label class="searchable-select-field">${label}<input class="select-search-input" data-select-search="${name}" type="search" placeholder="${escapeHtml(placeholder)}" autocomplete="off" />${selectHtml}</label>`;
+}
+
+function bindSearchableSelects() {
+  $$("[data-select-search]").forEach((input) => {
+    const fieldName = input.dataset.selectSearch;
+    const select = $(`[data-generic-field="${fieldName}"]`);
+    if (!select) return;
+    const applySearch = () => filterSelectOptions(select, input.value);
+    input.addEventListener("input", applySearch);
+    select.addEventListener("change", () => {
+      input.value = "";
+      filterSelectOptions(select, "");
+    });
+    applySearch();
+  });
+}
+
+function filterSelectOptions(select, searchText) {
+  const normalizedSearch = normalizeSearch(searchText);
+  Array.from(select.options).forEach((option) => {
+    if (!option.value) {
+      option.hidden = false;
+      option.dataset.searchHidden = "false";
+      return;
+    }
+    const hiddenBySearch = Boolean(normalizedSearch && !normalizeSearch(option.textContent).includes(normalizedSearch));
+    option.dataset.searchHidden = hiddenBySearch ? "true" : "false";
+    option.hidden = hiddenBySearch || option.dataset.dependencyHidden === "true";
+  });
+}
+
+function setOptionDependencyHidden(option, hidden) {
+  option.dataset.dependencyHidden = hidden ? "true" : "false";
+  option.hidden = hidden || option.dataset.searchHidden === "true";
+}
+
+function normalizeSearch(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function buildGenericPayload(resource) {
@@ -1325,6 +1468,14 @@ function buildGenericPayload(resource) {
     if (!element) return;
     if (field.type === "json") {
       payload[field.name] = parseJsonText(element.value, {});
+      return;
+    }
+    if (field.type === "checkbox") {
+      payload[field.name] = element.checked;
+      return;
+    }
+    if (field.type === "number") {
+      payload[field.name] = element.value === "" ? field.defaultValue ?? null : Number(element.value);
       return;
     }
     payload[field.name] = emptyToNull(element.value);
@@ -1346,10 +1497,19 @@ async function saveGenericEntity(event) {
 
   try {
     const id = $("#genericId").value;
+    const payload = buildGenericPayload(resource);
+    if (state.currentView === "committeeMembers" && payload.status !== "inactive") {
+      const confirmed = await confirmAction({
+        title: "Asignar rol Comite",
+        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirira automaticamente el rol Comite para el condominio seleccionado.",
+        acceptLabel: "Guardar y asignar rol",
+      });
+      if (!confirmed) return;
+    }
     await apiFetch(id ? `${resource.endpoint}${id}` : resource.endpoint, {
       method: id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildGenericPayload(resource)),
+      body: JSON.stringify(payload),
     });
     await returnToGenericList();
     showToast({
@@ -2009,6 +2169,11 @@ $("#searchInput").addEventListener("input", () => {
 $("#companyFilter").addEventListener("change", () => {
   const resource = resources[state.currentView];
   if (resource) {
+    if (state.currentView === "committeeMembers") {
+      state.tablePage = 1;
+      loadTable();
+      return;
+    }
     renderTable(resource.columns, filteredTableItems());
     renderPagination();
   }
@@ -2057,19 +2222,65 @@ async function bootstrap() {
 function bindGenericFieldDependencies() {
   const companySelect = $('[data-generic-field="company_id"]');
   const condominiumSelect = $('[data-generic-field="condominium_id"]');
+  const unitSelect = $('[data-generic-field="unit_id"]');
+  const contactSelect = $('[data-generic-field="unit_contact_id"]');
+  const fullNameInput = $('[data-generic-field="full_name"]');
+  const emailInput = $('[data-generic-field="email"]');
+  const phoneInput = $('[data-generic-field="phone"]');
   if (!companySelect || !condominiumSelect) return;
 
   const syncCondominiumOptions = () => {
     const selectedCompanyId = companySelect.value;
     Array.from(condominiumSelect.options).forEach((option) => {
       const optionCompanyId = option.dataset.companyId;
-      option.hidden = Boolean(optionCompanyId && selectedCompanyId && !sameId(optionCompanyId, selectedCompanyId));
+      setOptionDependencyHidden(option, Boolean(optionCompanyId && selectedCompanyId && !sameId(optionCompanyId, selectedCompanyId)));
     });
     const selectedOption = condominiumSelect.selectedOptions[0];
     if (selectedOption?.hidden) condominiumSelect.value = "";
+    syncUnitOptions();
+  };
+
+  const syncUnitOptions = () => {
+    const selectedCondominiumId = condominiumSelect.value;
+    if (unitSelect) {
+      Array.from(unitSelect.options).forEach((option) => {
+        const optionCondominiumId = option.dataset.condominiumId;
+        setOptionDependencyHidden(option, Boolean(optionCondominiumId && selectedCondominiumId && !sameId(optionCondominiumId, selectedCondominiumId)));
+      });
+      if (unitSelect.selectedOptions[0]?.hidden) unitSelect.value = "";
+    }
+    syncContactOptions();
+  };
+
+  const syncContactOptions = () => {
+    if (!contactSelect) return;
+    const selectedCondominiumId = condominiumSelect.value;
+    const selectedUnitId = unitSelect?.value || "";
+    Array.from(contactSelect.options).forEach((option) => {
+      const optionCondominiumId = option.dataset.condominiumId;
+      const optionUnitId = option.dataset.unitId;
+      const hiddenByCondominium = Boolean(optionCondominiumId && selectedCondominiumId && !sameId(optionCondominiumId, selectedCondominiumId));
+      const hiddenByUnit = Boolean(optionUnitId && selectedUnitId && !sameId(optionUnitId, selectedUnitId));
+      setOptionDependencyHidden(option, hiddenByCondominium || hiddenByUnit);
+    });
+    if (contactSelect.selectedOptions[0]?.hidden) contactSelect.value = "";
+  };
+
+  const syncContactData = () => {
+    if (!contactSelect) return;
+    const option = contactSelect.selectedOptions[0];
+    if (!option || !option.value) return;
+    if (unitSelect && !unitSelect.value && option.dataset.unitId) unitSelect.value = option.dataset.unitId;
+    if (fullNameInput && !fullNameInput.value && option.dataset.fullName) fullNameInput.value = option.dataset.fullName;
+    if (emailInput && !emailInput.value && option.dataset.email) emailInput.value = option.dataset.email;
+    if (phoneInput && !phoneInput.value && option.dataset.phone) phoneInput.value = option.dataset.phone;
+    syncUnitOptions();
   };
 
   companySelect.addEventListener("change", syncCondominiumOptions);
+  condominiumSelect.addEventListener("change", syncUnitOptions);
+  unitSelect?.addEventListener("change", syncContactOptions);
+  contactSelect?.addEventListener("change", syncContactData);
   syncCondominiumOptions();
 }
 

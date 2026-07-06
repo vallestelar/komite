@@ -211,6 +211,7 @@ onMounted(() => {
 
       <DashboardView v-if="currentView === 'dashboard'" :key="`dashboard-${activeCondominiumId}-${viewRefreshKey}`" @open-view="selectView" />
       <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}`" />
+      <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
       <ToolsView v-else-if="['tools', 'edifito', 'edifito-neighbors-import'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />

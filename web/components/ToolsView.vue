@@ -55,6 +55,9 @@ type EdifitoNeighborsImportResponse = {
     contacts_created: number;
     contacts_updated: number;
     contacts_skipped: number;
+    users_created: number;
+    users_updated: number;
+    users_skipped: number;
   };
   items: Array<{
     unit: string;
@@ -132,6 +135,8 @@ const importFileInputKey = ref(0);
 const importProcessing = ref(false);
 const importErrorMessage = ref("");
 const importResult = ref<EdifitoNeighborsImportResponse | null>(null);
+const importPreview = ref<EdifitoNeighborsImportResponse | null>(null);
+const showImportConfirm = ref(false);
 
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
 const canProcess = computed(() => Boolean(selectedBank.value && bankStatementFile.value && assignmentsFile.value && chargeDetailFile.value && !processing.value));
@@ -222,6 +227,8 @@ const resetImportNeighbors = () => {
   importProcessing.value = false;
   importErrorMessage.value = "";
   importResult.value = null;
+  importPreview.value = null;
+  showImportConfirm.value = false;
   importFileInputKey.value += 1;
 };
 
@@ -253,6 +260,32 @@ const processEdifito = async () => {
   }
 };
 
+const previewEdifitoNeighborsImport = async () => {
+  if (!canImportNeighbors.value) return;
+
+  const form = new FormData();
+  form.append("condominium_id", importCondominiumId.value);
+  form.append("assignments_file", importAssignmentsFile.value as File);
+
+  importProcessing.value = true;
+  importErrorMessage.value = "";
+  importResult.value = null;
+  importPreview.value = null;
+  showImportConfirm.value = false;
+
+  try {
+    importPreview.value = await request<EdifitoNeighborsImportResponse>("/api/v1/edifito/import-neighbors/preview", {
+      method: "POST",
+      body: form,
+    });
+    showImportConfirm.value = true;
+  } catch (error) {
+    importErrorMessage.value = parseError(error);
+  } finally {
+    importProcessing.value = false;
+  }
+};
+
 const importEdifitoNeighbors = async () => {
   if (!canImportNeighbors.value) return;
 
@@ -269,11 +302,17 @@ const importEdifitoNeighbors = async () => {
       method: "POST",
       body: form,
     });
+    showImportConfirm.value = false;
+    importPreview.value = null;
   } catch (error) {
     importErrorMessage.value = parseError(error);
   } finally {
     importProcessing.value = false;
   }
+};
+
+const cancelImportConfirmation = () => {
+  showImportConfirm.value = false;
 };
 
 const downloadResult = () => {
@@ -311,6 +350,21 @@ const actionIcon = (status: string) => {
   if (status === "Ya procesado") return "stop-circle";
   if (status === "Analizar") return "alert-circle";
   return "help-circle";
+};
+
+const tableStatusLabel = (status: string | null | undefined) => {
+  if (status === "active") return "Activo";
+  if (status === "inactive") return "Inactivo";
+  if (status === "created") return "Creado";
+  if (status === "updated") return "Actualizado";
+  if (status === "skipped") return "Omitido";
+  return status || "Sin estado";
+};
+
+const tableStatusBadgeClass = (status: string | null | undefined) => {
+  if (status === "active" || status === "created" || status === "updated") return "is-active";
+  if (status === "inactive") return "is-inactive";
+  return "is-neutral";
 };
 
 watch(isEdifito, (active) => {
@@ -512,9 +566,9 @@ watch(toolsPages, (pages) => {
           <svg class="icon" aria-hidden="true"><use href="#icon-settings" /></svg>
           <span>Reset</span>
         </button>
-        <button class="button orange" type="button" :disabled="!canImportNeighbors" @click="importEdifitoNeighbors">
+        <button class="button orange" type="button" :disabled="!canImportNeighbors" @click="previewEdifitoNeighborsImport">
           <svg class="icon" aria-hidden="true"><use href="#icon-checks" /></svg>
-          <span>{{ importProcessing ? "Procesando" : "Procesar carga" }}</span>
+          <span>{{ importProcessing ? "Analizando" : "Revisar carga" }}</span>
         </button>
       </div>
     </div>
@@ -544,6 +598,8 @@ watch(toolsPages, (pages) => {
         <article><span>Unidades actualizadas</span><strong>{{ importResult.summary.units_updated }}</strong></article>
         <article><span>Contactos nuevos</span><strong>{{ importResult.summary.contacts_created }}</strong></article>
         <article><span>Contactos actualizados</span><strong>{{ importResult.summary.contacts_updated }}</strong></article>
+        <article><span>Usuarios nuevos</span><strong>{{ importResult.summary.users_created }}</strong></article>
+        <article><span>Usuarios actualizados</span><strong>{{ importResult.summary.users_updated }}</strong></article>
         <article><span>Omitidos</span><strong>{{ importResult.summary.contacts_skipped }}</strong></article>
       </div>
 
@@ -564,13 +620,49 @@ watch(toolsPages, (pages) => {
               <td>{{ item.unit }}</td>
               <td>{{ item.relationship_type }}</td>
               <td>{{ item.full_name }}</td>
-              <td>{{ item.status }}</td>
+              <td>
+                <span class="status-badge" :class="tableStatusBadgeClass(item.status)">
+                  <span aria-hidden="true"></span>
+                  {{ tableStatusLabel(item.status) }}
+                </span>
+              </td>
             </tr>
             <tr v-if="!importResult.items.length">
               <td class="empty-row" colspan="4">No hay detalle para mostrar.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="showImportConfirm && importPreview" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">
+      <div class="confirm-modal import-confirm-modal">
+        <p class="eyebrow">Confirmar carga</p>
+        <h3 id="import-preview-title">Carga vecinos Edifito</h3>
+        <p class="placeholder-copy">
+          Se va a aplicar el informe en {{ importPreview.condominium_name }}. Revisa el resumen antes de continuar.
+        </p>
+
+        <div class="edifito-summary import-preview-summary">
+          <article><span>Filas</span><strong>{{ importPreview.summary.rows }}</strong></article>
+          <article><span>Unidades nuevas</span><strong>{{ importPreview.summary.units_created }}</strong></article>
+          <article><span>Unidades actualizadas</span><strong>{{ importPreview.summary.units_updated }}</strong></article>
+          <article><span>Contactos nuevos</span><strong>{{ importPreview.summary.contacts_created }}</strong></article>
+          <article><span>Contactos actualizados</span><strong>{{ importPreview.summary.contacts_updated }}</strong></article>
+          <article><span>Usuarios nuevos</span><strong>{{ importPreview.summary.users_created }}</strong></article>
+          <article><span>Usuarios actualizados</span><strong>{{ importPreview.summary.users_updated }}</strong></article>
+          <article><span>Omitidos</span><strong>{{ importPreview.summary.contacts_skipped + importPreview.summary.users_skipped }}</strong></article>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="importProcessing" @click="cancelImportConfirmation">
+            Cancelar
+          </button>
+          <button class="button orange" type="button" :disabled="importProcessing" @click="importEdifitoNeighbors">
+            <svg class="icon" aria-hidden="true"><use href="#icon-checks" /></svg>
+            <span>{{ importProcessing ? "Procesando" : "Aceptar y cargar" }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </section>

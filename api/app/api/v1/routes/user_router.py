@@ -211,9 +211,13 @@ async def list_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     q: str | None = Query(None),
+    filter_company_id: UUID | None = Query(None),
     order_by: list[str] | None = Query(None),
 ) -> UserPage:
     query = User.all()
+    if filter_company_id:
+        query = query.filter(company_id=filter_company_id)
+
     if q:
         query = query.filter(
             Q(email__icontains=q)

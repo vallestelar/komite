@@ -63,21 +63,13 @@
                   <svg class="nav-icon" aria-hidden="true"><use href="#icon-building"></use></svg>
                   <span class="nav-label">Condominios</span>
                 </button>
-                <button class="nav-item" data-view="committeeMembers" title="Comite">
-                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-users"></use></svg>
-                  <span class="nav-label">Comite</span>
-                </button>
-                <button class="nav-item" data-view="banks" title="Bancos">
-                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-bank"></use></svg>
-                  <span class="nav-label">Bancos</span>
-                </button>
                 <button class="nav-item" data-view="users" title="Usuarios">
                   <svg class="nav-icon" aria-hidden="true"><use href="#icon-user"></use></svg>
                   <span class="nav-label">Usuarios</span>
                 </button>
-                <button class="nav-item" data-view="roles" title="Roles">
-                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-shield"></use></svg>
-                  <span class="nav-label">Roles</span>
+                <button class="nav-item" data-view="committeeMembers" title="Comite">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-users"></use></svg>
+                  <span class="nav-label">Comite</span>
                 </button>
               </div>
             </div>
@@ -109,6 +101,14 @@
                 <svg class="nav-section-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
               </button>
               <div class="nav-group-items">
+                <button class="nav-item" data-view="roles" title="Roles">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-shield"></use></svg>
+                  <span class="nav-label">Roles</span>
+                </button>
+                <button class="nav-item" data-view="banks" title="Bancos">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-bank"></use></svg>
+                  <span class="nav-label">Bancos</span>
+                </button>
                 <button class="nav-item" data-view="integrations" title="Integraciones">
                   <svg class="nav-icon" aria-hidden="true"><use href="#icon-tool"></use></svg>
                   <span class="nav-label">Integraciones</span>
@@ -178,7 +178,6 @@
               <section class="chart-card">
                 <div class="section-heading">
                   <h2>Tickets por estado</h2>
-                  <span class="status-pill">Datos reales</span>
                 </div>
                 <div class="chart-wrap">
                   <canvas id="ticketsStatusChart" aria-label="Tickets por estado"></canvas>
@@ -188,7 +187,6 @@
               <section class="chart-card">
                 <div class="section-heading">
                   <h2>Tickets por empresa y condominio</h2>
-                  <span class="status-pill">Aporte por condominio</span>
                 </div>
                 <div class="chart-wrap chart-wrap-wide">
                   <canvas id="ticketsCompanyChart" aria-label="Tickets por empresa y condominio"></canvas>
@@ -634,6 +632,6 @@
       <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path></symbol>
     </svg>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/static/js/backoffice.js?v=20260705-08"></script>
+    <script src="/static/js/backoffice.js?v=20260705-10"></script>
   </body>
 </html>

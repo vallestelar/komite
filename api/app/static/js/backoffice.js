@@ -295,22 +295,22 @@ const statusLabels = {
 };
 
 const ticketStatusPalette = {
-  open: { background: "#dbeafe", color: "#1d4f91", accent: "#60a5fa" },
-  pending: { background: "#fef3c7", color: "#8a5a10", accent: "#fbbf24" },
-  in_progress: { background: "#ede9fe", color: "#5b3aa4", accent: "#a78bfa" },
-  resolved: { background: "#dcfce7", color: "#1f7a3a", accent: "#86efac" },
-  closed: { background: "#f1f5f9", color: "#475569", accent: "#94a3b8" },
+  open: { fill: "#2563eb", background: "#e8f0ff", color: "#173b8f", accent: "#2563eb" },
+  pending: { fill: "#f59e0b", background: "#fff4d6", color: "#8a4b00", accent: "#f59e0b" },
+  in_progress: { fill: "#7c3aed", background: "#f0e8ff", color: "#4c1d95", accent: "#7c3aed" },
+  resolved: { fill: "#10b981", background: "#ddfff3", color: "#047857", accent: "#10b981" },
+  closed: { fill: "#64748b", background: "#edf2f7", color: "#334155", accent: "#64748b" },
 };
 
 const companyChartPalette = [
-  { background: "#bfdbfe", border: "#60a5fa" },
-  { background: "#bbf7d0", border: "#4ade80" },
-  { background: "#ddd6fe", border: "#a78bfa" },
-  { background: "#fecaca", border: "#f87171" },
-  { background: "#fde68a", border: "#fbbf24" },
-  { background: "#99f6e4", border: "#2dd4bf" },
-  { background: "#fed7aa", border: "#fb923c" },
-  { background: "#fbcfe8", border: "#f472b6" },
+  { background: "#0ea5e9", border: "#0284c7" },
+  { background: "#14b8a6", border: "#0f766e" },
+  { background: "#6366f1", border: "#4f46e5" },
+  { background: "#a855f7", border: "#7e22ce" },
+  { background: "#f97316", border: "#ea580c" },
+  { background: "#22c55e", border: "#16a34a" },
+  { background: "#e11d48", border: "#be123c" },
+  { background: "#0891b2", border: "#0e7490" },
 ];
 
 const roleLabels = {
@@ -686,7 +686,7 @@ function renderTicketsStatusChart(tickets) {
   const statuses = ["open", "pending", "in_progress", "resolved", "closed"];
   const labels = statuses.map((status) => statusLabels[status] || status);
   const values = statuses.map((status) => countByStatus(tickets, status));
-  const statusColors = statuses.map((status) => ticketStatusPalette[status].background);
+  const statusColors = statuses.map((status) => ticketStatusPalette[status].fill);
   const statusBorders = statuses.map((status) => ticketStatusPalette[status].accent);
 
   const canvas = $("#ticketsStatusChart");
@@ -709,7 +709,8 @@ function renderTicketsStatusChart(tickets) {
         data: values,
         backgroundColor: statusColors,
         borderColor: statusBorders,
-        borderWidth: 2,
+        borderWidth: 3,
+        hoverOffset: 8,
       }],
     },
     options: {
@@ -800,13 +801,13 @@ function renderTicketsByCompanyChart(tickets, companies, condominiums) {
           },
         },
         outerStackBorder: {
-          enabled: true,
-          color: "#93c5fd",
-          width: 1.5,
+          enabled: false,
+          color: "#0f172a",
+          width: 1.25,
         },
         stackPercentageLabels: {
           enabled: true,
-          color: "#172536",
+          color: "#ffffff",
           minHeight: 18,
         },
       },

@@ -36,6 +36,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { id: "neighbors", label: "Vecinos y unidades", icon: "home", view: "neighbors" },
       { id: "committee", label: "Comité", icon: "users", view: "committee" },
+      { id: "team", label: "Equipo", icon: "network-users", view: "team" },
     ],
   },
   {
@@ -221,6 +222,7 @@ onMounted(() => {
 
       <DashboardView v-if="currentView === 'dashboard'" :key="`dashboard-${activeCondominiumId}-${viewRefreshKey}`" @open-view="selectView" />
       <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}-${selectedNeighborId}`" :focus-neighbor-id="selectedNeighborId" />
+      <TeamView v-else-if="currentView === 'team'" :key="`team-${viewRefreshKey}`" />
       <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" @open-neighbor="openNeighborFromCommittee" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
       <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />

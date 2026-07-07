@@ -834,6 +834,130 @@ h3 {
   margin: 8px 0 0;
 }
 
+.team-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.team-hero {
+  margin-bottom: 0;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.team-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfe;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.team-card:hover {
+  border-color: rgba(255, 143, 31, 0.55);
+  box-shadow: 0 14px 30px rgba(16, 36, 55, 0.1);
+  transform: translateY(-1px);
+}
+
+.team-card-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.team-avatar {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--white);
+  background: var(--navy);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.team-avatar.is-project-manager {
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+}
+
+.team-avatar.is-supervisor {
+  background: linear-gradient(135deg, #34d399, #16a34a);
+}
+
+.team-avatar.is-executive {
+  background: linear-gradient(135deg, #f9a8d4, #ec4899 52%, #be185d);
+}
+
+.team-avatar.is-neutral-profile {
+  background: linear-gradient(135deg, #64748b, #334155);
+}
+
+.team-profile {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.team-profile span {
+  color: var(--muted);
+}
+
+.team-profile strong {
+  color: var(--orange);
+}
+
+.team-card h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.team-role {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: var(--white);
+}
+
+.team-role .icon {
+  width: 18px;
+  height: 18px;
+  color: var(--orange);
+  flex: 0 0 auto;
+}
+
+.team-role span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.team-role strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--navy);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
 .tools-catalog-toolbar {
   display: flex;
   align-items: flex-end;
@@ -1393,6 +1517,7 @@ h3 {
 @media (max-width: 1100px) {
   .committee-grid,
   .metrics-grid,
+  .team-grid,
   .tool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1492,6 +1617,7 @@ h3 {
   .edifito-toolbar,
   .edifito-summary,
   .metrics-grid,
+  .team-grid,
   .tool-grid {
     grid-template-columns: 1fr;
   }
@@ -1504,7 +1630,16 @@ h3 {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
+  .team-card-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
   .committee-card-header .status-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .team-card-header .status-badge {
     grid-column: 2;
     justify-self: start;
   }

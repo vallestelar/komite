@@ -15,6 +15,16 @@ from app.models.entities.incident_event import IncidentEvent
 from app.models.entities.task import Task
 from app.models.entities.task_checklist import TaskChecklist
 from app.models.entities.inspection_template import InspectionTemplate
+from app.models.entities.inspection_template_section import InspectionTemplateSection
+from app.models.entities.inspection_template_item import InspectionTemplateItem
+from app.models.entities.condominium_inspection_template import CondominiumInspectionTemplate
+from app.models.entities.condominium_inspection_item import CondominiumInspectionItem
+from app.models.entities.operational_work_calendar import OperationalWorkCalendar
+from app.models.entities.operational_calendar_exception import OperationalCalendarException
+from app.models.entities.planned_operational_event import PlannedOperationalEvent
+from app.models.entities.operational_event_execution import OperationalEventExecution
+from app.models.entities.operational_event_evidence import OperationalEventEvidence
+from app.models.entities.operational_reschedule_log import OperationalRescheduleLog
 from app.models.entities.inspection import Inspection
 from app.models.entities.inspection_answer import InspectionAnswer
 from app.models.entities.report import Report
@@ -45,6 +55,16 @@ __all__ = [
     "Task",
     "TaskChecklist",
     "InspectionTemplate",
+    "InspectionTemplateSection",
+    "InspectionTemplateItem",
+    "CondominiumInspectionTemplate",
+    "CondominiumInspectionItem",
+    "OperationalWorkCalendar",
+    "OperationalCalendarException",
+    "PlannedOperationalEvent",
+    "OperationalEventExecution",
+    "OperationalEventEvidence",
+    "OperationalRescheduleLog",
     "Inspection",
     "InspectionAnswer",
     "Report",

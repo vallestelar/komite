@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any, Optional
 from uuid import UUID
@@ -716,7 +716,12 @@ class InspectionTemplateCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     name: str = Field(..., max_length=150)
+    description: Optional[str] = None
+    template_type: str = Field(default="inspection", max_length=80)
     inspection_type: str = Field(..., max_length=80)
+    version: int = 1
+    status: str = Field(default="active", max_length=30)
+    source_file_name: Optional[str] = Field(default=None, max_length=255)
     checklist_schema: list[Any] = Field(default_factory=list)
     is_active: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -726,7 +731,12 @@ class InspectionTemplateUpdate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     name: Optional[str] = Field(default=None, max_length=150)
+    description: Optional[str] = None
+    template_type: Optional[str] = Field(default=None, max_length=80)
     inspection_type: Optional[str] = Field(default=None, max_length=80)
+    version: Optional[int] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    source_file_name: Optional[str] = Field(default=None, max_length=255)
     checklist_schema: Optional[list[Any]] = None
     is_active: Optional[bool] = None
     metadata: Optional[dict[str, Any]] = None
@@ -737,7 +747,12 @@ class InspectionTemplateOut(AuditOut):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
     name: str
+    description: Optional[str] = None
+    template_type: str
     inspection_type: str
+    version: int
+    status: str
+    source_file_name: Optional[str] = None
     checklist_schema: list[Any] = Field(default_factory=list)
     is_active: bool
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -745,6 +760,518 @@ class InspectionTemplateOut(AuditOut):
 
 class InspectionTemplatePage(BaseModel):
     items: list[InspectionTemplateOut]
+    meta: PageMeta
+
+
+class InspectionTemplateSectionCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    template_id: UUID
+    name: str = Field(..., max_length=150)
+    description: Optional[str] = None
+    display_order: int = 0
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class InspectionTemplateSectionUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    template_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=150)
+    description: Optional[str] = None
+    display_order: Optional[int] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class InspectionTemplateSectionOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    template_id: UUID
+    name: str
+    description: Optional[str] = None
+    display_order: int
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class InspectionTemplateSectionPage(BaseModel):
+    items: list[InspectionTemplateSectionOut]
+    meta: PageMeta
+
+
+class InspectionTemplateItemCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    template_id: UUID
+    section_id: Optional[UUID] = None
+    asset_name: Optional[str] = Field(default=None, max_length=180)
+    task_name: str = Field(..., max_length=255)
+    instructions: Optional[str] = None
+    periodicity: Optional[str] = Field(default=None, max_length=80)
+    planned_months: list[Any] = Field(default_factory=list)
+    requires_evidence: bool = False
+    default_responsible_profile: Optional[str] = Field(default=None, max_length=60)
+    default_duration_minutes: Optional[int] = None
+    display_order: int = 0
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class InspectionTemplateItemUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    template_id: Optional[UUID] = None
+    section_id: Optional[UUID] = None
+    asset_name: Optional[str] = Field(default=None, max_length=180)
+    task_name: Optional[str] = Field(default=None, max_length=255)
+    instructions: Optional[str] = None
+    periodicity: Optional[str] = Field(default=None, max_length=80)
+    planned_months: Optional[list[Any]] = None
+    requires_evidence: Optional[bool] = None
+    default_responsible_profile: Optional[str] = Field(default=None, max_length=60)
+    default_duration_minutes: Optional[int] = None
+    display_order: Optional[int] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class InspectionTemplateItemOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    template_id: UUID
+    section_id: Optional[UUID] = None
+    asset_name: Optional[str] = None
+    task_name: str
+    instructions: Optional[str] = None
+    periodicity: Optional[str] = None
+    planned_months: list[Any] = Field(default_factory=list)
+    requires_evidence: bool
+    default_responsible_profile: Optional[str] = None
+    default_duration_minutes: Optional[int] = None
+    display_order: int
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class InspectionTemplateItemPage(BaseModel):
+    items: list[InspectionTemplateItemOut]
+    meta: PageMeta
+
+
+class CondominiumInspectionTemplateCreate(BaseModel):
+    company_id: UUID
+    condominium_id: UUID
+    base_template_id: Optional[UUID] = None
+    name: str = Field(..., max_length=150)
+    template_type: str = Field(default="maintenance", max_length=80)
+    version: int = 1
+    status: str = Field(default="draft", max_length=30)
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumInspectionTemplateUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    base_template_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=150)
+    template_type: Optional[str] = Field(default=None, max_length=80)
+    version: Optional[int] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CondominiumInspectionTemplateOut(AuditOut):
+    id: UUID
+    company_id: UUID
+    condominium_id: UUID
+    base_template_id: Optional[UUID] = None
+    name: str
+    template_type: str
+    version: int
+    status: str
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumInspectionTemplatePage(BaseModel):
+    items: list[CondominiumInspectionTemplateOut]
+    meta: PageMeta
+
+
+class InspectionTemplateDuplicateToCondominiumRequest(BaseModel):
+    condominium_id: UUID
+    name: Optional[str] = Field(default=None, max_length=150)
+    status: str = Field(default="draft", max_length=30)
+
+
+class InspectionTemplateDuplicateToCondominiumOut(BaseModel):
+    template: CondominiumInspectionTemplateOut
+    items_created: int
+
+
+class CondominiumInspectionItemCreate(BaseModel):
+    company_id: UUID
+    condominium_id: UUID
+    condominium_template_id: UUID
+    base_item_id: Optional[UUID] = None
+    section_name: Optional[str] = Field(default=None, max_length=150)
+    asset_name: Optional[str] = Field(default=None, max_length=180)
+    task_name: str = Field(..., max_length=255)
+    instructions: Optional[str] = None
+    periodicity: Optional[str] = Field(default=None, max_length=80)
+    planned_months: list[Any] = Field(default_factory=list)
+    responsible_user_id: Optional[UUID] = None
+    responsible_profile: Optional[str] = Field(default=None, max_length=60)
+    provider_id: Optional[UUID] = None
+    estimated_duration_minutes: Optional[int] = None
+    priority: str = Field(default="medium", max_length=30)
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumInspectionItemUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    condominium_template_id: Optional[UUID] = None
+    base_item_id: Optional[UUID] = None
+    section_name: Optional[str] = Field(default=None, max_length=150)
+    asset_name: Optional[str] = Field(default=None, max_length=180)
+    task_name: Optional[str] = Field(default=None, max_length=255)
+    instructions: Optional[str] = None
+    periodicity: Optional[str] = Field(default=None, max_length=80)
+    planned_months: Optional[list[Any]] = None
+    responsible_user_id: Optional[UUID] = None
+    responsible_profile: Optional[str] = Field(default=None, max_length=60)
+    provider_id: Optional[UUID] = None
+    estimated_duration_minutes: Optional[int] = None
+    priority: Optional[str] = Field(default=None, max_length=30)
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CondominiumInspectionItemOut(AuditOut):
+    id: UUID
+    company_id: UUID
+    condominium_id: UUID
+    condominium_template_id: UUID
+    base_item_id: Optional[UUID] = None
+    section_name: Optional[str] = None
+    asset_name: Optional[str] = None
+    task_name: str
+    instructions: Optional[str] = None
+    periodicity: Optional[str] = None
+    planned_months: list[Any] = Field(default_factory=list)
+    responsible_user_id: Optional[UUID] = None
+    responsible_profile: Optional[str] = None
+    provider_id: Optional[UUID] = None
+    estimated_duration_minutes: Optional[int] = None
+    priority: str
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumInspectionItemPage(BaseModel):
+    items: list[CondominiumInspectionItemOut]
+    meta: PageMeta
+
+
+class OperationalWorkCalendarCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    base_calendar_id: Optional[UUID] = None
+    name: str = Field(..., max_length=150)
+    calendar_type: str = Field(default="condominium", max_length=40)
+    working_days: list[Any] = Field(default_factory=list)
+    default_start_time: Optional[time] = None
+    default_end_time: Optional[time] = None
+    timezone: str = Field(default="America/Santiago", max_length=80)
+    status: str = Field(default="active", max_length=30)
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalWorkCalendarUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    base_calendar_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=150)
+    calendar_type: Optional[str] = Field(default=None, max_length=40)
+    working_days: Optional[list[Any]] = None
+    default_start_time: Optional[time] = None
+    default_end_time: Optional[time] = None
+    timezone: Optional[str] = Field(default=None, max_length=80)
+    status: Optional[str] = Field(default=None, max_length=30)
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class OperationalWorkCalendarOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    base_calendar_id: Optional[UUID] = None
+    name: str
+    calendar_type: str
+    working_days: list[Any] = Field(default_factory=list)
+    default_start_time: Optional[time] = None
+    default_end_time: Optional[time] = None
+    timezone: str
+    status: str
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalWorkCalendarPage(BaseModel):
+    items: list[OperationalWorkCalendarOut]
+    meta: PageMeta
+
+
+class OperationalCalendarExceptionCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    calendar_id: UUID
+    exception_date: date
+    exception_type: str = Field(..., max_length=40)
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    reason: Optional[str] = Field(default=None, max_length=255)
+    source: str = Field(default="condominium_override", max_length=40)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalCalendarExceptionUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    calendar_id: Optional[UUID] = None
+    exception_date: Optional[date] = None
+    exception_type: Optional[str] = Field(default=None, max_length=40)
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    reason: Optional[str] = Field(default=None, max_length=255)
+    source: Optional[str] = Field(default=None, max_length=40)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class OperationalCalendarExceptionOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    calendar_id: UUID
+    exception_date: date
+    exception_type: str
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    reason: Optional[str] = None
+    source: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalCalendarExceptionPage(BaseModel):
+    items: list[OperationalCalendarExceptionOut]
+    meta: PageMeta
+
+
+class PlannedOperationalEventCreate(BaseModel):
+    company_id: UUID
+    condominium_id: UUID
+    condominium_template_item_id: Optional[UUID] = None
+    calendar_id: Optional[UUID] = None
+    assigned_user_id: Optional[UUID] = None
+    title: str = Field(..., max_length=180)
+    description: Optional[str] = None
+    planned_date: date
+    planned_start_time: Optional[time] = None
+    planned_end_time: Optional[time] = None
+    assigned_profile: Optional[str] = Field(default=None, max_length=60)
+    priority: str = Field(default="medium", max_length=30)
+    status: str = Field(default="pending", max_length=40)
+    source_type: Optional[str] = Field(default=None, max_length=60)
+    source_id: Optional[UUID] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class PlannedOperationalEventUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    condominium_template_item_id: Optional[UUID] = None
+    calendar_id: Optional[UUID] = None
+    assigned_user_id: Optional[UUID] = None
+    title: Optional[str] = Field(default=None, max_length=180)
+    description: Optional[str] = None
+    planned_date: Optional[date] = None
+    planned_start_time: Optional[time] = None
+    planned_end_time: Optional[time] = None
+    assigned_profile: Optional[str] = Field(default=None, max_length=60)
+    priority: Optional[str] = Field(default=None, max_length=30)
+    status: Optional[str] = Field(default=None, max_length=40)
+    source_type: Optional[str] = Field(default=None, max_length=60)
+    source_id: Optional[UUID] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class PlannedOperationalEventOut(AuditOut):
+    id: UUID
+    company_id: UUID
+    condominium_id: UUID
+    condominium_template_item_id: Optional[UUID] = None
+    calendar_id: Optional[UUID] = None
+    assigned_user_id: Optional[UUID] = None
+    title: str
+    description: Optional[str] = None
+    planned_date: date
+    planned_start_time: Optional[time] = None
+    planned_end_time: Optional[time] = None
+    assigned_profile: Optional[str] = None
+    priority: str
+    status: str
+    source_type: Optional[str] = None
+    source_id: Optional[UUID] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class PlannedOperationalEventPage(BaseModel):
+    items: list[PlannedOperationalEventOut]
+    meta: PageMeta
+
+
+class OperationalEventExecutionCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    event_id: UUID
+    executed_by_user_id: Optional[UUID] = None
+    executed_at: Optional[datetime] = None
+    result: str = Field(default="pending", max_length=60)
+    comments: Optional[str] = None
+    requires_follow_up: bool = False
+    related_incident_id: Optional[UUID] = None
+    related_ticket_id: Optional[UUID] = None
+    validation_status: str = Field(default="not_validated", max_length=40)
+    validated_by_user_id: Optional[UUID] = None
+    validated_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalEventExecutionUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    event_id: Optional[UUID] = None
+    executed_by_user_id: Optional[UUID] = None
+    executed_at: Optional[datetime] = None
+    result: Optional[str] = Field(default=None, max_length=60)
+    comments: Optional[str] = None
+    requires_follow_up: Optional[bool] = None
+    related_incident_id: Optional[UUID] = None
+    related_ticket_id: Optional[UUID] = None
+    validation_status: Optional[str] = Field(default=None, max_length=40)
+    validated_by_user_id: Optional[UUID] = None
+    validated_at: Optional[datetime] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class OperationalEventExecutionOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    event_id: UUID
+    executed_by_user_id: Optional[UUID] = None
+    executed_at: Optional[datetime] = None
+    result: str
+    comments: Optional[str] = None
+    requires_follow_up: bool
+    related_incident_id: Optional[UUID] = None
+    related_ticket_id: Optional[UUID] = None
+    validation_status: str
+    validated_by_user_id: Optional[UUID] = None
+    validated_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalEventExecutionPage(BaseModel):
+    items: list[OperationalEventExecutionOut]
+    meta: PageMeta
+
+
+class OperationalEventEvidenceCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    event_id: UUID
+    execution_id: Optional[UUID] = None
+    attachment_id: Optional[UUID] = None
+    evidence_type: str = Field(default="attachment", max_length=40)
+    description: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalEventEvidenceUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    event_id: Optional[UUID] = None
+    execution_id: Optional[UUID] = None
+    attachment_id: Optional[UUID] = None
+    evidence_type: Optional[str] = Field(default=None, max_length=40)
+    description: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class OperationalEventEvidenceOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    event_id: UUID
+    execution_id: Optional[UUID] = None
+    attachment_id: Optional[UUID] = None
+    evidence_type: str
+    description: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalEventEvidencePage(BaseModel):
+    items: list[OperationalEventEvidenceOut]
+    meta: PageMeta
+
+
+class OperationalRescheduleLogCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    event_id: UUID
+    previous_date: Optional[date] = None
+    new_date: Optional[date] = None
+    previous_assigned_user_id: Optional[UUID] = None
+    new_assigned_user_id: Optional[UUID] = None
+    reason: Optional[str] = Field(default=None, max_length=255)
+    requested_by_user_id: Optional[UUID] = None
+    approved_by_user_id: Optional[UUID] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalRescheduleLogUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    event_id: Optional[UUID] = None
+    previous_date: Optional[date] = None
+    new_date: Optional[date] = None
+    previous_assigned_user_id: Optional[UUID] = None
+    new_assigned_user_id: Optional[UUID] = None
+    reason: Optional[str] = Field(default=None, max_length=255)
+    requested_by_user_id: Optional[UUID] = None
+    approved_by_user_id: Optional[UUID] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class OperationalRescheduleLogOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    event_id: UUID
+    previous_date: Optional[date] = None
+    new_date: Optional[date] = None
+    previous_assigned_user_id: Optional[UUID] = None
+    new_assigned_user_id: Optional[UUID] = None
+    reason: Optional[str] = None
+    requested_by_user_id: Optional[UUID] = None
+    approved_by_user_id: Optional[UUID] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OperationalRescheduleLogPage(BaseModel):
+    items: list[OperationalRescheduleLogOut]
     meta: PageMeta
 
 

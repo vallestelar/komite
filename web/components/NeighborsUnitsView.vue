@@ -182,6 +182,14 @@ const statusBadgeClass = (status: string | null | undefined) => {
   return "is-neutral";
 };
 
+const formatDate = (value: string | null | undefined) => {
+  if (!value) return "";
+  const [datePart] = value.split("T");
+  const parts = datePart.split("-");
+  if (parts.length !== 3) return value;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
 const loadUnits = async () => {
   const params = new URLSearchParams({
     page: String(unitsMeta.page),
@@ -533,8 +541,14 @@ watch(() => props.focusNeighborId, async (neighborId) => {
 
     <div v-if="mode === 'list'" class="entity-list">
       <div class="entity-tabs" role="tablist" aria-label="Vecinos y unidades">
-        <button class="button compact" :class="activeTab === 'neighbors' ? 'navy' : 'ghost'" type="button" @click="selectTab('neighbors')">Vecinos</button>
-        <button class="button compact" :class="activeTab === 'units' ? 'navy' : 'ghost'" type="button" @click="selectTab('units')">Unidades</button>
+        <button class="button compact" :class="activeTab === 'neighbors' ? 'navy' : 'ghost'" type="button" @click="selectTab('neighbors')">
+          <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
+          <span>Vecinos</span>
+        </button>
+        <button class="button compact" :class="activeTab === 'units' ? 'navy' : 'ghost'" type="button" @click="selectTab('units')">
+          <svg class="icon" aria-hidden="true"><use href="#icon-home" /></svg>
+          <span>Unidades</span>
+        </button>
       </div>
 
       <div class="entity-toolbar">
@@ -614,13 +628,11 @@ watch(() => props.focusNeighborId, async (neighborId) => {
                 </span>
               </td>
               <td class="actions-cell">
-                <button class="button compact navy" type="button" @click="openEditNeighbor(neighbor)">
+                <button class="button compact icon-action navy" type="button" aria-label="Editar" title="Editar" @click="openEditNeighbor(neighbor)">
                   <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>
-                  <span>Editar</span>
                 </button>
-                <button class="button compact danger" type="button" @click="askDeleteNeighbor(neighbor)">
+                <button class="button compact icon-action danger" type="button" aria-label="Borrar" title="Borrar" @click="askDeleteNeighbor(neighbor)">
                   <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
-                  <span>Borrar</span>
                 </button>
               </td>
             </tr>
@@ -633,31 +645,29 @@ watch(() => props.focusNeighborId, async (neighborId) => {
         <table v-else class="edifito-table entity-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Unidad</th>
               <th>Código</th>
               <th>Piso</th>
               <th>Tipo</th>
               <th>Prorrateo</th>
+              <th>Fecha asignación</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="unit in units" :key="unit.id">
-              <td class="mono-cell">{{ unit.id }}</td>
               <td><strong>{{ unit.identifier }}</strong></td>
               <td>{{ unit.external_code || "" }}</td>
               <td>{{ unit.floor || "" }}</td>
               <td>{{ unitTypeLabel(unit.unit_type) }}</td>
               <td>{{ unit.proration_total ?? unit.proration ?? "" }}</td>
+              <td>{{ formatDate(unit.assignment_date) || "Sin fecha" }}</td>
               <td class="actions-cell">
-                <button class="button compact navy" type="button" @click="openEditUnit(unit)">
+                <button class="button compact icon-action navy" type="button" aria-label="Editar" title="Editar" @click="openEditUnit(unit)">
                   <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>
-                  <span>Editar</span>
                 </button>
-                <button class="button compact danger" type="button" @click="askDeleteUnit(unit)">
+                <button class="button compact icon-action danger" type="button" aria-label="Borrar" title="Borrar" @click="askDeleteUnit(unit)">
                   <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
-                  <span>Borrar</span>
                 </button>
               </td>
             </tr>
@@ -754,13 +764,15 @@ watch(() => props.focusNeighborId, async (neighborId) => {
           Fin relacion
           <input v-model="neighborForm.end_date" type="date" />
         </label>
-        <label class="checkbox-field">
+        <label class="switch-field">
           <input v-model="neighborForm.is_primary_contact" type="checkbox" />
-          Contacto principal
+          <span class="switch-slider" aria-hidden="true"></span>
+          <span>Contacto principal</span>
         </label>
-        <label class="checkbox-field">
+        <label class="switch-field">
           <input v-model="neighborForm.receives_notifications" type="checkbox" />
-          Recibe notificaciones
+          <span class="switch-slider" aria-hidden="true"></span>
+          <span>Recibe notificaciones</span>
         </label>
         <label class="span-all">
           Metadata

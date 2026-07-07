@@ -295,7 +295,8 @@ th {
   background: #f8fafc;
 }
 
-.checkbox-row {
+.checkbox-row,
+.switch-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -304,6 +305,63 @@ th {
 .checkbox-row input {
   width: 18px;
   min-height: 18px;
+}
+
+.switch-row {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 800;
+  user-select: none;
+}
+
+.switch-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-slider {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
+  border-radius: 999px;
+  background: #d7dee8;
+  box-shadow: inset 0 0 0 1px rgba(16, 36, 55, 0.08);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.switch-slider::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(16, 36, 55, 0.24);
+  transition: transform 0.18s ease;
+}
+
+.switch-row input:checked + .switch-slider {
+  background: var(--orange);
+  box-shadow: inset 0 0 0 1px rgba(247, 148, 29, 0.2), 0 0 0 3px rgba(247, 148, 29, 0.12);
+}
+
+.switch-row input:checked + .switch-slider::before {
+  transform: translateX(18px);
+}
+
+.switch-row input:focus-visible + .switch-slider {
+  outline: 2px solid rgba(247, 148, 29, 0.45);
+  outline-offset: 2px;
+}
+
+.switch-row input:disabled + .switch-slider {
+  opacity: 0.55;
 }
 
 .result-box {

@@ -11,6 +11,7 @@ El objetivo no es crear desde el primer dia un motor complejo de optimizacion, s
 - Gestionar plantillas maestras desde el backoffice de Komite.
 - Permitir que cada condominio tenga su propia version de una plantilla.
 - Programar mantenciones, inspecciones y tareas recurrentes.
+- Gestionar un calendario laboral base y sus adaptaciones por condominio.
 - Asignar responsables.
 - Registrar ejecucion, evidencia, atrasos y reprogramaciones.
 - Preparar el terreno para una futura capa de optimizacion o replanificacion automatica.
@@ -36,8 +37,8 @@ Portal administrador
 App mobile / Portal
   responsables ejecutan, reportan evidencia y cierran tareas
         |
-Komite
-  mide cumplimiento, detecta desviaciones y propone replanificacion
+Portal administrador / Project manager
+  mide cumplimiento, detecta desviaciones y replanifica
 ```
 
 ---
@@ -50,6 +51,8 @@ Komite
 - Versiones de plantilla por condominio.
 - Catalogo de categorias, instalaciones/equipos y tareas.
 - Periodicidad de cada tarea.
+- Calendario laboral base.
+- Calendario laboral heredable y modificable por condominio.
 - Programacion anual o mensual.
 - Generacion de eventos planificados.
 - Asignacion de responsable.
@@ -64,6 +67,7 @@ Komite
 - Prediccion automatica de atrasos.
 - Reasignacion automatica sin validacion humana.
 - Integraciones con calendarios externos.
+- Que Komite opere o mida el cumplimiento diario de los clientes.
 
 Estos puntos se consideran una fase posterior, cuando el sistema ya tenga datos reales de ejecucion.
 
@@ -187,6 +191,30 @@ Motivos posibles:
 
 La reprogramacion debe quedar trazada.
 
+### 5.6 Calendario laboral
+
+El calendario laboral define que dias y horarios son validos para programar inspecciones, mantenciones y tareas recurrentes.
+
+Debe existir un calendario base, mantenido por Komite desde el backoffice, que represente una configuracion inicial razonable:
+
+- Dias laborales por defecto.
+- Horarios operativos sugeridos.
+- Feriados generales.
+- Bloques no laborables.
+- Reglas basicas de disponibilidad.
+
+Cada condominio debe poder heredar ese calendario base y crear su propia version operativa. En principio, al adoptar el calendario base, sus reglas se propagan al condominio. Luego el condominio puede modificarlo sin alterar el calendario original.
+
+Ejemplos de personalizacion por condominio:
+
+- Feriados o dias no operativos propios.
+- Horarios distintos para mantenciones.
+- Ventanas permitidas para proveedores.
+- Dias restringidos por asambleas, eventos o condiciones internas.
+- Bloques especiales por temporada.
+
+La generacion de eventos planificados debe respetar el calendario laboral del condominio. Si una tarea cae en un dia no laborable, el sistema debe proponer moverla al siguiente dia disponible o dejarla pendiente de ajuste por el project manager.
+
 ---
 
 ## 6. Actores
@@ -201,7 +229,10 @@ Responsabilidades:
 - Versionar plantillas.
 - Desactivar plantillas antiguas.
 - Definir categorias estandar.
+- Mantener calendario laboral base.
 - Mantener catalogos globales.
+
+Komite no debe ser responsable de medir el cumplimiento operativo diario de cada cliente ni de replanificar su operacion. Esa responsabilidad pertenece a la empresa administradora dentro del portal administrador.
 
 ### 6.2 Empresa administradora
 
@@ -214,6 +245,7 @@ Responsabilidades:
 - Programar calendario operativo.
 - Asignar responsables.
 - Revisar cumplimiento.
+- Ajustar calendario laboral de sus condominios.
 
 ### 6.3 Project manager
 
@@ -222,9 +254,12 @@ Responsable de coordinar la operacion de varios condominios.
 Responsabilidades:
 
 - Visualizar carga de trabajo.
+- Medir cumplimiento.
+- Detectar desviaciones.
 - Reasignar tareas.
 - Resolver atrasos.
 - Priorizar urgencias.
+- Replanificar trabajo diario o semanal.
 - Validar cumplimiento operativo.
 
 ### 6.4 Ejecutivo/a
@@ -393,7 +428,63 @@ Campos sugeridos:
 - priority.
 - status.
 
-### 8.6 planned_operational_events
+### 8.6 operational_work_calendars
+
+Calendarios laborales base o propios de condominio.
+
+Campos sugeridos:
+
+- id.
+- tenant_id.
+- company_id.
+- condominium_id.
+- base_calendar_id.
+- name.
+- calendar_type: base, company, condominium.
+- working_days.
+- default_start_time.
+- default_end_time.
+- timezone.
+- status.
+- effective_from.
+- effective_to.
+- created_by.
+- updated_by.
+
+Reglas:
+
+- El calendario base lo mantiene Komite.
+- Un calendario de condominio puede heredar de un calendario base.
+- Si el calendario de condominio no define una regla propia, usa la regla heredada.
+- Las modificaciones del condominio no deben alterar el calendario base.
+
+### 8.7 operational_calendar_exceptions
+
+Excepciones o ajustes puntuales del calendario laboral.
+
+Campos sugeridos:
+
+- id.
+- tenant_id.
+- calendar_id.
+- exception_date.
+- exception_type: non_working_day, special_hours, blocked_window.
+- start_time.
+- end_time.
+- reason.
+- source: base, inherited, condominium_override.
+- created_by.
+- created_at.
+
+Ejemplos:
+
+- Feriado nacional.
+- Feriado propio del condominio.
+- Mantencion general que bloquea agenda.
+- Asamblea o evento comunitario.
+- Ventana restringida para proveedores.
+
+### 8.8 planned_operational_events
 
 Eventos concretos generados desde una plantilla.
 
@@ -413,11 +504,12 @@ Campos sugeridos:
 - assigned_profile.
 - priority.
 - status.
+- calendar_id.
 - source_type.
 - source_id.
 - created_by.
 
-### 8.7 operational_event_executions
+### 8.9 operational_event_executions
 
 Registro de ejecucion real.
 
@@ -437,7 +529,7 @@ Campos sugeridos:
 - validated_by_user_id.
 - validated_at.
 
-### 8.8 operational_event_evidence
+### 8.10 operational_event_evidence
 
 Evidencias asociadas a la ejecucion.
 
@@ -453,7 +545,7 @@ Campos sugeridos:
 - created_by.
 - created_at.
 
-### 8.9 operational_reschedule_logs
+### 8.11 operational_reschedule_logs
 
 Historial de reprogramaciones.
 
@@ -492,7 +584,23 @@ Acciones:
 - Versionar plantilla.
 - Activar / desactivar.
 
-### 9.2 Editor de plantilla
+### 9.2 Calendario laboral base
+
+Permite a Komite mantener calendarios base reutilizables por las empresas y condominios.
+
+Acciones:
+
+- Crear calendario base.
+- Definir dias laborales por defecto.
+- Definir horarios operativos sugeridos.
+- Registrar feriados generales.
+- Registrar excepciones globales.
+- Versionar calendario.
+- Activar / desactivar.
+
+Este calendario no representa la operacion real de un condominio concreto. Es una referencia inicial que los condominios pueden heredar y adaptar.
+
+### 9.3 Editor de plantilla
 
 Debe permitir editar:
 
@@ -508,7 +616,7 @@ Debe permitir editar:
 - Responsable sugerido.
 - Requiere evidencia.
 
-### 9.3 Importador de plantilla Excel
+### 9.4 Importador de plantilla Excel
 
 Debe permitir cargar una plantilla como la enviada.
 
@@ -540,7 +648,27 @@ Acciones:
 - Personalizar plantilla.
 - Activar plantilla.
 
-### 10.2 Programacion
+### 10.2 Calendario laboral del condominio
+
+Permite revisar y ajustar el calendario laboral que se usara para planificar eventos del condominio seleccionado.
+
+Acciones:
+
+- Heredar calendario base.
+- Ver reglas heredadas.
+- Crear excepciones propias del condominio.
+- Bloquear dias u horarios.
+- Ajustar ventanas de trabajo.
+- Restaurar regla heredada.
+
+Comportamiento esperado:
+
+- Al crear un condominio, puede asignarse un calendario base por defecto.
+- Mientras el condominio no tenga cambios propios, se comporta como una copia heredada del calendario base.
+- Si el condominio personaliza una regla, esa regla prevalece sobre la heredada.
+- La programacion de eventos debe respetar este calendario.
+
+### 10.3 Programacion
 
 Vista calendario/listado de eventos.
 
@@ -559,7 +687,9 @@ Acciones:
 - Asignar responsable.
 - Cambiar prioridad.
 
-### 10.3 Cumplimiento
+### 10.4 Cumplimiento y desviaciones
+
+Esta pantalla pertenece al portal administrador y es responsabilidad del project manager o de la empresa administradora.
 
 Indicadores:
 
@@ -569,6 +699,16 @@ Indicadores:
 - Tareas reprogramadas.
 - Cumplimiento por responsable.
 - Cumplimiento por categoria.
+- Desviaciones por condominio.
+- Desviaciones por motivo.
+
+Acciones:
+
+- Revisar atrasos.
+- Reprogramar tareas.
+- Reasignar responsables.
+- Validar cumplimiento.
+- Generar informe operativo.
 
 ---
 
@@ -606,7 +746,7 @@ Relacion recomendada:
 
 La optimizacion no deberia ser la primera fase, pero el modelo debe prepararse para ella.
 
-Para que en el futuro tenga sentido usar algoritmos geneticos, heuristicas u optimizacion, Komite necesitara datos historicos:
+Para que en el futuro tenga sentido usar algoritmos geneticos, heuristicas u optimizacion, el sistema necesitara datos historicos capturados por la operacion real de las empresas administradoras:
 
 - Duracion real de tareas.
 - Responsables disponibles.
@@ -629,6 +769,8 @@ Antes de algoritmos complejos, se puede crear un asistente simple:
 - Agrupar tareas por condominio.
 - Priorizar tareas criticas.
 
+Estas alertas y sugerencias deben mostrarse en el portal administrador. El project manager decide si aplica o no la replanificacion.
+
 ### 13.2 Fase de optimizacion avanzada
 
 Cuando existan datos suficientes:
@@ -640,6 +782,8 @@ Cuando existan datos suficientes:
 - Comparacion entre plan original y plan reoptimizado.
 
 La recomendacion es que el sistema proponga cambios, pero que un usuario humano los apruebe.
+
+La aprobacion debe quedar en manos del project manager o del perfil autorizado dentro de la empresa administradora, no del backoffice de Komite.
 
 ---
 
@@ -654,6 +798,8 @@ La recomendacion es que el sistema proponga cambios, pero que un usuario humano 
 
 ### Fase 2 - Programacion por condominio
 
+- Crear calendario laboral base.
+- Permitir herencia y personalizacion por condominio.
 - Crear calendario/listado de eventos.
 - Generar eventos desde periodicidad.
 - Asignar responsables.
@@ -668,7 +814,7 @@ La recomendacion es que el sistema proponga cambios, pero que un usuario humano 
 
 ### Fase 4 - Seguimiento operativo
 
-- Dashboard de cumplimiento.
+- Dashboard de cumplimiento en portal administrador.
 - Alertas por atraso.
 - Informes por condominio.
 - Historial de reprogramaciones.
@@ -715,12 +861,13 @@ La recomendacion es que el sistema proponga cambios, pero que un usuario humano 
 La recomendacion es comenzar con una version sencilla y robusta:
 
 1. Backoffice crea plantillas base.
-2. Condominio adopta y adapta una plantilla.
-3. El sistema genera eventos planificados.
-4. Responsables ejecutan y suben evidencia.
-5. El portal muestra cumplimiento y atrasos.
+2. Backoffice mantiene calendario laboral base.
+3. Condominio adopta calendario base y lo personaliza si aplica.
+4. Condominio adopta y adapta una plantilla.
+5. El sistema genera eventos planificados respetando el calendario laboral del condominio.
+6. Responsables ejecutan y suben evidencia.
+7. El portal administrador muestra cumplimiento, atrasos y desviaciones para que el project manager replanifique.
 
 Solo cuando existan datos reales de varios meses, tiene sentido avanzar hacia optimizacion automatica.
 
 Esta estrategia evita construir un motor complejo antes de conocer como trabajan realmente los supervisores, administradores y conserjes en el dia a dia.
-

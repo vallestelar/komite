@@ -24,6 +24,9 @@ const state = {
   roles: [],
   usersLookup: [],
   operationalStaff: [],
+  inspectionTemplates: [],
+  inspectionTemplateSections: [],
+  duplicateTemplateId: null,
   edifitoNeighborsPreview: null,
   comunidadFelizNeighborsPreview: null,
   companyReturnContext: null,
@@ -197,6 +200,66 @@ const resources = {
     endpoint: "/api/v1/inspections/",
     columns: ["inspection_type", "status", "started_at", "finished_at"],
   },
+  inspectionTemplates: {
+    title: "Plantillas",
+    endpoint: "/api/v1/inspection-templates/",
+    columns: ["name", "template_type", "inspection_type", "version", "status", "is_active"],
+    createLabel: "Nueva plantilla",
+    singular: "plantilla",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company" },
+      { name: "condominium_id", label: "Condominio", type: "condominium", emptyLabel: "Plantilla base sin condominio" },
+      { name: "name", label: "Nombre", required: true, maxLength: 150 },
+      { name: "description", label: "Descripci\u00f3n", type: "textarea" },
+      { name: "template_type", label: "Tipo de plantilla", type: "select", options: [["inspection", "Inspecci\u00f3n"], ["maintenance", "Mantenci\u00f3n"], ["mixed", "Mixta"]], defaultValue: "maintenance" },
+      { name: "inspection_type", label: "Categor\u00eda", type: "select", options: [["preventive", "Preventiva"], ["security", "Seguridad"], ["cleaning", "Aseo"], ["infrastructure", "Infraestructura"], ["operations", "Operaci\u00f3n"], ["other", "Otra"]], defaultValue: "preventive", required: true },
+      { name: "version", label: "Versi\u00f3n", type: "number", defaultValue: 1 },
+      { name: "status", label: "Estado", type: "select", options: [["draft", "Borrador"], ["active", "Activo"], ["published", "Publicado"], ["inactive", "Inactivo"]], defaultValue: "draft" },
+      { name: "source_file_name", label: "Archivo origen", maxLength: 255 },
+      { name: "is_active", label: "Activa", type: "checkbox", defaultValue: true },
+      { name: "checklist_schema", label: "Checklist base", type: "json", defaultValue: [] },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
+  inspectionTemplateSections: {
+    title: "Secciones",
+    endpoint: "/api/v1/inspection-template-sections/",
+    columns: ["template_id", "name", "display_order", "status"],
+    createLabel: "Nueva secci\u00f3n",
+    singular: "secci\u00f3n",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company" },
+      { name: "template_id", label: "Plantilla", type: "inspection_template", required: true },
+      { name: "name", label: "Nombre", required: true, maxLength: 150 },
+      { name: "description", label: "Descripci\u00f3n", type: "textarea" },
+      { name: "display_order", label: "Orden", type: "number", defaultValue: 0 },
+      { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
+  inspectionTemplateItems: {
+    title: "\u00cdtems de plantilla",
+    endpoint: "/api/v1/inspection-template-items/",
+    columns: ["template_id", "section_id", "asset_name", "task_name", "periodicity", "default_responsible_profile", "default_duration_minutes", "requires_evidence", "status"],
+    createLabel: "Nuevo \u00edtem",
+    singular: "\u00edtem",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company" },
+      { name: "template_id", label: "Plantilla", type: "inspection_template", required: true },
+      { name: "section_id", label: "Secci\u00f3n", type: "inspection_template_section" },
+      { name: "asset_name", label: "Activo / zona", maxLength: 180 },
+      { name: "task_name", label: "Tarea", required: true, maxLength: 255 },
+      { name: "instructions", label: "Instrucciones", type: "textarea" },
+      { name: "periodicity", label: "Periodicidad", type: "select", options: [["daily", "Diaria"], ["weekly", "Semanal"], ["biweekly", "Quincenal"], ["monthly", "Mensual"], ["bimonthly", "Cada 2 meses"], ["quarterly", "Trimestral"], ["four_monthly", "Cada 4 meses"], ["semiannual", "Semestral"], ["annual", "Anual"], ["biennial", "Cada 2 a\u00f1os"], ["permanent", "Permanente"], ["on_demand", "Seg\u00fan necesidad"]], defaultValue: "monthly" },
+      { name: "planned_months", label: "Meses planificados", type: "json", defaultValue: [] },
+      { name: "requires_evidence", label: "Requiere evidencia", type: "checkbox", defaultValue: false },
+      { name: "default_responsible_profile", label: "Responsable sugerido", type: "select", options: [["", "Sin responsable sugerido"], ["project_manager", "Project manager"], ["supervisor", "Supervisor"], ["ejecutivo", "Ejecutivo/a"], ["conserje", "Conserje"]], defaultValue: "" },
+      { name: "default_duration_minutes", label: "Duraci\u00f3n estimada (min)", type: "number" },
+      { name: "display_order", label: "Orden", type: "number", defaultValue: 0 },
+      { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
   users: {
     title: "Usuarios",
     endpoint: "/api/v1/users/",
@@ -247,6 +310,20 @@ const columnLabels = {
   communication_type: "Tipo de comunicación",
   audience: "Audiencia",
   inspection_type: "Tipo de inspección",
+  template_type: "Tipo plantilla",
+  template_id: "Plantilla",
+  section_id: "Secci\u00f3n",
+  version: "Versi\u00f3n",
+  is_active: "Activa",
+  source_file_name: "Archivo origen",
+  asset_name: "Activo / zona",
+  task_name: "Tarea",
+  instructions: "Instrucciones",
+  periodicity: "Periodicidad",
+  planned_months: "Meses planificados",
+  requires_evidence: "Evidencia",
+  default_responsible_profile: "Responsable sugerido",
+  default_duration_minutes: "Duraci\u00f3n min.",
   started_at: "Inicio",
   finished_at: "Fin",
   full_name: "Nombre completo",
@@ -335,6 +412,36 @@ const positionLabels = {
   otro: "Otro",
 };
 
+const templateTypeLabels = {
+  inspection: "Inspecci\u00f3n",
+  maintenance: "Mantenci\u00f3n",
+  mixed: "Mixta",
+};
+
+const inspectionTypeLabels = {
+  preventive: "Preventiva",
+  security: "Seguridad",
+  cleaning: "Aseo",
+  infrastructure: "Infraestructura",
+  operations: "Operaci\u00f3n",
+  other: "Otra",
+};
+
+const periodicityLabels = {
+  daily: "Diaria",
+  weekly: "Semanal",
+  biweekly: "Quincenal",
+  monthly: "Mensual",
+  bimonthly: "Cada 2 meses",
+  quarterly: "Trimestral",
+  four_monthly: "Cada 4 meses",
+  semiannual: "Semestral",
+  annual: "Anual",
+  biennial: "Cada 2 a\u00f1os",
+  permanent: "Permanente",
+  on_demand: "Seg\u00fan necesidad",
+};
+
 const placeholders = {
   committee: {
     title: "Comité",
@@ -401,6 +508,50 @@ async function apiFetch(path, options = {}) {
   } finally {
     setLoading(false);
   }
+}
+
+async function apiDownload(path, fallbackFilename) {
+  setLoading(true);
+
+  try {
+    const headers = {};
+    if (state.token) headers.Authorization = `Bearer ${state.token}`;
+
+    let response = await fetch(`${API_BASE}${path}`, { headers });
+    if (response.status === 401 && state.refreshToken && shouldAttemptRefresh(path)) {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        headers.Authorization = `Bearer ${state.token}`;
+        response = await fetch(`${API_BASE}${path}`, { headers });
+      }
+    }
+    if (response.status === 401) handleExpiredSession();
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const filename = filenameFromDisposition(response.headers.get("Content-Disposition")) || fallbackFilename;
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function filenameFromDisposition(disposition) {
+  if (!disposition) return "";
+  const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) return decodeURIComponent(utfMatch[1]);
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  return plainMatch?.[1] || "";
 }
 
 function setSession(data) {
@@ -971,7 +1122,7 @@ async function openView(view) {
   $("#ticketCondominiumFilter").value = "";
   $("#ticketStatusFilter").value = "";
   state.tablePage = 1;
-  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users"].includes(view);
+  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(view);
   $("#ticketCompanyFilter").hidden = view !== "supportTickets";
   $("#ticketCondominiumFilter").hidden = view !== "supportTickets";
   $("#ticketStatusFilter").hidden = view !== "supportTickets";
@@ -987,6 +1138,10 @@ async function openView(view) {
     populateCompanyFilter();
   }
   if (view === "committeeMembers") {
+    await ensureUserLookupsLoaded();
+    populateCompanyFilter();
+  }
+  if (["inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(view)) {
     await ensureUserLookupsLoaded();
     populateCompanyFilter();
   }
@@ -1037,7 +1192,7 @@ function buildTableQueryParams() {
     if (status) params.set("filter_status", status);
   }
 
-  if (["condominiums", "committeeMembers", "users"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) params.set("filter_company_id", companyId);
   }
@@ -1047,7 +1202,7 @@ function buildTableQueryParams() {
 
 function filteredTableItems() {
   let items = state.currentItems || [];
-  if (["condominiums", "committeeMembers", "users"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) {
       items = items.filter((item) => sameId(item.company_id, companyId));
@@ -1114,14 +1269,19 @@ function labelForColumn(column) {
 
 function formatTableCell(column, value) {
   if (column === "status") return renderStatusBadge(value);
-  if (["is_system", "receives_notifications"].includes(column)) return renderBooleanBadge(value);
+  if (["is_system", "receives_notifications", "is_active", "requires_evidence"].includes(column)) return renderBooleanBadge(value);
   if (column === "company_id") return escapeHtml(companyName(value));
   if (column === "condominium_id") return escapeHtml(condominiumName(value));
   if (column === "unit_id") return escapeHtml(unitName(value));
   if (column === "unit_contact_id") return escapeHtml(unitContactName(value));
   if (column === "user_id") return escapeHtml(userName(value));
+  if (column === "template_id") return escapeHtml(inspectionTemplateName(value));
+  if (column === "section_id") return escapeHtml(inspectionTemplateSectionName(value));
   if (column === "position") return escapeHtml(positionLabels[value] || formatCell(value));
-  if (["company_profile", "role_code"].includes(column)) return escapeHtml(roleLabels[value] || formatCell(value));
+  if (["company_profile", "role_code", "default_responsible_profile"].includes(column)) return escapeHtml(roleLabels[value] || formatCell(value));
+  if (column === "template_type") return escapeHtml(templateTypeLabels[value] || formatCell(value));
+  if (column === "inspection_type") return escapeHtml(inspectionTypeLabels[value] || formatCell(value));
+  if (column === "periodicity") return escapeHtml(periodicityLabels[value] || formatCell(value));
   return escapeHtml(formatCell(value));
 }
 
@@ -1152,6 +1312,18 @@ function userName(userId) {
   if (!userId) return "";
   const user = state.usersLookup.find((item) => sameId(item.id, userId));
   return user?.full_name || user?.email || formatCell(userId);
+}
+
+function inspectionTemplateName(templateId) {
+  if (!templateId) return "";
+  const template = state.inspectionTemplates.find((item) => sameId(item.id, templateId));
+  return template?.name || formatCell(templateId);
+}
+
+function inspectionTemplateSectionName(sectionId) {
+  if (!sectionId) return "";
+  const section = state.inspectionTemplateSections.find((item) => sameId(item.id, sectionId));
+  return section?.name || formatCell(sectionId);
 }
 
 function renderStatusBadge(status) {
@@ -1203,21 +1375,34 @@ function renderRowActions(view, id) {
 
 function renderGenericActions(id) {
   const safeId = escapeHtml(id);
+  const duplicateButton = state.currentView === "inspectionTemplates"
+    ? `<button class="duplicate-row icon-button" type="button" data-duplicate-template="${safeId}" aria-label="Duplicar para condominio" title="Duplicar para condominio">
+        <svg aria-hidden="true"><use href="#icon-copy"></use></svg>
+      </button>
+      <button class="export-row icon-button" type="button" data-export-template="${safeId}" aria-label="Exportar plantilla" title="Exportar plantilla">
+        <svg aria-hidden="true"><use href="#icon-download"></use></svg>
+      </button>`
+    : "";
   return `
     <div class="table-actions">
-      <button class="edit-row icon-button" type="button" data-edit-generic="${safeId}">
+      ${duplicateButton}
+      <button class="edit-row icon-button" type="button" data-edit-generic="${safeId}" aria-label="Editar" title="Editar">
         <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
-        <span>Editar</span>
       </button>
-      <button class="delete-row icon-button" type="button" data-delete-generic="${safeId}">
+      <button class="delete-row icon-button" type="button" data-delete-generic="${safeId}" aria-label="Borrar" title="Borrar">
         <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
-        <span>Borrar</span>
       </button>
     </div>
   `;
 }
 
 function bindGenericRowActions() {
+  $$("[data-duplicate-template]").forEach((button) => {
+    button.addEventListener("click", () => openDuplicateTemplateModal(button.dataset.duplicateTemplate));
+  });
+  $$("[data-export-template]").forEach((button) => {
+    button.addEventListener("click", () => exportInspectionTemplate(button.dataset.exportTemplate));
+  });
   $$("[data-edit-generic]").forEach((button) => {
     button.addEventListener("click", () => openGenericForm(button.dataset.editGeneric));
   });
@@ -1230,13 +1415,11 @@ function renderCondominiumActions(id) {
   const safeId = escapeHtml(id);
   return `
     <div class="table-actions">
-      <button class="edit-row icon-button" type="button" data-edit-condominium="${safeId}">
+      <button class="edit-row icon-button" type="button" data-edit-condominium="${safeId}" aria-label="Editar" title="Editar">
         <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
-        <span>Editar</span>
       </button>
-      <button class="delete-row icon-button" type="button" data-delete-condominium="${safeId}">
+      <button class="delete-row icon-button" type="button" data-delete-condominium="${safeId}" aria-label="Borrar" title="Borrar">
         <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
-        <span>Borrar</span>
       </button>
     </div>
   `;
@@ -1255,13 +1438,11 @@ function renderCompanyActions(id) {
   const safeId = escapeHtml(id);
   return `
     <div class="table-actions">
-      <button class="edit-row icon-button" type="button" data-edit-company="${safeId}">
+      <button class="edit-row icon-button" type="button" data-edit-company="${safeId}" aria-label="Editar" title="Editar">
         <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
-        <span>Editar</span>
       </button>
-      <button class="delete-row icon-button" type="button" data-delete-company="${safeId}">
+      <button class="delete-row icon-button" type="button" data-delete-company="${safeId}" aria-label="Borrar" title="Borrar">
         <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
-        <span>Borrar</span>
       </button>
     </div>
   `;
@@ -1280,13 +1461,11 @@ function renderUserActions(id) {
   const safeId = escapeHtml(id);
   return `
     <div class="table-actions">
-      <button class="edit-row icon-button" type="button" data-edit-user="${safeId}">
+      <button class="edit-row icon-button" type="button" data-edit-user="${safeId}" aria-label="Editar" title="Editar">
         <svg aria-hidden="true"><use href="#icon-pencil"></use></svg>
-        <span>Editar</span>
       </button>
-      <button class="delete-row icon-button" type="button" data-delete-user="${safeId}">
+      <button class="delete-row icon-button" type="button" data-delete-user="${safeId}" aria-label="Borrar" title="Borrar">
         <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
-        <span>Borrar</span>
       </button>
     </div>
   `;
@@ -1343,7 +1522,7 @@ function populateTicketCondominiumFilter() {
 }
 
 async function ensureUserLookupsLoaded() {
-  const [companies, condominiums, roles, units, users, unitContacts, operationalStaff] = await Promise.all([
+  const [companies, condominiums, roles, units, users, unitContacts, operationalStaff, inspectionTemplates, inspectionTemplateSections] = await Promise.all([
     fetchAllPages("/api/v1/companies/"),
     fetchAllPages("/api/v1/condominiums/"),
     apiFetch("/api/v1/roles/?page=1&page_size=200"),
@@ -1351,6 +1530,8 @@ async function ensureUserLookupsLoaded() {
     fetchAllPages("/api/v1/users/"),
     fetchAllPages("/api/v1/unit-contacts/"),
     fetchAllPages("/api/v1/condominium-operational-staff/"),
+    fetchAllPages("/api/v1/inspection-templates/"),
+    fetchAllPages("/api/v1/inspection-template-sections/"),
   ]);
   state.companies = Array.isArray(companies) ? companies : companies.items || [];
   state.condominiums = Array.isArray(condominiums) ? condominiums : condominiums.items || [];
@@ -1359,6 +1540,23 @@ async function ensureUserLookupsLoaded() {
   state.usersLookup = Array.isArray(users) ? users : users.items || [];
   state.unitContacts = Array.isArray(unitContacts) ? unitContacts : unitContacts.items || [];
   state.operationalStaff = Array.isArray(operationalStaff) ? operationalStaff : operationalStaff.items || [];
+  state.inspectionTemplates = Array.isArray(inspectionTemplates) ? inspectionTemplates : inspectionTemplates.items || [];
+  state.inspectionTemplateSections = Array.isArray(inspectionTemplateSections) ? inspectionTemplateSections : inspectionTemplateSections.items || [];
+}
+
+async function exportInspectionTemplate(templateId) {
+  try {
+    const template = state.currentItems.find((entry) => sameId(entry.id, templateId))
+      || state.inspectionTemplates.find((entry) => sameId(entry.id, templateId));
+    const fallbackName = `plantilla_${normalizeSearch(template?.name || "komite").replaceAll(" ", "_")}.xlsx`;
+    await apiDownload(`/api/v1/inspection-templates/${templateId}/export`, fallbackName);
+    showToast({
+      title: "Plantilla exportada",
+      message: "Se descargo el Excel de la plantilla.",
+    });
+  } catch (error) {
+    window.alert(readableError(error));
+  }
 }
 
 async function openGenericForm(id = null) {
@@ -1366,7 +1564,7 @@ async function openGenericForm(id = null) {
   if (!resource?.fields) return;
 
   $("#genericFormError").hidden = true;
-  if (resource.fields.some((field) => ["company", "condominium", "user", "unit", "unit_contact"].includes(field.type))) {
+  if (resource.fields.some((field) => ["company", "condominium", "user", "unit", "unit_contact", "inspection_template", "inspection_template_section"].includes(field.type))) {
     await ensureUserLookupsLoaded();
   }
 
@@ -1439,14 +1637,26 @@ function renderGenericField(field, item) {
       .join("")}</select>`, "Buscar usuario");
   }
 
+  if (field.type === "inspection_template") {
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"${required}><option value="">Selecciona plantilla</option>${state.inspectionTemplates
+      .map((template) => `<option value="${escapeHtml(template.id)}" data-company-id="${escapeHtml(template.company_id || "")}"${value === template.id ? " selected" : ""}>${escapeHtml(template.name || template.id)}</option>`)
+      .join("")}</select>`, "Buscar plantilla");
+  }
+
+  if (field.type === "inspection_template_section") {
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"><option value="">Sin secci\u00f3n</option>${state.inspectionTemplateSections
+      .map((section) => `<option value="${escapeHtml(section.id)}" data-template-id="${escapeHtml(section.template_id || "")}" data-company-id="${escapeHtml(section.company_id || "")}"${value === section.id ? " selected" : ""}>${escapeHtml(section.name || section.id)}</option>`)
+      .join("")}</select>`, "Buscar secci\u00f3n");
+  }
+
   if (field.type === "textarea" || field.type === "json") {
-    const textareaValue = field.type === "json" ? JSON.stringify(value || {}, null, 2) : value || "";
+    const textareaValue = field.type === "json" ? JSON.stringify(value ?? field.defaultValue ?? {}, null, 2) : value || "";
     return `<label class="span-2">${label}<textarea data-generic-field="${name}" data-field-type="${field.type}" rows="4"${required}>${escapeHtml(textareaValue)}</textarea></label>`;
   }
 
   if (field.type === "checkbox") {
     const checked = value === true || value === "true" ? " checked" : "";
-    return `<label class="checkbox-row"><input data-generic-field="${name}" type="checkbox"${checked} />${label}</label>`;
+    return `<label class="switch-row"><input data-generic-field="${name}" type="checkbox"${checked} /><span class="switch-slider" aria-hidden="true"></span><span>${label}</span></label>`;
   }
 
   const inputType = field.type === "datetime" ? "datetime-local" : field.type || "text";
@@ -1506,7 +1716,7 @@ function buildGenericPayload(resource) {
     const element = $(`[data-generic-field="${field.name}"]`);
     if (!element) return;
     if (field.type === "json") {
-      payload[field.name] = parseJsonText(element.value, {});
+      payload[field.name] = parseJsonText(element.value, field.defaultValue ?? {});
       return;
     }
     if (field.type === "checkbox") {
@@ -1580,6 +1790,96 @@ async function deleteGenericEntity(id = $("#genericId").value) {
     });
   } catch (error) {
     window.alert(readableError(error));
+  }
+}
+
+async function openDuplicateTemplateModal(templateId) {
+  try {
+    await ensureUserLookupsLoaded();
+    state.duplicateTemplateId = templateId;
+    const template = state.currentItems.find((entry) => sameId(entry.id, templateId))
+      || state.inspectionTemplates.find((entry) => sameId(entry.id, templateId))
+      || await apiFetch(`/api/v1/inspection-templates/${templateId}`);
+    const selectedCompanyId = $("#companyFilter")?.value || template.company_id || "";
+    $("#duplicateTemplateError").hidden = true;
+    $("#duplicateTemplateMessage").textContent = `Se creara una version editable de "${template.name}" para el condominio seleccionado.`;
+    $("#duplicateTemplateName").value = "";
+    populateDuplicateTemplateCompanies(selectedCompanyId);
+    populateDuplicateTemplateCondominiums();
+    suggestDuplicateTemplateName(template);
+    $("#duplicateTemplateModal").hidden = false;
+    $("#duplicateTemplateCompany").focus();
+  } catch (error) {
+    window.alert(readableError(error));
+  }
+}
+
+function closeDuplicateTemplateModal() {
+  state.duplicateTemplateId = null;
+  $("#duplicateTemplateModal").hidden = true;
+}
+
+function populateDuplicateTemplateCompanies(selectedCompanyId = "") {
+  const companies = state.companies.filter((company) => !isInternalKomiteCompany(company));
+  $("#duplicateTemplateCompany").innerHTML = companies
+    .map((company, index) => {
+      const selected = selectedCompanyId
+        ? sameId(company.id, selectedCompanyId)
+        : index === 0;
+      return `<option value="${escapeHtml(company.id)}"${selected ? " selected" : ""}>${escapeHtml(company.name || "Empresa")}</option>`;
+    })
+    .join("");
+}
+
+function populateDuplicateTemplateCondominiums() {
+  const companyId = $("#duplicateTemplateCompany").value;
+  const condominiums = state.condominiums.filter((condominium) => sameId(condominium.company_id, companyId));
+  $("#duplicateTemplateCondominium").innerHTML = condominiums.length
+    ? condominiums
+      .map((condominium) => `<option value="${escapeHtml(condominium.id)}">${escapeHtml(condominium.name || "Condominio")}</option>`)
+      .join("")
+    : `<option value="">Sin condominios disponibles</option>`;
+}
+
+function suggestDuplicateTemplateName(template) {
+  const condominiumId = $("#duplicateTemplateCondominium").value;
+  const condominium = state.condominiums.find((item) => sameId(item.id, condominiumId));
+  $("#duplicateTemplateName").placeholder = condominium
+    ? `${template.name} - ${condominium.name}`
+    : template.name;
+}
+
+async function duplicateTemplateToCondominium(event) {
+  event.preventDefault();
+  const templateId = state.duplicateTemplateId;
+  if (!templateId) return;
+  const condominiumId = $("#duplicateTemplateCondominium").value;
+  if (!condominiumId) {
+    $("#duplicateTemplateError").textContent = "Selecciona un condominio para crear la copia.";
+    $("#duplicateTemplateError").hidden = false;
+    return;
+  }
+
+  try {
+    $("#duplicateTemplateError").hidden = true;
+    const payload = {
+      condominium_id: condominiumId,
+      name: emptyToNull($("#duplicateTemplateName").value),
+      status: "draft",
+    };
+    const result = await apiFetch(`/api/v1/inspection-templates/${templateId}/duplicate-to-condominium`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    closeDuplicateTemplateModal();
+    showToast({
+      title: "Plantilla duplicada",
+      message: `Se creo la version para el condominio con ${result.items_created} items.`,
+    });
+  } catch (error) {
+    $("#duplicateTemplateError").textContent = readableError(error);
+    $("#duplicateTemplateError").hidden = false;
   }
 }
 
@@ -2093,9 +2393,10 @@ function addOperationalStaffRow(item = {}, target = "condominium", readOnly = fa
         <option value="inactive">Inactivo</option>
       </select>
     </label>
-    <label class="checkbox-line">
+    <label class="switch-line">
       <input class="staff-primary" type="checkbox" ${readOnly ? "disabled" : ""} />
-      Principal
+      <span class="switch-slider" aria-hidden="true"></span>
+      <span>Principal</span>
     </label>
     <button class="staff-remove icon-button danger-action" type="button" ${readOnly ? "hidden" : ""}>
       <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
@@ -2724,7 +3025,24 @@ $("#confirmAcceptButton").addEventListener("click", () => closeConfirmModal(true
 $("#confirmModal").addEventListener("click", (event) => {
   if (event.target === $("#confirmModal")) closeConfirmModal(false);
 });
+$("#duplicateTemplateCancelButton").addEventListener("click", closeDuplicateTemplateModal);
+$("#duplicateTemplateForm").addEventListener("submit", duplicateTemplateToCondominium);
+$("#duplicateTemplateModal").addEventListener("click", (event) => {
+  if (event.target === $("#duplicateTemplateModal")) closeDuplicateTemplateModal();
+});
+$("#duplicateTemplateCompany").addEventListener("change", () => {
+  populateDuplicateTemplateCondominiums();
+  const template = state.inspectionTemplates.find((entry) => sameId(entry.id, state.duplicateTemplateId))
+    || state.currentItems.find((entry) => sameId(entry.id, state.duplicateTemplateId));
+  if (template) suggestDuplicateTemplateName(template);
+});
+$("#duplicateTemplateCondominium").addEventListener("change", () => {
+  const template = state.inspectionTemplates.find((entry) => sameId(entry.id, state.duplicateTemplateId))
+    || state.currentItems.find((entry) => sameId(entry.id, state.duplicateTemplateId));
+  if (template) suggestDuplicateTemplateName(template);
+});
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#duplicateTemplateModal").hidden) closeDuplicateTemplateModal();
   if (event.key === "Escape" && !$("#confirmModal").hidden) closeConfirmModal(false);
 });
 $("#searchInput").addEventListener("keydown", (event) => {
@@ -2744,7 +3062,7 @@ $("#searchInput").addEventListener("input", () => {
 $("#companyFilter").addEventListener("change", () => {
   const resource = resources[state.currentView];
   if (resource) {
-    if (["condominiums", "committeeMembers", "users"].includes(state.currentView)) {
+    if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(state.currentView)) {
       state.tablePage = 1;
       loadTable();
       return;
@@ -2827,9 +3145,38 @@ function bindGenericFieldDependencies() {
   const condominiumSelect = $('[data-generic-field="condominium_id"]');
   const unitSelect = $('[data-generic-field="unit_id"]');
   const contactSelect = $('[data-generic-field="unit_contact_id"]');
+  const templateSelect = $('[data-generic-field="template_id"]');
+  const sectionSelect = $('[data-generic-field="section_id"]');
   const fullNameInput = $('[data-generic-field="full_name"]');
   const emailInput = $('[data-generic-field="email"]');
   const phoneInput = $('[data-generic-field="phone"]');
+  const syncInspectionSectionOptions = () => {
+    if (!sectionSelect) return;
+    const selectedTemplateId = templateSelect?.value || "";
+    const selectedCompanyId = companySelect?.value || "";
+    Array.from(sectionSelect.options).forEach((option) => {
+      const optionTemplateId = option.dataset.templateId;
+      const optionCompanyId = option.dataset.companyId;
+      const hiddenByTemplate = Boolean(optionTemplateId && selectedTemplateId && !sameId(optionTemplateId, selectedTemplateId));
+      const hiddenByCompany = Boolean(optionCompanyId && selectedCompanyId && !sameId(optionCompanyId, selectedCompanyId));
+      setOptionDependencyHidden(option, hiddenByTemplate || hiddenByCompany);
+    });
+    if (sectionSelect.selectedOptions[0]?.hidden) sectionSelect.value = "";
+  };
+  const syncInspectionTemplateOptions = () => {
+    if (!templateSelect) return;
+    const selectedCompanyId = companySelect?.value || "";
+    Array.from(templateSelect.options).forEach((option) => {
+      const optionCompanyId = option.dataset.companyId;
+      setOptionDependencyHidden(option, Boolean(optionCompanyId && selectedCompanyId && !sameId(optionCompanyId, selectedCompanyId)));
+    });
+    if (templateSelect.selectedOptions[0]?.hidden) templateSelect.value = "";
+    syncInspectionSectionOptions();
+  };
+  companySelect?.addEventListener("change", syncInspectionTemplateOptions);
+  templateSelect?.addEventListener("change", syncInspectionSectionOptions);
+  syncInspectionTemplateOptions();
+
   if (!companySelect || !condominiumSelect) return;
 
   const syncCondominiumOptions = () => {

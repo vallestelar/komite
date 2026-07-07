@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Komite Backoffice</title>
-    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260706-02" />
+    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260707-06" />
   </head>
   <body>
     <main id="app">
@@ -70,6 +70,27 @@
                 <button class="nav-item" data-view="committeeMembers" title="Comité">
                   <svg class="nav-icon" aria-hidden="true"><use href="#icon-users"></use></svg>
                   <span class="nav-label">Comité</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="nav-group" data-nav-group-panel="operacion">
+              <button class="nav-section" type="button" data-nav-group="operacion" aria-expanded="true">
+                <span>Operaci&oacute;n</span>
+                <svg class="nav-section-chevron" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+              </button>
+              <div class="nav-group-items">
+                <button class="nav-item" data-view="inspectionTemplates" title="Plantillas">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-clipboard"></use></svg>
+                  <span class="nav-label">Plantillas</span>
+                </button>
+                <button class="nav-item" data-view="inspectionTemplateSections" title="Secciones">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                  <span class="nav-label">Secciones</span>
+                </button>
+                <button class="nav-item" data-view="inspectionTemplateItems" title="&Iacute;tems">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-checks"></use></svg>
+                  <span class="nav-label">&Iacute;tems</span>
                 </button>
               </div>
             </div>
@@ -592,9 +613,10 @@
                 Idioma
                 <input id="audioLanguage" name="language" value="es" />
               </label>
-              <label class="checkbox-row">
+              <label class="switch-row">
                 <input id="generateDraft" name="generateDraft" type="checkbox" />
-                Generar borrador con IA
+                <span class="switch-slider" aria-hidden="true"></span>
+                <span>Generar borrador con IA</span>
               </label>
               <button type="submit">Procesar audio</button>
             </form>
@@ -800,6 +822,41 @@
         </div>
       </section>
     </div>
+    <div id="duplicateTemplateModal" class="modal-backdrop duplicate-template-backdrop" hidden>
+      <section class="form-dialog duplicate-template-dialog" role="dialog" aria-modal="true" aria-labelledby="duplicateTemplateTitle">
+        <div class="dialog-heading">
+          <div class="confirm-icon duplicate-template-icon">
+            <svg aria-hidden="true"><use href="#icon-copy"></use></svg>
+          </div>
+          <div>
+            <p class="eyebrow">Plantillas</p>
+            <h2 id="duplicateTemplateTitle">Duplicar para condominio</h2>
+            <p id="duplicateTemplateMessage" class="confirm-message"></p>
+          </div>
+        </div>
+        <form id="duplicateTemplateForm" class="dialog-form">
+          <div id="duplicateTemplateError" class="form-error" hidden></div>
+          <div class="form-grid">
+            <label>Empresa
+              <select id="duplicateTemplateCompany" required></select>
+            </label>
+            <label>Condominio
+              <select id="duplicateTemplateCondominium" required></select>
+            </label>
+            <label class="span-2">Nombre de la copia
+              <input id="duplicateTemplateName" type="text" maxlength="150" />
+            </label>
+          </div>
+          <div class="confirm-actions duplicate-template-actions">
+            <button id="duplicateTemplateCancelButton" class="ghost-action" type="button">Cancelar</button>
+            <button class="duplicate-template-submit" type="submit">
+              <svg aria-hidden="true"><use href="#icon-copy"></use></svg>
+              <span>Duplicar plantilla</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden>
       <strong id="toastTitle">Operacion completada</strong>
       <span id="toastMessage">Los cambios se guardaron correctamente.</span>
@@ -822,6 +879,8 @@
       <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></symbol>
       <symbol id="icon-pencil" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></symbol>
       <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></symbol>
+      <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></symbol>
+      <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></symbol>
       <symbol id="icon-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path></symbol>
       <symbol id="icon-log-out" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18h-6"></path></symbol>
       <symbol id="icon-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="8" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="15" width="7" height="6" rx="1"></rect></symbol>
@@ -846,6 +905,6 @@
       <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path></symbol>
     </svg>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/static/js/backoffice.js?v=20260706-10"></script>
+    <script src="/static/js/backoffice.js?v=20260707-06"></script>
   </body>
 </html>

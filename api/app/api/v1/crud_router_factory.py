@@ -12,7 +12,22 @@ from tortoise.models import Model
 from pydantic import BaseModel
 
 from app.core.auth.dependencies import require_access_token, require_komite_employee, user_is_komite_employee
-from app.models.entities import Communication, Condominium, Incident, Inspection, Report, Task
+from app.models.entities import (
+    Communication,
+    Condominium,
+    CondominiumInspectionItem,
+    CondominiumInspectionTemplate,
+    Incident,
+    Inspection,
+    InspectionTemplate,
+    InspectionTemplateItem,
+    InspectionTemplateSection,
+    OperationalEventExecution,
+    OperationalWorkCalendar,
+    PlannedOperationalEvent,
+    Report,
+    Task,
+)
 from app.services.service_factory import service_factory
 
 
@@ -95,6 +110,14 @@ async def _derive_company_id(data: dict[str, Any]) -> Any:
         ("inspection_id", Inspection),
         ("report_id", Report),
         ("communication_id", Communication),
+        ("template_id", InspectionTemplate),
+        ("section_id", InspectionTemplateSection),
+        ("base_item_id", InspectionTemplateItem),
+        ("condominium_template_id", CondominiumInspectionTemplate),
+        ("condominium_template_item_id", CondominiumInspectionItem),
+        ("calendar_id", OperationalWorkCalendar),
+        ("event_id", PlannedOperationalEvent),
+        ("execution_id", OperationalEventExecution),
     )
     for field_name, parent_model in parent_lookups:
         if data.get(field_name):

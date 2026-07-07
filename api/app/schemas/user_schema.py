@@ -32,6 +32,7 @@ class UserCreate(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=40)
     company_id: Optional[UUID] = None
     company_profile: Optional[str] = Field(default=None, max_length=60)
+    organization_position: Optional[str] = Field(default=None, max_length=120)
     status: str = Field(default="active", max_length=30)
     condominium_id: Optional[UUID] = None
     role_code: Optional[str] = Field(default=None, max_length=60)
@@ -45,6 +46,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=40)
     company_id: Optional[UUID] = None
     company_profile: Optional[str] = Field(default=None, max_length=60)
+    organization_position: Optional[str] = Field(default=None, max_length=120)
     status: Optional[str] = Field(default=None, max_length=30)
     condominium_id: Optional[UUID] = None
     role_code: Optional[str] = Field(default=None, max_length=60)
@@ -59,6 +61,7 @@ class UserOut(BaseModel):
     phone: Optional[str] = None
     status: str
     company_profile: Optional[str] = None
+    organization_position: Optional[str] = None
     condominium_id: Optional[UUID] = None
     role_code: Optional[str] = None
     memberships: list[UserMembershipOut] = Field(default_factory=list)

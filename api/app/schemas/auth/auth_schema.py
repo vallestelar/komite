@@ -35,6 +35,7 @@ class UserLoginResponse(BaseModel):
     email: str
     full_name: str
     company_profile: Optional[str] = None
+    organization_position: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

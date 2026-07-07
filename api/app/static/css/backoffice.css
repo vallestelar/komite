@@ -1021,6 +1021,40 @@ tbody tr:hover {
   grid-column: auto;
 }
 
+.operational-staff-row {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.75fr) auto auto;
+}
+
+.checkbox-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  font-weight: 700;
+}
+
+.checkbox-line input {
+  width: 16px;
+  height: 16px;
+}
+
+.readonly-value {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eef6ff;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.readonly-value.muted-badge {
+  background: #f3f6f9;
+  color: var(--muted);
+}
+
 .membership-remove {
   min-height: 42px;
   background: #b42318;

@@ -71,6 +71,7 @@ async def _user_out(user: User) -> UserOut:
         phone=user.phone,
         status=user.status,
         company_profile=user.company_profile,
+        organization_position=user.organization_position,
         condominium_id=first_membership.condominium_id if first_membership else None,
         role_code=first_membership.role.code if first_membership else None,
         memberships=[await _membership_out(membership) for membership in memberships],
@@ -193,6 +194,7 @@ async def create_user(payload: UserCreate, request: Request) -> UserCreatedOut:
             phone=payload.phone,
             status=payload.status,
             company_profile=payload.company_profile,
+            organization_position=payload.organization_position,
         )
     except IntegrityError:
         raise HTTPException(
@@ -223,6 +225,7 @@ async def list_users(
             Q(email__icontains=q)
             | Q(full_name__icontains=q)
             | Q(company_profile__icontains=q)
+            | Q(organization_position__icontains=q)
         )
 
     if order_by:

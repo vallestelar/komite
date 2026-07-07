@@ -23,6 +23,7 @@ const state = {
   unitContacts: [],
   roles: [],
   usersLookup: [],
+  operationalStaff: [],
   edifitoNeighborsPreview: null,
   comunidadFelizNeighborsPreview: null,
   companyReturnContext: null,
@@ -199,7 +200,7 @@ const resources = {
   users: {
     title: "Usuarios",
     endpoint: "/api/v1/users/",
-    columns: ["company_id", "email", "full_name", "company_profile", "role_code", "status"],
+    columns: ["company_id", "email", "full_name", "company_profile", "organization_position", "role_code", "status"],
   },
   roles: {
     title: "Roles",
@@ -250,6 +251,7 @@ const columnLabels = {
   finished_at: "Fin",
   full_name: "Nombre completo",
   company_profile: "Perfil Portal Administrador",
+  organization_position: "Puesto en la organizacion",
   role_code: "Rol",
   scope: "Ámbito",
   is_system: "Sistema",
@@ -1341,20 +1343,22 @@ function populateTicketCondominiumFilter() {
 }
 
 async function ensureUserLookupsLoaded() {
-  const [companies, condominiums, roles, units, users, unitContacts] = await Promise.all([
-    apiFetch("/api/v1/companies/?page=1&page_size=200"),
-    apiFetch("/api/v1/condominiums/?page=1&page_size=200"),
+  const [companies, condominiums, roles, units, users, unitContacts, operationalStaff] = await Promise.all([
+    fetchAllPages("/api/v1/companies/"),
+    fetchAllPages("/api/v1/condominiums/"),
     apiFetch("/api/v1/roles/?page=1&page_size=200"),
-    apiFetch("/api/v1/units/?page=1&page_size=200"),
-    apiFetch("/api/v1/users/?page=1&page_size=200"),
-    apiFetch("/api/v1/unit-contacts/?page=1&page_size=200"),
+    fetchAllPages("/api/v1/units/"),
+    fetchAllPages("/api/v1/users/"),
+    fetchAllPages("/api/v1/unit-contacts/"),
+    fetchAllPages("/api/v1/condominium-operational-staff/"),
   ]);
-  state.companies = companies.items || [];
-  state.condominiums = condominiums.items || [];
+  state.companies = Array.isArray(companies) ? companies : companies.items || [];
+  state.condominiums = Array.isArray(condominiums) ? condominiums : condominiums.items || [];
   state.roles = (roles.items || []).filter((role) => ["vecino", "comite", "supervisor", "conserje"].includes(role.code));
-  state.units = units.items || [];
-  state.usersLookup = users.items || [];
-  state.unitContacts = unitContacts.items || [];
+  state.units = Array.isArray(units) ? units : units.items || [];
+  state.usersLookup = Array.isArray(users) ? users : users.items || [];
+  state.unitContacts = Array.isArray(unitContacts) ? unitContacts : unitContacts.items || [];
+  state.operationalStaff = Array.isArray(operationalStaff) ? operationalStaff : operationalStaff.items || [];
 }
 
 async function openGenericForm(id = null) {
@@ -1593,7 +1597,7 @@ function capitalize(value) {
 async function openCondominiumForm(id = null) {
   try {
     $("#condominiumFormError").hidden = true;
-    await ensureCompaniesLoaded();
+    await ensureUserLookupsLoaded();
     if (!state.companies.length) {
       throw new Error("Antes de crear un condominio debes crear al menos una empresa.");
     }
@@ -1615,6 +1619,7 @@ async function openCompanyForm(id = null, returnContext = null) {
   $("#companyFormError").hidden = true;
   state.companyReturnContext = returnContext;
   $("#companyReturnView").value = returnContext || "";
+  await ensureUserLookupsLoaded();
 
   const item = id ? state.currentItems.find((entry) => entry.id === id) || (await apiFetch(`/api/v1/companies/${id}`)) : null;
   $("#viewTitle").textContent = item ? "Editar empresa" : "Nueva empresa";
@@ -1634,6 +1639,25 @@ function fillCompanyForm(item) {
   $("#companyPhone").value = item?.phone || "";
   $("#companyStatus").value = item?.status || "active";
   $("#companyMetadata").value = JSON.stringify(item?.metadata || {}, null, 2);
+  renderCompanyOperationalStaffRows(item);
+}
+
+function renderCompanyOperationalStaffRows(company) {
+  const list = $("#companyOperationalStaffRows");
+  list.innerHTML = "";
+
+  if (!company?.id) {
+    addOperationalStaffRow({}, "company");
+    return;
+  }
+
+  const rows = state.operationalStaff.filter((item) => sameId(item.company_id, company.id) && !item.condominium_id);
+  if (!rows.length) {
+    addOperationalStaffRow({}, "company");
+    return;
+  }
+
+  rows.forEach((item) => addOperationalStaffRow(item, "company"));
 }
 
 async function saveCompany(event) {
@@ -1648,6 +1672,7 @@ async function saveCompany(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    await syncCompanyOperationalStaff(saved.id || id);
     state.companies = [];
     await returnFromCompanyForm(saved);
     showToast({
@@ -1754,6 +1779,7 @@ function fillUserForm(item) {
   $("#userPassword").value = "";
   $("#userStatus").value = item?.status || "active";
   $("#userCompanyProfile").value = item?.company_profile || "";
+  $("#userOrganizationPosition").value = item?.organization_position || "";
   renderMembershipRows(item);
 }
 
@@ -1875,6 +1901,7 @@ function buildUserPayload(isUpdate) {
     phone: emptyToNull($("#userPhone").value),
     company_id: emptyToNull($("#userCompany").value),
     company_profile: emptyToNull($("#userCompanyProfile").value),
+    organization_position: emptyToNull($("#userOrganizationPosition").value),
     status: $("#userStatus").value,
   };
 
@@ -1952,6 +1979,8 @@ function fillCompanySelect() {
 }
 
 function fillCondominiumForm(item) {
+  const customRows = item?.id ? state.operationalStaff.filter((entry) => sameId(entry.condominium_id, item.id)) : [];
+  const metadata = item?.metadata || {};
   $("#condominiumId").value = item?.id || "";
   $("#condominiumCompany").value = item?.company_id || state.companies[0]?.id || "";
   $("#condominiumName").value = item?.name || "";
@@ -1964,7 +1993,159 @@ function fillCondominiumForm(item) {
   $("#condominiumUnits").value = item?.units_count ?? 0;
   $("#condominiumIncidentCategories").value = JSON.stringify(item?.incident_categories || [], null, 2);
   $("#condominiumCommunicationRules").value = JSON.stringify(item?.communication_rules || {}, null, 2);
-  $("#condominiumMetadata").value = JSON.stringify(item?.metadata || {}, null, 2);
+  $("#condominiumMetadata").value = JSON.stringify(metadata, null, 2);
+  $("#condominiumOperationalStaffMode").value = metadata.operational_staff_mode || (customRows.length ? "custom" : "company");
+  renderOperationalStaffRows(item);
+}
+
+function renderOperationalStaffRows(condominium) {
+  const list = $("#condominiumOperationalStaffRows");
+  list.innerHTML = "";
+  const mode = $("#condominiumOperationalStaffMode").value || "company";
+  const companyId = $("#condominiumCompany").value;
+  const baseRows = state.operationalStaff.filter((item) => sameId(item.company_id, companyId) && !item.condominium_id);
+
+  if (mode === "company") {
+    $("#addOperationalStaffButton").hidden = true;
+    if (!baseRows.length) {
+      list.innerHTML = `<div class="empty-table">Esta empresa aun no tiene equipo operativo base.</div>`;
+      return;
+    }
+    baseRows.forEach((item) => addOperationalStaffRow({ ...item, id: "" }, "condominium", true));
+    return;
+  }
+
+  $("#addOperationalStaffButton").hidden = false;
+  const rows = condominium?.id
+    ? state.operationalStaff.filter((item) => sameId(item.condominium_id, condominium.id))
+    : [];
+
+  if (!rows.length) {
+    if (baseRows.length) {
+      baseRows.forEach((item) => addOperationalStaffRow({ ...item, id: "" }, "condominium"));
+    } else {
+      addOperationalStaffRow({}, "condominium");
+    }
+    return;
+  }
+
+  rows.forEach((item) => addOperationalStaffRow(item, "condominium"));
+}
+
+function operationalStaffUsersForCompany(companyId) {
+  return state.usersLookup
+    .filter((user) => sameId(user.company_id, companyId) && user.company_profile)
+    .sort((left, right) => String(left.full_name || "").localeCompare(String(right.full_name || "")));
+}
+
+function selectedOperationalStaffUser(row) {
+  const userId = row.querySelector(".staff-user")?.value;
+  return state.usersLookup.find((user) => sameId(user.id, userId)) || null;
+}
+
+function updateOperationalStaffProfile(row) {
+  const user = selectedOperationalStaffUser(row);
+  const profile = user?.company_profile || "";
+  row.querySelector(".staff-profile").value = profile;
+  row.querySelector(".staff-profile-display").textContent = roleLabels[profile] || "Sin perfil";
+  row.querySelector(".staff-profile-display").classList.toggle("muted-badge", !profile);
+  if (row.dataset.staffTarget === "company" || row.dataset.staffReadOnly === "true") {
+    const fallbackResponsibility = row.querySelector(".staff-responsibility")?.value || "";
+    const position = user?.organization_position || fallbackResponsibility;
+    row.querySelector(".staff-responsibility").value = position;
+    row.querySelector(".staff-responsibility-display").textContent = position || (row.dataset.staffTarget === "company" ? "Sin puesto" : "Sin responsabilidad");
+    row.querySelector(".staff-responsibility-display").classList.toggle("muted-badge", !position);
+  }
+}
+
+function addOperationalStaffRow(item = {}, target = "condominium", readOnly = false) {
+  const companyId = target === "company" ? $("#companyId").value : $("#condominiumCompany").value;
+  const containerSelector = target === "company" ? "#companyOperationalStaffRows" : "#condominiumOperationalStaffRows";
+  const users = operationalStaffUsersForCompany(companyId);
+  const row = document.createElement("div");
+  row.className = "membership-row operational-staff-row";
+  row.dataset.staffId = item.id || "";
+  row.dataset.staffTarget = target;
+  row.dataset.staffReadOnly = readOnly ? "true" : "false";
+  row.innerHTML = `
+    <label>
+      Usuario
+      <select class="staff-user" required ${readOnly ? "disabled" : ""}>
+        <option value="">Selecciona usuario</option>
+        ${users.map((user) => `<option value="${escapeHtml(user.id)}" data-profile="${escapeHtml(user.company_profile || "")}">${escapeHtml(user.full_name || user.email)}</option>`).join("")}
+      </select>
+    </label>
+    <label>
+      Perfil
+      <input class="staff-profile" type="hidden" />
+      <span class="readonly-value staff-profile-display">Sin perfil</span>
+    </label>
+    <label>
+      ${target === "company" ? "Puesto" : "Responsabilidad"}
+      ${target === "company" || readOnly
+        ? `<input class="staff-responsibility" type="hidden" /><span class="readonly-value staff-responsibility-display">${target === "company" ? "Sin puesto" : "Sin responsabilidad"}</span>`
+        : `<input class="staff-responsibility" maxlength="120" placeholder="Ej. Zona norte" ${readOnly ? "disabled" : ""} />`}
+    </label>
+    <label>
+      Estado
+      <select class="staff-status" ${readOnly ? "disabled" : ""}>
+        <option value="active">Activo</option>
+        <option value="inactive">Inactivo</option>
+      </select>
+    </label>
+    <label class="checkbox-line">
+      <input class="staff-primary" type="checkbox" ${readOnly ? "disabled" : ""} />
+      Principal
+    </label>
+    <button class="staff-remove icon-button danger-action" type="button" ${readOnly ? "hidden" : ""}>
+      <svg aria-hidden="true"><use href="#icon-trash"></use></svg>
+      <span>Quitar</span>
+    </button>
+  `;
+
+  const userSelect = row.querySelector(".staff-user");
+  const profileSelect = row.querySelector(".staff-profile");
+  userSelect.value = item.user_id || "";
+  row.querySelector(".staff-responsibility").value = item.responsibility || "";
+  const responsibilityDisplay = row.querySelector(".staff-responsibility-display");
+  if (responsibilityDisplay && row.dataset.staffTarget !== "company") {
+    const responsibility = item.responsibility || "";
+    responsibilityDisplay.textContent = responsibility || "Sin responsabilidad";
+    responsibilityDisplay.classList.toggle("muted-badge", !responsibility);
+  }
+  row.querySelector(".staff-status").value = item.status || "active";
+  row.querySelector(".staff-primary").checked = Boolean(item.is_primary);
+  updateOperationalStaffProfile(row);
+
+  userSelect.addEventListener("change", () => {
+    updateOperationalStaffProfile(row);
+  });
+
+  row.querySelector(".staff-remove").addEventListener("click", () => {
+    row.remove();
+    if (!$$(`${containerSelector} .operational-staff-row`).length) {
+      addOperationalStaffRow({}, target);
+    }
+  });
+
+  $(containerSelector).appendChild(row);
+}
+
+function refreshOperationalStaffUserOptions(target = "condominium") {
+  const containerSelector = target === "company" ? "#companyOperationalStaffRows" : "#condominiumOperationalStaffRows";
+  const currentRows = $$(`${containerSelector} .operational-staff-row`).map((row) => ({
+    id: row.dataset.staffId || "",
+    user_id: row.querySelector(".staff-user").value,
+    responsibility: row.querySelector(".staff-responsibility").value,
+    status: row.querySelector(".staff-status").value,
+    is_primary: row.querySelector(".staff-primary").checked,
+  }));
+  $(containerSelector).innerHTML = "";
+  if (!currentRows.length) {
+    addOperationalStaffRow({}, target);
+    return;
+  }
+  currentRows.forEach((row) => addOperationalStaffRow(row, target));
 }
 
 async function saveCondominium(event) {
@@ -1974,11 +2155,12 @@ async function saveCondominium(event) {
   try {
     const id = $("#condominiumId").value;
     const payload = buildCondominiumPayload();
-    await apiFetch(id ? `/api/v1/condominiums/${id}` : "/api/v1/condominiums/", {
+    const savedCondominium = await apiFetch(id ? `/api/v1/condominiums/${id}` : "/api/v1/condominiums/", {
       method: id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    await syncOperationalStaff(savedCondominium.id || id, savedCondominium.company_id || payload.company_id);
     await returnToCondominiumList();
     showToast({
       title: id ? "Condominio actualizado" : "Condominio creado",
@@ -1991,6 +2173,8 @@ async function saveCondominium(event) {
 }
 
 function buildCondominiumPayload() {
+  const metadata = parseJsonField("#condominiumMetadata", {});
+  metadata.operational_staff_mode = $("#condominiumOperationalStaffMode").value || "company";
   return {
     company_id: $("#condominiumCompany").value,
     name: $("#condominiumName").value.trim(),
@@ -2003,8 +2187,82 @@ function buildCondominiumPayload() {
     status: $("#condominiumStatus").value,
     incident_categories: parseJsonField("#condominiumIncidentCategories", []),
     communication_rules: parseJsonField("#condominiumCommunicationRules", {}),
-    metadata: parseJsonField("#condominiumMetadata", {}),
+    metadata,
   };
+}
+
+function buildOperationalStaffPayloads({ companyId, condominiumId = null, target = "condominium" }) {
+  const containerSelector = target === "company" ? "#companyOperationalStaffRows" : "#condominiumOperationalStaffRows";
+  return $$(`${containerSelector} .operational-staff-row`)
+    .map((row) => ({
+      id: row.dataset.staffId || "",
+      company_id: companyId,
+      condominium_id: condominiumId,
+      user_id: emptyToNull(row.querySelector(".staff-user").value),
+      portal_profile: selectedOperationalStaffUser(row)?.company_profile || null,
+      responsibility: target === "company"
+        ? emptyToNull(selectedOperationalStaffUser(row)?.organization_position || "")
+        : emptyToNull(row.querySelector(".staff-responsibility").value),
+      is_primary: row.querySelector(".staff-primary").checked,
+      status: row.querySelector(".staff-status").value || "active",
+      metadata: {},
+    }))
+    .filter((item) => item.user_id && item.portal_profile);
+}
+
+async function syncOperationalStaff(condominiumId, companyId) {
+  const mode = $("#condominiumOperationalStaffMode").value || "company";
+  const existing = state.operationalStaff.filter((item) => sameId(item.condominium_id, condominiumId));
+  if (mode === "company") {
+    for (const item of existing) {
+      await apiFetch(`/api/v1/condominium-operational-staff/${item.id}`, { method: "DELETE" });
+    }
+    return;
+  }
+
+  const desired = buildOperationalStaffPayloads({ companyId, condominiumId, target: "condominium" });
+  const desiredIds = new Set(desired.map((item) => item.id).filter(Boolean));
+
+  for (const item of existing) {
+    if (!desiredIds.has(String(item.id))) {
+      await apiFetch(`/api/v1/condominium-operational-staff/${item.id}`, { method: "DELETE" });
+    }
+  }
+
+  for (const item of desired) {
+    const id = item.id;
+    const payload = { ...item };
+    delete payload.id;
+    await apiFetch(id ? `/api/v1/condominium-operational-staff/${id}` : "/api/v1/condominium-operational-staff/", {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+}
+
+async function syncCompanyOperationalStaff(companyId) {
+  if (!companyId) return;
+  const desired = buildOperationalStaffPayloads({ companyId, condominiumId: null, target: "company" });
+  const existing = state.operationalStaff.filter((item) => sameId(item.company_id, companyId) && !item.condominium_id);
+  const desiredIds = new Set(desired.map((item) => item.id).filter(Boolean));
+
+  for (const item of existing) {
+    if (!desiredIds.has(String(item.id))) {
+      await apiFetch(`/api/v1/condominium-operational-staff/${item.id}`, { method: "DELETE" });
+    }
+  }
+
+  for (const item of desired) {
+    const id = item.id;
+    const payload = { ...item };
+    delete payload.id;
+    await apiFetch(id ? `/api/v1/condominium-operational-staff/${id}` : "/api/v1/condominium-operational-staff/", {
+      method: id ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
 }
 
 function parseJsonField(selector, fallback) {
@@ -2450,9 +2708,13 @@ $("#quickCompanyButton").addEventListener("click", () => openCompanyForm(null, "
 $("#cancelCompanyButton").addEventListener("click", returnFromCompanyForm);
 $("#companyForm").addEventListener("submit", saveCompany);
 $("#deleteCompanyButton").addEventListener("click", deleteCurrentCompany);
+$("#addCompanyOperationalStaffButton").addEventListener("click", () => addOperationalStaffRow({}, "company"));
 $("#cancelCondominiumButton").addEventListener("click", returnToCondominiumList);
 $("#condominiumForm").addEventListener("submit", saveCondominium);
 $("#deleteCondominiumButton").addEventListener("click", deleteCurrentCondominium);
+$("#addOperationalStaffButton").addEventListener("click", () => addOperationalStaffRow());
+$("#condominiumOperationalStaffMode").addEventListener("change", () => renderOperationalStaffRows({ id: $("#condominiumId").value }));
+$("#condominiumCompany").addEventListener("change", () => renderOperationalStaffRows({ id: $("#condominiumId").value }));
 $("#cancelUserButton").addEventListener("click", returnToUserList);
 $("#userForm").addEventListener("submit", saveUser);
 $("#addMembershipButton").addEventListener("click", () => addMembershipRow());

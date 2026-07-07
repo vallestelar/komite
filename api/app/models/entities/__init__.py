@@ -1,5 +1,6 @@
 from app.models.entities.company import Company
 from app.models.entities.condominium import Condominium
+from app.models.entities.condominium_operational_staff import CondominiumOperationalStaff
 from app.models.entities.building import Building
 from app.models.entities.unit import Unit
 from app.models.entities.unit_contact import UnitContact
@@ -29,6 +30,7 @@ from app.models.entities.support_ticket import SupportTicket
 __all__ = [
     "Company",
     "Condominium",
+    "CondominiumOperationalStaff",
     "Building",
     "Unit",
     "UnitContact",

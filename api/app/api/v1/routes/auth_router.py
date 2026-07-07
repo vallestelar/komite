@@ -79,6 +79,7 @@ async def _build_token_response(user, refresh_token: str | None = None) -> Token
         email=user.email,
         full_name=user.full_name,
         company_profile=user.company_profile,
+        organization_position=user.organization_position,
     )
 
     company_payload = _company_payload(company)
@@ -90,6 +91,7 @@ async def _build_token_response(user, refresh_token: str | None = None) -> Token
             "email": user.email,
             "full_name": user.full_name,
             "company_profile": user.company_profile,
+            "organization_position": user.organization_position,
             "company": company_payload.model_dump() if company_payload else None,
             "condominiums": token_condominiums,
         },

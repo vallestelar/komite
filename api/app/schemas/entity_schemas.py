@@ -142,6 +142,54 @@ class CondominiumPage(BaseModel):
     meta: PageMeta
 
 
+class CondominiumOperationalStaffCreate(BaseModel):
+    company_id: UUID
+    condominium_id: Optional[UUID] = None
+    user_id: UUID
+    portal_profile: str = Field(..., max_length=60)
+    responsibility: Optional[str] = Field(default=None, max_length=120)
+    is_primary: bool = False
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: str = Field(default="active", max_length=30)
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumOperationalStaffUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
+    portal_profile: Optional[str] = Field(default=None, max_length=60)
+    responsibility: Optional[str] = Field(default=None, max_length=120)
+    is_primary: Optional[bool] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CondominiumOperationalStaffOut(AuditOut):
+    id: UUID
+    company_id: UUID
+    condominium_id: Optional[UUID] = None
+    user_id: UUID
+    portal_profile: str
+    responsibility: Optional[str] = None
+    is_primary: bool
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: str
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumOperationalStaffPage(BaseModel):
+    items: list[CondominiumOperationalStaffOut]
+    meta: PageMeta
+
+
 class BuildingCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: UUID

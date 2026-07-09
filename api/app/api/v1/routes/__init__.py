@@ -7,6 +7,7 @@ from .entities_router import entity_routers
 from .inspection_templates_router import router as inspection_templates_router
 from .portal_maintenance_router import router as portal_maintenance_router
 from .portal_neighbors_router import router as portal_neighbors_router
+from .portal_operational_plan_router import router as portal_operational_plan_router
 from .portal_team_router import router as portal_team_router
 from .user_router import router as user_router
 
@@ -19,6 +20,7 @@ all_routers = [
     inspection_templates_router,
     portal_maintenance_router,
     portal_neighbors_router,
+    portal_operational_plan_router,
     portal_team_router,
     user_router,
     *entity_routers,

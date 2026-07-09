@@ -1,10 +1,17 @@
+from calendar import monthrange
+from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.core.auth.dependencies import require_access_token
-from app.models.entities import CondominiumInspectionItem, CondominiumInspectionTemplate
+from app.models.entities import (
+    CondominiumInspectionItem,
+    CondominiumInspectionTemplate,
+    OperationalWorkCalendar,
+    PlannedOperationalEvent,
+)
 
 
 router = APIRouter(
@@ -75,6 +82,20 @@ class PortalMaintenanceItemCreate(BaseModel):
     status: str = Field(default="active", max_length=30)
 
 
+class PortalMaintenanceGenerateRequest(BaseModel):
+    condominium_template_id: UUID
+    year: int = Field(..., ge=2020, le=2100)
+    month: int | None = Field(default=None, ge=1, le=12)
+    overwrite_existing: bool = False
+
+
+class PortalMaintenanceGenerateResponse(BaseModel):
+    created: int
+    skipped_existing: int
+    skipped_inactive: int
+    period_label: str
+
+
 def _template_out(template: CondominiumInspectionTemplate) -> PortalMaintenanceTemplateOut:
     return PortalMaintenanceTemplateOut(
         id=template.id,
@@ -118,6 +139,59 @@ async def _get_template_or_404(
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plantilla del condominio no encontrada")
     return template
+
+
+def _normalize_months(value: list) -> set[int]:
+    months: set[int] = set()
+    for item in value or []:
+        try:
+            month = int(item)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= month <= 12:
+            months.add(month)
+    return months
+
+
+def _next_business_day(value: date) -> date:
+    while value.weekday() >= 5:
+        value += timedelta(days=1)
+    return value
+
+
+def _dates_for_item(item: CondominiumInspectionItem, year: int, month: int) -> list[date]:
+    periodicity = item.periodicity or "monthly"
+    _, days_in_month = monthrange(year, month)
+
+    if periodicity == "daily":
+        return [date(year, month, day) for day in range(1, days_in_month + 1) if date(year, month, day).weekday() < 5]
+
+    if periodicity == "weekly":
+        first = _next_business_day(date(year, month, 1))
+        monday = first + timedelta(days=(0 - first.weekday()) % 7)
+        result: list[date] = []
+        current = monday
+        while current.month == month:
+            result.append(current)
+            current += timedelta(days=7)
+        return result or [first]
+
+    if periodicity == "biweekly":
+        return sorted({_next_business_day(date(year, month, 1)), _next_business_day(date(year, month, 15))})
+
+    return [_next_business_day(date(year, month, 1))]
+
+
+async def _active_calendar(request: Request) -> OperationalWorkCalendar | None:
+    return await (
+        OperationalWorkCalendar.filter(
+            company_id=request.state.company_id,
+            condominium_id=request.state.condominium_id,
+            status="active",
+        )
+        .order_by("-effective_from", "name")
+        .first()
+    )
 
 
 @router.get("/", response_model=PortalMaintenanceResponse)
@@ -209,6 +283,98 @@ async def update_maintenance_item(
     item.updated_by = getattr(request.state.user, "email", None) or str(request.state.user_id)
     await item.save()
     return _item_out(item)
+
+
+@router.post("/generate", response_model=PortalMaintenanceGenerateResponse)
+async def generate_maintenance_plan(
+    payload: PortalMaintenanceGenerateRequest,
+    request: Request,
+) -> PortalMaintenanceGenerateResponse:
+    template = await _get_template_or_404(payload.condominium_template_id, request)
+    calendar = await _active_calendar(request)
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    items = await CondominiumInspectionItem.filter(
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        condominium_template_id=template.id,
+    )
+    months = [payload.month] if payload.month else list(range(1, 13))
+    created = 0
+    skipped_existing = 0
+    skipped_inactive = 0
+
+    for item in items:
+        if item.status != "active":
+            skipped_inactive += 1
+            continue
+
+        planned_months = _normalize_months(item.planned_months)
+        item_months = [month for month in months if not planned_months or month in planned_months]
+        for month in item_months:
+            for planned_date in _dates_for_item(item, payload.year, month):
+                if planned_date.year != payload.year or planned_date.month != month:
+                    continue
+
+                existing = await PlannedOperationalEvent.get_or_none(
+                    company_id=request.state.company_id,
+                    condominium_id=request.state.condominium_id,
+                    condominium_template_item_id=item.id,
+                    planned_date=planned_date,
+                    source_type="maintenance_template",
+                )
+                if existing and not payload.overwrite_existing:
+                    skipped_existing += 1
+                    continue
+                if existing and payload.overwrite_existing:
+                    existing.title = item.task_name
+                    existing.description = item.instructions
+                    existing.assigned_profile = item.responsible_profile
+                    existing.priority = item.priority
+                    existing.status = "pending"
+                    existing.calendar_id = calendar.id if calendar else None
+                    existing.metadata = {
+                        **(existing.metadata or {}),
+                        "section_name": item.section_name,
+                        "asset_name": item.asset_name,
+                        "template_id": str(template.id),
+                        "regenerated_from_portal": True,
+                    }
+                    existing.updated_by = actor
+                    await existing.save()
+                    continue
+
+                await PlannedOperationalEvent.create(
+                    company_id=request.state.company_id,
+                    condominium_id=request.state.condominium_id,
+                    condominium_template_item_id=item.id,
+                    calendar_id=calendar.id if calendar else None,
+                    title=item.task_name,
+                    description=item.instructions,
+                    planned_date=planned_date,
+                    assigned_profile=item.responsible_profile,
+                    priority=item.priority,
+                    status="pending",
+                    source_type="maintenance_template",
+                    source_id=template.id,
+                    metadata={
+                        "section_name": item.section_name,
+                        "asset_name": item.asset_name,
+                        "template_id": str(template.id),
+                        "template_name": template.name,
+                        "generated_from_portal": True,
+                    },
+                    created_by=actor,
+                    updated_by=actor,
+                )
+                created += 1
+
+    period_label = f"{payload.month:02d}/{payload.year}" if payload.month else str(payload.year)
+    return PortalMaintenanceGenerateResponse(
+        created=created,
+        skipped_existing=skipped_existing,
+        skipped_inactive=skipped_inactive,
+        period_label=period_label,
+    )
 
 
 @router.post("/items/{item_id}/deactivate", response_model=PortalMaintenanceItemOut)

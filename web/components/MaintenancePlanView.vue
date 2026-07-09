@@ -31,6 +31,13 @@ type MaintenanceResponse = {
   items: MaintenanceItem[];
 };
 
+type GenerateResponse = {
+  created: number;
+  skipped_existing: number;
+  skipped_inactive: number;
+  period_label: string;
+};
+
 type ItemForm = {
   id: string;
   section_name: string;
@@ -57,8 +64,12 @@ const statusFilter = ref("");
 const errorMessage = ref("");
 const toastMessage = ref("");
 const loading = ref(false);
+const generating = ref(false);
 const editMode = ref(false);
 const formMode = ref<"create" | "edit">("edit");
+const generationYear = ref(new Date().getFullYear());
+const generationMonth = ref("");
+const overwriteExisting = ref(false);
 
 const itemForm = reactive<ItemForm>({
   id: "",
@@ -130,6 +141,10 @@ const activeItems = computed(() => items.value.filter((item) => item.status === 
 const inactiveItems = computed(() => items.value.filter((item) => item.status !== "active"));
 const sectionCount = computed(() => new Set(items.value.map((item) => item.section_name || "Sin sección")).size);
 const formTitle = computed(() => formMode.value === "create" ? "Nueva tarea" : "Editar tarea");
+const generationYears = computed(() => {
+  const current = new Date().getFullYear();
+  return [current - 1, current, current + 1, current + 2];
+});
 
 const filteredItems = computed(() => {
   const normalizedSearch = normalize(search.value);
@@ -261,6 +276,33 @@ const saveItem = async () => {
   }
 };
 
+const generatePlan = async () => {
+  if (!selectedTemplateId.value) return;
+  generating.value = true;
+  errorMessage.value = "";
+  try {
+    const payload = {
+      condominium_template_id: selectedTemplateId.value,
+      year: Number(generationYear.value),
+      month: generationMonth.value ? Number(generationMonth.value) : null,
+      overwrite_existing: overwriteExisting.value,
+    };
+    const result = await request<GenerateResponse>("/api/v1/portal/maintenance/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    toastMessage.value = `Planificación ${result.period_label}: ${result.created} eventos creados, ${result.skipped_existing} ya existentes.`;
+    window.setTimeout(() => {
+      toastMessage.value = "";
+    }, 4200);
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    generating.value = false;
+  }
+};
+
 const periodicityLabel = (value: string | null | undefined) => periodicityOptions.find(([key]) => key === value)?.[1] || value || "";
 const profileLabel = (value: string | null | undefined) => profileOptions.find(([key]) => key === value)?.[1] || value || "Sin responsable";
 const priorityLabel = (value: string | null | undefined) => priorityOptions.find(([key]) => key === value)?.[1] || value || "";
@@ -359,6 +401,35 @@ onMounted(loadPlan);
       </button>
     </div>
 
+    <div v-if="templates.length" class="maintenance-generator">
+      <div>
+        <p class="eyebrow">Planificación</p>
+        <h3>Generar eventos operativos</h3>
+      </div>
+      <label>
+        Año
+        <select v-model.number="generationYear">
+          <option v-for="year in generationYears" :key="year" :value="year">{{ year }}</option>
+        </select>
+      </label>
+      <label>
+        Mes
+        <select v-model="generationMonth">
+          <option value="">Todo el año</option>
+          <option v-for="[month, label] in monthOptions" :key="month" :value="String(month)">{{ label }}</option>
+        </select>
+      </label>
+      <label class="switch-field maintenance-switch">
+        <input v-model="overwriteExisting" type="checkbox" />
+        <span class="switch-slider" aria-hidden="true"></span>
+        <span>Sobrescribir existentes</span>
+      </label>
+      <button class="button navy" type="button" :disabled="generating || !selectedTemplateId" @click="generatePlan">
+        <svg class="icon" aria-hidden="true"><use href="#icon-calendar" /></svg>
+        <span>{{ generating ? "Generando..." : "Generar planificación" }}</span>
+      </button>
+    </div>
+
     <div v-if="!templates.length && !errorMessage" class="committee-empty">
       <span class="committee-avatar large" aria-hidden="true">
         <svg class="icon"><use href="#icon-clipboard" /></svg>
@@ -425,7 +496,7 @@ onMounted(loadPlan);
       <aside v-if="editMode" class="maintenance-editor">
         <div class="entity-header compact-header">
           <div>
-            <p class="eyebrow">{{ formMode === "create" ? "Nueva mantención" : "Editar item" }}</p>
+            <p class="eyebrow">{{ formMode === "create" ? "Nueva mantención" : "Editar ítem" }}</p>
             <h2>{{ formTitle }}</h2>
           </div>
           <button class="button ghost icon-only" type="button" title="Cerrar" @click="closeEdit">

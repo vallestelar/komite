@@ -46,6 +46,7 @@ const menuGroups: MenuGroup[] = [
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
       { id: "maintenance", label: "Plan de mantenciones", icon: "calendar", view: "maintenance" },
+      { id: "operational-plan", label: "Agenda operativa", icon: "calendar", view: "operational-plan" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
       { id: "files", label: "Archivos", icon: "file-text", view: "files" },
     ],
@@ -226,6 +227,7 @@ onMounted(() => {
       <TeamView v-else-if="currentView === 'team'" :key="`team-${viewRefreshKey}`" />
       <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" @open-neighbor="openNeighborFromCommittee" />
       <MaintenancePlanView v-else-if="currentView === 'maintenance'" :key="`maintenance-${activeCondominiumId}-${viewRefreshKey}`" />
+      <OperationalPlanView v-else-if="currentView === 'operational-plan'" :key="`operational-plan-${activeCondominiumId}-${viewRefreshKey}`" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
       <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />

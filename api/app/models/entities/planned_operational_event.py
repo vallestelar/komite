@@ -21,10 +21,11 @@ class PlannedOperationalEvent(TimestampAuditMixin):
     assigned_profile = fields.CharField(max_length=60, null=True)
     priority = fields.CharField(max_length=30, default="medium")
     status = fields.CharField(max_length=40, default="pending")
+    event_type = fields.CharField(max_length=40, default="task")
     source_type = fields.CharField(max_length=60, null=True)
     source_id = fields.UUIDField(null=True)
     metadata = fields.JSONField(default=dict)
 
     class Meta:
         table = "planned_operational_events"
-        indexes = (("company_id",), ("condominium_id", "status"), ("condominium_template_item_id",), ("calendar_id",), ("assigned_user_id",), ("planned_date",), ("priority",))
+        indexes = (("company_id",), ("condominium_id", "status"), ("condominium_id", "event_type"), ("condominium_template_item_id",), ("calendar_id",), ("assigned_user_id",), ("planned_date",), ("priority",))

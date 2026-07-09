@@ -10,6 +10,7 @@ type OperationalEvent = {
   assigned_user_name?: string | null;
   priority: string;
   status: string;
+  event_type?: string | null;
   source_type?: string | null;
 };
 
@@ -96,7 +97,7 @@ const loadIncidents = async () => {
     if (selectedMonth.value) params.set("month", selectedMonth.value);
     if (selectedStatus.value) params.set("status", selectedStatus.value);
     const data = await request<OperationalPlanResponse>(`/api/v1/portal/operational-plan/?${params}`);
-    incidents.value = (data.items || []).filter((item) => item.source_type === "unplanned_incident");
+    incidents.value = (data.items || []).filter((item) => item.event_type ? item.event_type === "incident" : item.source_type === "unplanned_incident");
     staff.value = data.staff || [];
   } catch (error) {
     incidents.value = [];

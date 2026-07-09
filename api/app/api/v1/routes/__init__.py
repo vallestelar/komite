@@ -5,6 +5,8 @@ from .comunidad_feliz_router import router as comunidad_feliz_router
 from .edifito_router import router as edifito_router
 from .entities_router import entity_routers
 from .inspection_templates_router import router as inspection_templates_router
+from .portal_assemblies_router import router as portal_assemblies_router
+from .portal_inspections_router import router as portal_inspections_router
 from .portal_maintenance_router import router as portal_maintenance_router
 from .portal_neighbors_router import router as portal_neighbors_router
 from .portal_operational_plan_router import router as portal_operational_plan_router
@@ -18,6 +20,8 @@ all_routers = [
     comunidad_feliz_router,
     edifito_router,
     inspection_templates_router,
+    portal_assemblies_router,
+    portal_inspections_router,
     portal_maintenance_router,
     portal_neighbors_router,
     portal_operational_plan_router,

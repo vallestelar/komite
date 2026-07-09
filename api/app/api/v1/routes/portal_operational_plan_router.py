@@ -17,6 +17,9 @@ router = APIRouter(
     dependencies=[Depends(require_access_token(require_condominium=True))],
 )
 
+EVENT_TYPES = {"task", "administrative", "assembly", "meeting", "inspection", "maintenance", "incident"}
+MANUAL_TASK_EVENT_TYPES = {"task", "administrative", "meeting", "inspection", "maintenance"}
+
 
 class PortalOperationalEventOut(BaseModel):
     id: UUID
@@ -33,6 +36,7 @@ class PortalOperationalEventOut(BaseModel):
     assigned_user_email: str | None = None
     priority: str
     status: str
+    event_type: str
     source_type: str | None = None
     section_name: str | None = None
     asset_name: str | None = None
@@ -85,6 +89,7 @@ class PortalOperationalEventUpdateRequest(BaseModel):
     assigned_user_id: UUID | None = None
     priority: str | None = None
     status: str | None = None
+    event_type: str | None = None
 
 
 class PortalOperationalReorderRequest(BaseModel):
@@ -121,6 +126,7 @@ class PortalManualTaskRequest(BaseModel):
     estimated_duration_hours: float | None = None
     assigned_user_id: UUID | None = None
     priority: str = "medium"
+    event_type: str = "task"
 
 
 class PortalManualTaskUpdateRequest(BaseModel):
@@ -132,6 +138,7 @@ class PortalManualTaskUpdateRequest(BaseModel):
     assigned_user_id: UUID | None = None
     priority: str | None = None
     status: str | None = None
+    event_type: str | None = None
 
 
 def _time_to_text(value) -> str | None:
@@ -153,6 +160,26 @@ def _minutes_to_hours(value: int | None) -> float | None:
     if value is None:
         return None
     return round(value / 60, 2)
+
+
+def _normalize_event_type(value: str | None, default: str = "task") -> str:
+    event_type = (value or default).strip().lower()
+    if event_type not in EVENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Tipo de evento no permitido",
+        )
+    return event_type
+
+
+def _normalize_manual_task_type(value: str | None, default: str = "task") -> str:
+    event_type = _normalize_event_type(value, default)
+    if event_type not in MANUAL_TASK_EVENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Tipo de tarea no permitido",
+        )
+    return event_type
 
 
 def _metadata_value(event: PlannedOperationalEvent, key: str) -> str | None:
@@ -186,6 +213,7 @@ def _event_out(event: PlannedOperationalEvent) -> PortalOperationalEventOut:
         assigned_user_email=getattr(assigned_user, "email", None),
         priority=event.priority,
         status=event.status,
+        event_type=event.event_type,
         source_type=event.source_type,
         section_name=_metadata_value(event, "section_name"),
         asset_name=_metadata_value(event, "asset_name"),
@@ -433,6 +461,8 @@ async def update_operational_event(
         event.priority = payload.priority
     if payload.status is not None:
         event.status = payload.status
+    if payload.event_type is not None:
+        event.event_type = _normalize_manual_task_type(payload.event_type, event.event_type)
     if "assigned_user_id" in payload.model_fields_set:
         await _assign_event_user(
             event,
@@ -568,6 +598,7 @@ async def create_unplanned_incident_event(
         estimated_duration_minutes=_hours_to_minutes(payload.estimated_duration_hours),
         priority=payload.priority,
         status="pending",
+        event_type="incident",
         source_type="unplanned_incident",
         metadata={
             "section_name": "Incidencia no programada",
@@ -622,6 +653,8 @@ async def update_manual_task_event(
         event.priority = payload.priority
     if payload.status is not None:
         event.status = payload.status
+    if payload.event_type is not None:
+        event.event_type = _normalize_event_type(payload.event_type, event.event_type)
     if "assigned_user_id" in payload.model_fields_set:
         await _assign_event_user(
             event,
@@ -660,6 +693,7 @@ async def create_manual_task_event(
         estimated_duration_minutes=_hours_to_minutes(payload.estimated_duration_hours),
         priority=payload.priority,
         status="pending",
+        event_type=_normalize_manual_task_type(payload.event_type, "task"),
         source_type="manual_task",
         metadata={
             "section_name": "Tarea manual",

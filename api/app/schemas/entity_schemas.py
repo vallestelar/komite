@@ -1092,6 +1092,7 @@ class PlannedOperationalEventCreate(BaseModel):
     assigned_profile: Optional[str] = Field(default=None, max_length=60)
     priority: str = Field(default="medium", max_length=30)
     status: str = Field(default="pending", max_length=40)
+    event_type: str = Field(default="task", max_length=40)
     source_type: Optional[str] = Field(default=None, max_length=60)
     source_id: Optional[UUID] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -1112,6 +1113,7 @@ class PlannedOperationalEventUpdate(BaseModel):
     assigned_profile: Optional[str] = Field(default=None, max_length=60)
     priority: Optional[str] = Field(default=None, max_length=30)
     status: Optional[str] = Field(default=None, max_length=40)
+    event_type: Optional[str] = Field(default=None, max_length=40)
     source_type: Optional[str] = Field(default=None, max_length=60)
     source_id: Optional[UUID] = None
     metadata: Optional[dict[str, Any]] = None
@@ -1133,6 +1135,7 @@ class PlannedOperationalEventOut(AuditOut):
     assigned_profile: Optional[str] = None
     priority: str
     status: str
+    event_type: str
     source_type: Optional[str] = None
     source_id: Optional[UUID] = None
     metadata: dict[str, Any] = Field(default_factory=dict)

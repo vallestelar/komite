@@ -264,6 +264,20 @@ textarea:focus {
   box-shadow: 0 14px 28px rgba(19, 98, 173, 0.26);
 }
 
+.button.assembly-action {
+  border: 1px solid #cbd5e1;
+  color: var(--navy);
+  background: #e5e7eb;
+  box-shadow: 0 10px 22px rgba(71, 85, 105, 0.12);
+}
+
+.button.assembly-action:hover:not(:disabled) {
+  border-color: #94a3b8;
+  color: var(--navy);
+  background: #d1d5db;
+  box-shadow: 0 14px 28px rgba(71, 85, 105, 0.18);
+}
+
 .button.navy {
   color: var(--white);
   background: var(--navy);
@@ -2535,6 +2549,242 @@ h3 {
   width: min(860px, 100%);
 }
 
+.assembly-modal {
+  display: grid;
+  gap: 16px;
+  width: min(1040px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+
+.assemblies-panel .table-wrap {
+  overflow-x: auto;
+}
+
+.assembly-editor-block {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.section-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading-row h3 {
+  margin-bottom: 3px;
+}
+
+.assembly-list-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.assembly-inline-row,
+.assembly-point-row {
+  display: grid;
+  gap: 8px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--white);
+}
+
+.assembly-inline-row {
+  grid-template-columns: minmax(160px, 1.3fr) minmax(160px, 1fr) minmax(140px, 1fr) 140px auto;
+}
+
+.assembly-point-row {
+  grid-template-columns: minmax(220px, 1.3fr) minmax(160px, 0.8fr) 130px auto;
+}
+
+.assembly-point-row textarea {
+  min-height: 64px;
+}
+
+.inspection-execution-modal {
+  display: grid;
+  gap: 16px;
+  width: min(980px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+
+.inspections-table-card {
+  overflow-x: auto;
+}
+
+.inspections-table {
+  min-width: 1160px;
+  table-layout: fixed;
+}
+
+.inspections-table th,
+.inspections-table td {
+  padding: 13px 14px;
+  vertical-align: middle;
+}
+
+.inspection-col-date {
+  width: 82px;
+}
+
+.inspection-col-main {
+  width: 34%;
+}
+
+.inspection-col-zone {
+  width: 16%;
+}
+
+.inspection-col-person {
+  width: 17%;
+}
+
+.inspection-col-priority {
+  width: 94px;
+}
+
+.inspection-col-status {
+  width: 112px;
+}
+
+.inspection-col-result {
+  width: 118px;
+}
+
+.inspection-col-actions {
+  width: 74px;
+}
+
+.inspection-date {
+  display: inline-grid;
+  min-width: 58px;
+  gap: 2px;
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--navy);
+  background: #f8fafc;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.inspection-date strong {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inspection-date small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.inspection-main-cell {
+  min-width: 0;
+}
+
+.inspection-title,
+.inspection-subtitle,
+.inspection-muted-cell,
+.inspection-person-cell {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inspection-title {
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.inspection-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.inspection-muted-cell,
+.inspection-person-cell {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.inspection-muted-cell {
+  color: var(--muted);
+}
+
+.inspection-actions {
+  text-align: center;
+}
+
+.inspection-actions .button.icon-only {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  margin: 0 auto;
+}
+
+.inspection-actions .icon {
+  width: 17px;
+  height: 17px;
+}
+
+.inspection-modal-header,
+.inspection-checklist-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.inspection-checklist {
+  display: grid;
+  gap: 12px;
+}
+
+.inspection-checklist h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.inspection-checklist-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) auto;
+  gap: 12px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.inspection-checklist-item .wide-field {
+  grid-column: 1 / -2;
+}
+
+.inspection-switch {
+  min-height: 42px;
+  align-items: center;
+  align-self: end;
+}
+
 .import-preview-summary {
   margin: 18px 0;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2629,6 +2879,19 @@ h3 {
   .maintenance-generator .button {
     grid-column: 1 / -1;
   }
+
+  .inspection-checklist-item {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inspection-checklist-item .wide-field {
+    grid-column: 1 / -1;
+  }
+
+  .assembly-inline-row,
+  .assembly-point-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -2704,6 +2967,7 @@ h3 {
   .committee-grid,
   .entity-form-grid,
   .edifito-form,
+  .inspection-checklist-item,
   .comunidad-form,
   .comunidad-toolbar,
   .edifito-toolbar,
@@ -2716,6 +2980,11 @@ h3 {
 
   .entity-form-grid .span-two {
     grid-column: 1 / -1;
+  }
+
+  .inspection-modal-header,
+  .inspection-checklist-header {
+    flex-direction: column;
   }
 
   .committee-summary {

@@ -45,6 +45,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
+      { id: "assemblies", label: "Asambleas", icon: "users", view: "assemblies" },
       { id: "maintenance", label: "Plan de mantenciones", icon: "calendar", view: "maintenance" },
       { id: "operational-plan", label: "Agenda operativa", icon: "calendar", view: "operational-plan" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
@@ -228,8 +229,10 @@ onMounted(() => {
       <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" @open-neighbor="openNeighborFromCommittee" />
       <IncidentsView v-else-if="currentView === 'incidents'" :key="`incidents-${activeCondominiumId}-${viewRefreshKey}`" />
       <TasksView v-else-if="currentView === 'tasks'" :key="`tasks-${activeCondominiumId}-${viewRefreshKey}`" />
+      <AssembliesView v-else-if="currentView === 'assemblies'" :key="`assemblies-${activeCondominiumId}-${viewRefreshKey}`" />
       <MaintenancePlanView v-else-if="currentView === 'maintenance'" :key="`maintenance-${activeCondominiumId}-${viewRefreshKey}`" />
       <OperationalPlanView v-else-if="currentView === 'operational-plan'" :key="`operational-plan-${activeCondominiumId}-${viewRefreshKey}`" />
+      <InspectionsView v-else-if="currentView === 'inspections'" :key="`inspections-${activeCondominiumId}-${viewRefreshKey}`" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
       <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />

@@ -22,6 +22,7 @@ from app.models.entities.condominium_inspection_item import CondominiumInspectio
 from app.models.entities.operational_work_calendar import OperationalWorkCalendar
 from app.models.entities.operational_calendar_exception import OperationalCalendarException
 from app.models.entities.planned_operational_event import PlannedOperationalEvent
+from app.models.entities.assembly import Assembly
 from app.models.entities.operational_event_execution import OperationalEventExecution
 from app.models.entities.operational_event_evidence import OperationalEventEvidence
 from app.models.entities.operational_reschedule_log import OperationalRescheduleLog
@@ -62,6 +63,7 @@ __all__ = [
     "OperationalWorkCalendar",
     "OperationalCalendarException",
     "PlannedOperationalEvent",
+    "Assembly",
     "OperationalEventExecution",
     "OperationalEventEvidence",
     "OperationalRescheduleLog",

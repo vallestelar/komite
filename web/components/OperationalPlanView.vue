@@ -14,6 +14,7 @@ type OperationalEvent = {
   assigned_user_email?: string | null;
   priority: string;
   status: string;
+  event_type?: string | null;
   source_type?: string | null;
   section_name?: string | null;
   asset_name?: string | null;
@@ -69,9 +70,11 @@ const agendaView = ref<"list" | "week">("list");
 const selectedWeekStart = ref<Date | null>(null);
 const showIncidentForm = ref(false);
 const showTaskForm = ref(false);
+const showAssemblyForm = ref(false);
 const showEditForm = ref(false);
 const savingIncident = ref(false);
 const savingTask = ref(false);
+const savingAssembly = ref(false);
 const savingEdit = ref(false);
 const draggingEventId = ref("");
 const dragOverDate = ref("");
@@ -95,6 +98,20 @@ const taskForm = reactive({
   estimated_duration_hours: "",
   assigned_user_id: "",
   priority: "medium",
+  event_type: "task",
+});
+const assemblyForm = reactive({
+  title: "",
+  description: "",
+  scheduled_date: new Date().toISOString().slice(0, 10),
+  scheduled_start_time: "",
+  estimated_duration_hours: "",
+  location: "",
+  modality: "presential",
+  assembly_type: "ordinary",
+  attendees: [{ name: "", email: "", role: "", attendance_status: "expected" }],
+  agenda_items: [{ id: "point-1", title: "", description: "", owner: "", conclusion: "", status: "pending" }],
+  conclusions: "",
 });
 const editForm = reactive({
   id: "",
@@ -106,6 +123,7 @@ const editForm = reactive({
   assigned_user_id: "",
   priority: "medium",
   status: "pending",
+  event_type: "task",
 });
 
 const monthOptions = [
@@ -129,6 +147,14 @@ const statusOptions = [
   ["in_progress", "En curso"],
   ["completed", "Completado"],
   ["cancelled", "Cancelado"],
+] as const;
+
+const eventTypeOptions = [
+  ["task", "Tarea"],
+  ["administrative", "Administrativa"],
+  ["meeting", "Reunión"],
+  ["inspection", "Inspección"],
+  ["maintenance", "Mantención"],
 ] as const;
 
 const yearOptions = computed(() => {
@@ -470,12 +496,62 @@ const openTaskForm = () => {
   taskForm.estimated_duration_hours = "";
   taskForm.assigned_user_id = "";
   taskForm.priority = "medium";
+  taskForm.event_type = "task";
   showTaskForm.value = true;
 };
 
 const closeTaskForm = () => {
   if (savingTask.value) return;
   showTaskForm.value = false;
+};
+
+const resetAssemblyForm = () => {
+  assemblyForm.title = "";
+  assemblyForm.description = "";
+  assemblyForm.scheduled_date = toDateKey(new Date());
+  assemblyForm.scheduled_start_time = "";
+  assemblyForm.estimated_duration_hours = "";
+  assemblyForm.location = "";
+  assemblyForm.modality = "presential";
+  assemblyForm.assembly_type = "ordinary";
+  assemblyForm.attendees = [{ name: "", email: "", role: "", attendance_status: "expected" }];
+  assemblyForm.agenda_items = [{ id: "point-1", title: "", description: "", owner: "", conclusion: "", status: "pending" }];
+  assemblyForm.conclusions = "";
+};
+
+const openAssemblyForm = () => {
+  resetAssemblyForm();
+  showAssemblyForm.value = true;
+};
+
+const closeAssemblyForm = () => {
+  if (savingAssembly.value) return;
+  showAssemblyForm.value = false;
+};
+
+const addAssemblyAttendee = () => {
+  assemblyForm.attendees.push({ name: "", email: "", role: "", attendance_status: "expected" });
+};
+
+const removeAssemblyAttendee = (index: number) => {
+  assemblyForm.attendees.splice(index, 1);
+  if (!assemblyForm.attendees.length) addAssemblyAttendee();
+};
+
+const addAssemblyPoint = () => {
+  assemblyForm.agenda_items.push({
+    id: `point-${Date.now()}-${assemblyForm.agenda_items.length + 1}`,
+    title: "",
+    description: "",
+    owner: "",
+    conclusion: "",
+    status: "pending",
+  });
+};
+
+const removeAssemblyPoint = (index: number) => {
+  assemblyForm.agenda_items.splice(index, 1);
+  if (!assemblyForm.agenda_items.length) addAssemblyPoint();
 };
 
 const openEditEvent = (event: OperationalEvent) => {
@@ -488,6 +564,7 @@ const openEditEvent = (event: OperationalEvent) => {
   editForm.assigned_user_id = event.assigned_user_id || "";
   editForm.priority = event.priority || "medium";
   editForm.status = event.status || "pending";
+  editForm.event_type = event.event_type || "task";
   showEditForm.value = true;
 };
 
@@ -516,6 +593,7 @@ const updateEditedEvent = async () => {
         assigned_user_id: editForm.assigned_user_id || null,
         priority: editForm.priority,
         status: editForm.status,
+        event_type: editForm.event_type,
       }),
     });
     replaceEvent(updated);
@@ -561,6 +639,7 @@ const createManualTask = async () => {
         estimated_duration_hours: optionalNumber(taskForm.estimated_duration_hours),
         assigned_user_id: taskForm.assigned_user_id || null,
         priority: taskForm.priority,
+        event_type: taskForm.event_type,
       }),
     });
     addCreatedEventToAgenda(created);
@@ -569,6 +648,54 @@ const createManualTask = async () => {
     errorMessage.value = readableError(error);
   } finally {
     savingTask.value = false;
+  }
+};
+
+const createAssembly = async () => {
+  if (!assemblyForm.title.trim()) {
+    errorMessage.value = "Indica el nombre de la asamblea.";
+    return;
+  }
+  savingAssembly.value = true;
+  errorMessage.value = "";
+  try {
+    const created = await request<{ event?: OperationalEvent }>("/api/v1/portal/assemblies/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: assemblyForm.title.trim(),
+        description: assemblyForm.description.trim() || null,
+        assembly_type: assemblyForm.assembly_type,
+        status: "scheduled",
+        scheduled_date: assemblyForm.scheduled_date,
+        scheduled_start_time: assemblyForm.scheduled_start_time || null,
+        estimated_duration_hours: optionalNumber(assemblyForm.estimated_duration_hours),
+        location: assemblyForm.location.trim() || null,
+        modality: assemblyForm.modality,
+        attendees: assemblyForm.attendees.filter((item) => item.name.trim()).map((item) => ({
+          name: item.name.trim(),
+          email: item.email.trim() || null,
+          role: item.role.trim() || null,
+          attendance_status: item.attendance_status,
+        })),
+        agenda_items: assemblyForm.agenda_items.filter((item) => item.title.trim()).map((item) => ({
+          id: item.id,
+          title: item.title.trim(),
+          description: item.description.trim() || null,
+          owner: item.owner.trim() || null,
+          conclusion: item.conclusion.trim() || null,
+          status: item.status,
+        })),
+        conclusions: assemblyForm.conclusions.trim() || null,
+      }),
+    });
+    if (created.event) addCreatedEventToAgenda(created.event);
+    else await loadPlan();
+    showAssemblyForm.value = false;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    savingAssembly.value = false;
   }
 };
 
@@ -695,7 +822,23 @@ const sourceLabel = (sourceType: string | null | undefined) => {
   return sourceType || "Planificada";
 };
 
-const isUnplannedIncident = (event: OperationalEvent) => event.source_type === "unplanned_incident";
+const eventTypeLabel = (eventType: string | null | undefined) => {
+  if (eventType === "administrative") return "Administrativa";
+  if (eventType === "assembly") return "Asamblea";
+  if (eventType === "meeting") return "Reunión";
+  if (eventType === "inspection") return "Inspección";
+  if (eventType === "maintenance") return "Mantención";
+  if (eventType === "incident") return "Incidencia";
+  return "Tarea";
+};
+
+const eventFunctionalLabel = (event: OperationalEvent) => {
+  if (event.event_type) return eventTypeLabel(event.event_type);
+  if (event.source_type === "unplanned_incident") return "Incidencia no programada";
+  return eventTypeLabel(event.event_type);
+};
+
+const isUnplannedIncident = (event: OperationalEvent) => event.event_type ? event.event_type === "incident" : event.source_type === "unplanned_incident";
 const isManualTask = (event: OperationalEvent) => event.source_type === "manual_task";
 
 const staffOptionLabel = (member: OperationalStaff) => {
@@ -779,6 +922,10 @@ onMounted(loadPlan);
         </button>
       </div>
       <div class="operational-actions">
+        <button class="button assembly-action" type="button" @click="openAssemblyForm">
+          <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
+          <span>Nueva asamblea</span>
+        </button>
         <button class="button manual-task-action" type="button" @click="openTaskForm">
           <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
           <span>Nueva tarea</span>
@@ -864,7 +1011,7 @@ onMounted(loadPlan);
                 <span aria-hidden="true"></span>
                 {{ statusLabel(event.status) }}
               </span>
-              <p v-if="isUnplannedIncident(event)" class="week-source">{{ sourceLabel(event.source_type) }}</p>
+              <p v-if="isUnplannedIncident(event)" class="week-source">{{ eventFunctionalLabel(event) }}</p>
               <p class="week-condominium">{{ activeCondominium?.name || "Sin condominio" }}</p>
               <p class="week-assignee" :title="assigneeLabel(event)">{{ assigneeLabel(event) }}</p>
               <div class="week-move-actions">
@@ -924,7 +1071,7 @@ onMounted(loadPlan);
             <div class="event-content">
               <div class="event-title-row">
                 <div>
-                  <p class="event-section">{{ sourceLabel(event.source_type) }} · {{ event.section_name || "Sin sección" }}</p>
+                  <p class="event-section">{{ eventFunctionalLabel(event) }} · {{ event.section_name || "Sin sección" }}</p>
                   <h3>{{ event.title }}</h3>
                 </div>
                 <div class="event-row-right">
@@ -1040,6 +1187,16 @@ onMounted(loadPlan);
               <option value="medium">Media</option>
               <option value="high">Alta</option>
               <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label v-if="editForm.event_type === 'assembly'">
+            Tipo
+            <input value="Asamblea" type="text" disabled />
+          </label>
+          <label v-else>
+            Tipo
+            <select v-model="editForm.event_type">
+              <option v-for="[value, label] in eventTypeOptions" :key="value" :value="value">{{ label }}</option>
             </select>
           </label>
           <label>
@@ -1172,6 +1329,12 @@ onMounted(loadPlan);
             </select>
           </label>
           <label>
+            Tipo
+            <select v-model="taskForm.event_type">
+              <option v-for="[value, label] in eventTypeOptions" :key="value" :value="value">{{ label }}</option>
+            </select>
+          </label>
+          <label>
             Responsable
             <select v-model="taskForm.assigned_user_id">
               <option value="">Sin persona asignada</option>
@@ -1193,6 +1356,133 @@ onMounted(loadPlan);
           <button class="button navy" type="submit" :disabled="savingTask">
             <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
             <span>{{ savingTask ? "Guardando..." : "Añadir a la agenda" }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    <div v-if="showAssemblyForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="assembly-form-title">
+      <form class="confirm-modal assembly-modal" @submit.prevent="createAssembly">
+        <div>
+          <p class="eyebrow">Agenda operativa</p>
+          <h2 id="assembly-form-title">Nueva asamblea</h2>
+          <p class="placeholder-copy">Se creará como entidad de asamblea y quedará visible en la agenda del condominio activo.</p>
+        </div>
+
+        <div class="entity-form-grid">
+          <label class="span-two">
+            Nombre
+            <input v-model="assemblyForm.title" type="text" maxlength="180" placeholder="Ej. Asamblea ordinaria de copropietarios" required />
+          </label>
+          <label>
+            Fecha
+            <input v-model="assemblyForm.scheduled_date" type="date" required />
+          </label>
+          <label>
+            Hora
+            <input v-model="assemblyForm.scheduled_start_time" type="time" />
+          </label>
+          <label>
+            Tipo
+            <select v-model="assemblyForm.assembly_type">
+              <option value="ordinary">Ordinaria</option>
+              <option value="extraordinary">Extraordinaria</option>
+              <option value="committee">Comité</option>
+              <option value="informative">Informativa</option>
+            </select>
+          </label>
+          <label>
+            Modalidad
+            <select v-model="assemblyForm.modality">
+              <option value="presential">Presencial</option>
+              <option value="online">Online</option>
+              <option value="hybrid">Híbrida</option>
+            </select>
+          </label>
+          <label>
+            Duración estimada (horas)
+            <input v-model="assemblyForm.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 1.5" />
+          </label>
+          <label>
+            Lugar
+            <input v-model="assemblyForm.location" type="text" maxlength="180" placeholder="Ej. Salón multiuso" />
+          </label>
+          <label class="wide-field">
+            Descripción
+            <textarea v-model="assemblyForm.description" rows="3"></textarea>
+          </label>
+        </div>
+
+        <section class="assembly-editor-block">
+          <div class="section-heading-row">
+            <div>
+              <h3>Asistentes</h3>
+              <p class="placeholder-copy">Registra convocados o asistentes principales.</p>
+            </div>
+            <button class="button ghost compact" type="button" @click="addAssemblyAttendee">
+              <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+              <span>Agregar</span>
+            </button>
+          </div>
+          <div class="assembly-list-editor">
+            <div v-for="(attendee, index) in assemblyForm.attendees" :key="index" class="assembly-inline-row">
+              <input v-model="attendee.name" type="text" placeholder="Nombre" />
+              <input v-model="attendee.email" type="email" placeholder="Email" />
+              <input v-model="attendee.role" type="text" placeholder="Rol / unidad" />
+              <select v-model="attendee.attendance_status">
+                <option value="expected">Convocado</option>
+                <option value="present">Presente</option>
+                <option value="absent">Ausente</option>
+                <option value="represented">Representado</option>
+              </select>
+              <button class="button danger compact icon-action" type="button" title="Quitar asistente" @click="removeAssemblyAttendee(index)">
+                <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="assembly-editor-block">
+          <div class="section-heading-row">
+            <div>
+              <h3>Puntos a tratar</h3>
+              <p class="placeholder-copy">Después podrás completar conclusiones y generar el resumen PDF.</p>
+            </div>
+            <button class="button ghost compact" type="button" @click="addAssemblyPoint">
+              <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+              <span>Agregar</span>
+            </button>
+          </div>
+          <div class="assembly-list-editor">
+            <div v-for="(point, index) in assemblyForm.agenda_items" :key="point.id || index" class="assembly-point-row">
+              <input v-model="point.title" type="text" placeholder="Punto a tratar" />
+              <input v-model="point.owner" type="text" placeholder="Responsable" />
+              <select v-model="point.status">
+                <option value="pending">Pendiente</option>
+                <option value="discussed">Tratado</option>
+                <option value="approved">Aprobado</option>
+                <option value="rejected">Rechazado</option>
+              </select>
+              <textarea v-model="point.description" rows="2" placeholder="Detalle del punto"></textarea>
+              <textarea v-model="point.conclusion" rows="2" placeholder="Conclusión o acuerdo"></textarea>
+              <button class="button danger compact icon-action" type="button" title="Quitar punto" @click="removeAssemblyPoint(index)">
+                <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <label>
+          Conclusiones generales
+          <textarea v-model="assemblyForm.conclusions" rows="3"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingAssembly" @click="closeAssemblyForm">
+            Cancelar
+          </button>
+          <button class="button navy" type="submit" :disabled="savingAssembly">
+            <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+            <span>{{ savingAssembly ? "Guardando..." : "Crear asamblea" }}</span>
           </button>
         </div>
       </form>

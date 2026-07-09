@@ -5,11 +5,14 @@ type OperationalEvent = {
   description?: string | null;
   planned_date: string;
   planned_start_time?: string | null;
+  estimated_duration_hours?: number | null;
+  estimated_duration_minutes?: number | null;
   assigned_profile?: string | null;
   assigned_user_id?: string | null;
   assigned_user_name?: string | null;
   priority: string;
   status: string;
+  event_type?: string | null;
   source_type?: string | null;
 };
 
@@ -46,9 +49,11 @@ const form = reactive({
   description: "",
   planned_date: new Date().toISOString().slice(0, 10),
   planned_start_time: "",
+  estimated_duration_hours: "",
   assigned_user_id: "",
   priority: "medium",
   status: "pending",
+  event_type: "task",
 });
 
 const monthOptions = [
@@ -72,6 +77,14 @@ const statusOptions = [
   ["in_progress", "En curso"],
   ["completed", "Completado"],
   ["cancelled", "Cancelado"],
+] as const;
+
+const eventTypeOptions = [
+  ["task", "Tarea"],
+  ["administrative", "Administrativa"],
+  ["meeting", "Reunión"],
+  ["inspection", "Inspección"],
+  ["maintenance", "Mantención"],
 ] as const;
 
 const yearOptions = computed(() => {
@@ -103,7 +116,7 @@ const loadTasks = async () => {
     if (selectedMonth.value) params.set("month", selectedMonth.value);
     if (selectedStatus.value) params.set("status", selectedStatus.value);
     const data = await request<OperationalPlanResponse>(`/api/v1/portal/operational-plan/?${params}`);
-    tasks.value = (data.items || []).filter((item) => item.source_type === "manual_task");
+    tasks.value = (data.items || []).filter((item) => item.event_type ? ["task", "administrative", "meeting"].includes(item.event_type) : item.source_type === "manual_task");
     staff.value = data.staff || [];
   } catch (error) {
     tasks.value = [];
@@ -119,9 +132,11 @@ const resetForm = () => {
   form.description = "";
   form.planned_date = new Date().toISOString().slice(0, 10);
   form.planned_start_time = "";
+  form.estimated_duration_hours = "";
   form.assigned_user_id = "";
   form.priority = "medium";
   form.status = "pending";
+  form.event_type = "task";
 };
 
 const openCreate = () => {
@@ -136,9 +151,11 @@ const openEdit = (task: OperationalEvent) => {
   form.description = task.description || "";
   form.planned_date = task.planned_date;
   form.planned_start_time = task.planned_start_time || "";
+  form.estimated_duration_hours = task.estimated_duration_hours ? String(task.estimated_duration_hours) : "";
   form.assigned_user_id = task.assigned_user_id || "";
   form.priority = task.priority || "medium";
   form.status = task.status || "pending";
+  form.event_type = task.event_type || "task";
   showTaskForm.value = true;
 };
 
@@ -165,8 +182,10 @@ const saveTask = async () => {
       description: form.description.trim() || null,
       planned_date: form.planned_date,
       planned_start_time: form.planned_start_time || null,
+      estimated_duration_hours: form.estimated_duration_hours ? Number(form.estimated_duration_hours) : null,
       assigned_user_id: form.assigned_user_id || null,
       priority: form.priority,
+      event_type: form.event_type,
     };
     if (editingTask.value) payload.status = form.status;
     const saved = await request<OperationalEvent>(endpoint, {
@@ -238,6 +257,16 @@ const priorityClass = (priority: string | null | undefined) => {
   if (priority === "high") return "is-high";
   if (priority === "low") return "is-low";
   return "is-medium";
+};
+
+const eventTypeLabel = (eventType: string | null | undefined) => {
+  if (eventType === "administrative") return "Administrativa";
+  if (eventType === "assembly") return "Asamblea";
+  if (eventType === "meeting") return "Reunión";
+  if (eventType === "inspection") return "Inspección";
+  if (eventType === "maintenance") return "Mantención";
+  if (eventType === "incident") return "Incidencia";
+  return "Tarea";
 };
 
 const profileLabel = (profile: string | null | undefined) => {
@@ -328,6 +357,7 @@ onMounted(loadTasks);
             <th>Fecha</th>
             <th>Tarea</th>
             <th>Responsable</th>
+            <th>Tipo</th>
             <th>Prioridad</th>
             <th>Estado</th>
             <th>Acciones</th>
@@ -338,12 +368,16 @@ onMounted(loadTasks);
             <td>
               <strong>{{ formatDate(task.planned_date) }}</strong>
               <small v-if="task.planned_start_time">{{ task.planned_start_time }}</small>
+              <small v-if="task.estimated_duration_hours">{{ task.estimated_duration_hours }} h</small>
             </td>
             <td>
               <strong>{{ task.title }}</strong>
               <small>{{ task.description || "Sin descripción" }}</small>
             </td>
             <td>{{ task.assigned_user_name || "Sin persona asignada" }}</td>
+            <td>
+              <span class="status-pill">{{ eventTypeLabel(task.event_type) }}</span>
+            </td>
             <td>
               <span class="priority-pill" :class="priorityClass(task.priority)">{{ priorityLabel(task.priority) }}</span>
             </td>
@@ -393,12 +427,22 @@ onMounted(loadTasks);
             <input v-model="form.planned_start_time" type="time" />
           </label>
           <label>
+            Duración estimada (horas)
+            <input v-model="form.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
+          </label>
+          <label>
             Prioridad
             <select v-model="form.priority">
               <option value="low">Baja</option>
               <option value="medium">Media</option>
               <option value="high">Alta</option>
               <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label>
+            Tipo
+            <select v-model="form.event_type">
+              <option v-for="[value, label] in eventTypeOptions" :key="value" :value="value">{{ label }}</option>
             </select>
           </label>
           <label v-if="editingTask">
@@ -427,9 +471,9 @@ onMounted(loadTasks);
 
         <div class="modal-actions">
           <button class="button ghost" type="button" :disabled="saving" @click="closeForm">Cancelar</button>
-          <button class="button orange" type="submit" :disabled="saving">
+          <button class="button navy" type="submit" :disabled="saving">
             <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
-            <span>{{ saving ? "Guardando..." : "Guardar tarea" }}</span>
+            <span>{{ saving ? "Guardando..." : editingTask ? "Guardar cambios" : "Añadir a la agenda" }}</span>
           </button>
         </div>
       </form>

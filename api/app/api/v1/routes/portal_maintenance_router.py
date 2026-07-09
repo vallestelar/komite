@@ -331,6 +331,7 @@ async def generate_maintenance_plan(
                     existing.assigned_profile = item.responsible_profile
                     existing.priority = item.priority
                     existing.status = "pending"
+                    existing.event_type = "maintenance"
                     existing.calendar_id = calendar.id if calendar else None
                     existing.metadata = {
                         **(existing.metadata or {}),
@@ -354,6 +355,7 @@ async def generate_maintenance_plan(
                     assigned_profile=item.responsible_profile,
                     priority=item.priority,
                     status="pending",
+                    event_type="maintenance",
                     source_type="maintenance_template",
                     source_id=template.id,
                     metadata={

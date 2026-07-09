@@ -226,6 +226,8 @@ onMounted(() => {
       <NeighborsUnitsView v-else-if="currentView === 'neighbors'" :key="`neighbors-${activeCondominiumId}-${viewRefreshKey}-${selectedNeighborId}`" :focus-neighbor-id="selectedNeighborId" />
       <TeamView v-else-if="currentView === 'team'" :key="`team-${viewRefreshKey}`" />
       <CommitteeView v-else-if="currentView === 'committee'" :key="`committee-${activeCondominiumId}-${viewRefreshKey}`" @open-neighbor="openNeighborFromCommittee" />
+      <IncidentsView v-else-if="currentView === 'incidents'" :key="`incidents-${activeCondominiumId}-${viewRefreshKey}`" />
+      <TasksView v-else-if="currentView === 'tasks'" :key="`tasks-${activeCondominiumId}-${viewRefreshKey}`" />
       <MaintenancePlanView v-else-if="currentView === 'maintenance'" :key="`maintenance-${activeCondominiumId}-${viewRefreshKey}`" />
       <OperationalPlanView v-else-if="currentView === 'operational-plan'" :key="`operational-plan-${activeCondominiumId}-${viewRefreshKey}`" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />

@@ -64,6 +64,26 @@ const search = ref("");
 const savingAssignment = ref("");
 const agendaView = ref<"list" | "week">("list");
 const selectedWeekStart = ref<Date | null>(null);
+const showIncidentForm = ref(false);
+const showTaskForm = ref(false);
+const savingIncident = ref(false);
+const savingTask = ref(false);
+const incidentForm = reactive({
+  title: "",
+  description: "",
+  planned_date: new Date().toISOString().slice(0, 10),
+  planned_start_time: "",
+  assigned_user_id: "",
+  priority: "medium",
+});
+const taskForm = reactive({
+  title: "",
+  description: "",
+  planned_date: new Date().toISOString().slice(0, 10),
+  planned_start_time: "",
+  assigned_user_id: "",
+  priority: "medium",
+});
 
 const monthOptions = [
   [1, "Enero"],
@@ -216,6 +236,109 @@ const assignEvent = async (event: OperationalEvent, assignedUserId: string) => {
   }
 };
 
+const openIncidentForm = () => {
+  incidentForm.title = "";
+  incidentForm.description = "";
+  incidentForm.planned_date = toDateKey(new Date());
+  incidentForm.planned_start_time = "";
+  incidentForm.assigned_user_id = "";
+  incidentForm.priority = "medium";
+  showIncidentForm.value = true;
+};
+
+const closeIncidentForm = () => {
+  if (savingIncident.value) return;
+  showIncidentForm.value = false;
+};
+
+const openTaskForm = () => {
+  taskForm.title = "";
+  taskForm.description = "";
+  taskForm.planned_date = toDateKey(new Date());
+  taskForm.planned_start_time = "";
+  taskForm.assigned_user_id = "";
+  taskForm.priority = "medium";
+  showTaskForm.value = true;
+};
+
+const closeTaskForm = () => {
+  if (savingTask.value) return;
+  showTaskForm.value = false;
+};
+
+const addCreatedEventToAgenda = (created: OperationalEvent) => {
+  events.value = [...events.value, created].sort((left, right) => {
+    const dateCompare = left.planned_date.localeCompare(right.planned_date);
+    return dateCompare || left.title.localeCompare(right.title);
+  });
+  summary.total += 1;
+  summary.pending += 1;
+  selectedYear.value = Number(created.planned_date.slice(0, 4));
+  selectedMonth.value = String(Number(created.planned_date.slice(5, 7)));
+  const createdDate = new Date(`${created.planned_date}T00:00:00`);
+  const mondayOffset = (createdDate.getDay() + 6) % 7;
+  createdDate.setDate(createdDate.getDate() - mondayOffset);
+  selectedWeekStart.value = createdDate;
+};
+
+const createManualTask = async () => {
+  if (!taskForm.title.trim()) {
+    errorMessage.value = "Indica el título de la tarea.";
+    return;
+  }
+  savingTask.value = true;
+  errorMessage.value = "";
+  try {
+    const created = await request<OperationalEvent>("/api/v1/portal/operational-plan/manual-tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: taskForm.title.trim(),
+        description: taskForm.description.trim() || null,
+        planned_date: taskForm.planned_date,
+        planned_start_time: taskForm.planned_start_time || null,
+        assigned_user_id: taskForm.assigned_user_id || null,
+        priority: taskForm.priority,
+      }),
+    });
+    addCreatedEventToAgenda(created);
+    showTaskForm.value = false;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    savingTask.value = false;
+  }
+};
+
+const createUnplannedIncident = async () => {
+  if (!incidentForm.title.trim()) {
+    errorMessage.value = "Indica el título de la incidencia.";
+    return;
+  }
+  savingIncident.value = true;
+  errorMessage.value = "";
+  try {
+    const created = await request<OperationalEvent>("/api/v1/portal/operational-plan/unplanned-incidents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: incidentForm.title.trim(),
+        description: incidentForm.description.trim() || null,
+        planned_date: incidentForm.planned_date,
+        planned_start_time: incidentForm.planned_start_time || null,
+        assigned_user_id: incidentForm.assigned_user_id || null,
+        priority: incidentForm.priority,
+      }),
+    });
+    addCreatedEventToAgenda(created);
+    showIncidentForm.value = false;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    savingIncident.value = false;
+  }
+};
+
 const formatDate = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("es-CL", {
@@ -289,6 +412,17 @@ const profileLabel = (profile: string | null | undefined) => {
   return profile || "Sin responsable";
 };
 
+const sourceLabel = (sourceType: string | null | undefined) => {
+  if (sourceType === "unplanned_incident") return "Incidencia no programada";
+  if (sourceType === "manual_task") return "Tarea manual";
+  if (sourceType === "maintenance_template") return "Planificada";
+  if (sourceType === "inspection_template") return "Planificada";
+  return sourceType || "Planificada";
+};
+
+const isUnplannedIncident = (event: OperationalEvent) => event.source_type === "unplanned_incident";
+const isManualTask = (event: OperationalEvent) => event.source_type === "manual_task";
+
 const staffOptionLabel = (member: OperationalStaff) => {
   const profile = profileLabel(member.portal_profile);
   const position = member.responsibility ? ` · ${member.responsibility}` : "";
@@ -310,7 +444,7 @@ onMounted(loadPlan);
         <h2>Plan operativo del condominio</h2>
         <p class="hero-copy">{{ activeCondominium?.name || "Sin condominio seleccionado" }}</p>
       </div>
-      <div class="committee-summary">
+      <div class="committee-summary operational-summary">
         <article>
           <span>Total</span>
           <strong>{{ summary.total }}</strong>
@@ -319,7 +453,7 @@ onMounted(loadPlan);
           <span>Pendientes</span>
           <strong>{{ summary.pending }}</strong>
         </article>
-        <article>
+        <article class="is-overdue">
           <span>Vencidos</span>
           <strong>{{ summary.overdue }}</strong>
         </article>
@@ -358,15 +492,27 @@ onMounted(loadPlan);
       </button>
     </div>
 
-    <div class="view-toggle" role="group" aria-label="Vista de agenda">
-      <button class="button compact" :class="agendaView === 'list' ? 'navy' : 'ghost'" type="button" @click="agendaView = 'list'">
-        <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
-        <span>Listado</span>
-      </button>
-      <button class="button compact" :class="agendaView === 'week' ? 'navy' : 'ghost'" type="button" @click="agendaView = 'week'">
-        <svg class="icon" aria-hidden="true"><use href="#icon-calendar" /></svg>
-        <span>Semana</span>
-      </button>
+    <div class="operational-view-row">
+      <div class="view-toggle" role="group" aria-label="Vista de agenda">
+        <button class="button compact" :class="agendaView === 'list' ? 'navy' : 'ghost'" type="button" @click="agendaView = 'list'">
+          <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
+          <span>Listado</span>
+        </button>
+        <button class="button compact" :class="agendaView === 'week' ? 'navy' : 'ghost'" type="button" @click="agendaView = 'week'">
+          <svg class="icon" aria-hidden="true"><use href="#icon-calendar" /></svg>
+          <span>Semana</span>
+        </button>
+      </div>
+      <div class="operational-actions">
+        <button class="button manual-task-action" type="button" @click="openTaskForm">
+          <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+          <span>Nueva tarea</span>
+        </button>
+        <button class="button incident-action" type="button" @click="openIncidentForm">
+          <svg class="icon" aria-hidden="true"><use href="#icon-alert" /></svg>
+          <span>Nueva incidencia</span>
+        </button>
+      </div>
     </div>
 
     <div class="week-navigation">
@@ -399,8 +545,18 @@ onMounted(loadPlan);
           <strong>{{ day.day }}</strong>
         </header>
         <div class="week-column-body">
-          <article v-for="event in day.items" :key="event.id" class="week-task-card">
+          <article
+            v-for="event in day.items"
+            :key="event.id"
+            class="week-task-card"
+            :class="{ 'is-unplanned': isUnplannedIncident(event), 'is-manual': isManualTask(event) }"
+          >
             <h3>{{ event.title }}</h3>
+            <span class="status-badge week-status" :class="statusBadgeClass(event.status)">
+              <span aria-hidden="true"></span>
+              {{ statusLabel(event.status) }}
+            </span>
+            <p v-if="isUnplannedIncident(event)" class="week-source">{{ sourceLabel(event.source_type) }}</p>
             <p class="week-condominium">{{ activeCondominium?.name || "Sin condominio" }}</p>
             <p>{{ assigneeLabel(event) }}</p>
           </article>
@@ -419,12 +575,17 @@ onMounted(loadPlan);
           <strong>{{ group.items.length }} eventos</strong>
         </header>
         <div class="operational-events">
-          <article v-for="event in group.items" :key="event.id" class="operational-event">
+          <article
+            v-for="event in group.items"
+            :key="event.id"
+            class="operational-event"
+            :class="{ 'is-manual': isManualTask(event) }"
+          >
             <div class="event-date-dot" aria-hidden="true"></div>
             <div class="event-content">
               <div class="event-title-row">
                 <div>
-                  <p class="event-section">{{ event.section_name || "Sin sección" }}</p>
+                  <p class="event-section">{{ sourceLabel(event.source_type) }} · {{ event.section_name || "Sin sección" }}</p>
                   <h3>{{ event.title }}</h3>
                 </div>
                 <span class="status-badge" :class="statusBadgeClass(event.status)">
@@ -472,6 +633,118 @@ onMounted(loadPlan);
       </span>
       <h2>Sin eventos operativos</h2>
       <p class="placeholder-copy">Genera la planificación desde el plan de mantenciones para visualizarla aquí.</p>
+    </div>
+    <div v-if="showIncidentForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-form-title">
+      <form class="confirm-modal operational-incident-modal" @submit.prevent="createUnplannedIncident">
+        <div>
+          <p class="eyebrow">Agenda operativa</p>
+          <h2 id="incident-form-title">Nueva incidencia no programada</h2>
+          <p class="placeholder-copy">Se añadirá como tarea pendiente dentro de la planificación del condominio activo.</p>
+        </div>
+
+        <div class="entity-form-grid">
+          <label>
+            Título
+            <input v-model="incidentForm.title" type="text" maxlength="180" placeholder="Ej. Fuga de agua en sala de bombas" required />
+          </label>
+          <label>
+            Fecha
+            <input v-model="incidentForm.planned_date" type="date" required />
+          </label>
+          <label>
+            Hora estimada
+            <input v-model="incidentForm.planned_start_time" type="time" />
+          </label>
+          <label>
+            Prioridad
+            <select v-model="incidentForm.priority">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label>
+            Responsable
+            <select v-model="incidentForm.assigned_user_id">
+              <option value="">Sin persona asignada</option>
+              <option v-for="member in staff" :key="member.user_id" :value="member.user_id">
+                {{ staffOptionLabel(member) }}
+              </option>
+            </select>
+          </label>
+          <label class="wide-field">
+            Descripción
+            <textarea v-model="incidentForm.description" rows="4" placeholder="Describe brevemente qué ocurrió y qué se necesita resolver."></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingIncident" @click="closeIncidentForm">
+            Cancelar
+          </button>
+          <button class="button incident-action" type="submit" :disabled="savingIncident">
+            <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+            <span>{{ savingIncident ? "Guardando..." : "Añadir a la agenda" }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    <div v-if="showTaskForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="task-form-title">
+      <form class="confirm-modal operational-incident-modal" @submit.prevent="createManualTask">
+        <div>
+          <p class="eyebrow">Agenda operativa</p>
+          <h2 id="task-form-title">Nueva tarea manual</h2>
+          <p class="placeholder-copy">Se añadirá como tarea pendiente dentro de la planificación del condominio activo.</p>
+        </div>
+
+        <div class="entity-form-grid">
+          <label>
+            Título
+            <input v-model="taskForm.title" type="text" maxlength="180" placeholder="Ej. Revisar sala de bombas" required />
+          </label>
+          <label>
+            Fecha
+            <input v-model="taskForm.planned_date" type="date" required />
+          </label>
+          <label>
+            Hora estimada
+            <input v-model="taskForm.planned_start_time" type="time" />
+          </label>
+          <label>
+            Prioridad
+            <select v-model="taskForm.priority">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label>
+            Responsable
+            <select v-model="taskForm.assigned_user_id">
+              <option value="">Sin persona asignada</option>
+              <option v-for="member in staff" :key="member.user_id" :value="member.user_id">
+                {{ staffOptionLabel(member) }}
+              </option>
+            </select>
+          </label>
+          <label class="wide-field">
+            Descripción
+            <textarea v-model="taskForm.description" rows="4" placeholder="Describe brevemente qué debe realizarse."></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingTask" @click="closeTaskForm">
+            Cancelar
+          </button>
+          <button class="button navy" type="submit" :disabled="savingTask">
+            <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+            <span>{{ savingTask ? "Guardando..." : "Añadir a la agenda" }}</span>
+          </button>
+        </div>
+      </form>
     </div>
   </section>
 </template>

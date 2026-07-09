@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -65,6 +65,44 @@ class PortalOperationalPlanResponse(BaseModel):
 
 class PortalOperationalAssignmentRequest(BaseModel):
     assigned_user_id: UUID | None = None
+
+
+class PortalUnplannedIncidentRequest(BaseModel):
+    title: str
+    description: str | None = None
+    planned_date: date
+    planned_start_time: time | None = None
+    assigned_user_id: UUID | None = None
+    priority: str = "medium"
+
+
+class PortalUnplannedIncidentUpdateRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    planned_date: date | None = None
+    planned_start_time: time | None = None
+    assigned_user_id: UUID | None = None
+    priority: str | None = None
+    status: str | None = None
+
+
+class PortalManualTaskRequest(BaseModel):
+    title: str
+    description: str | None = None
+    planned_date: date
+    planned_start_time: time | None = None
+    assigned_user_id: UUID | None = None
+    priority: str = "medium"
+
+
+class PortalManualTaskUpdateRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    planned_date: date | None = None
+    planned_start_time: time | None = None
+    assigned_user_id: UUID | None = None
+    priority: str | None = None
+    status: str | None = None
 
 
 def _time_to_text(value) -> str | None:
@@ -149,13 +187,7 @@ def _staff_out(row: CondominiumOperationalStaff) -> PortalOperationalStaffOut:
     )
 
 
-@router.get("/", response_model=PortalOperationalPlanResponse)
-async def list_operational_plan(
-    request: Request,
-    year: int = Query(default_factory=lambda: date.today().year, ge=2020, le=2100),
-    month: int | None = Query(default=None, ge=1, le=12),
-    status_filter: str | None = Query(default=None, alias="status"),
-) -> PortalOperationalPlanResponse:
+async def _current_condominium(request: Request) -> Condominium:
     if not request.state.company_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -171,6 +203,41 @@ async def list_operational_plan(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Condominio no encontrado para la empresa del usuario",
         )
+    return condominium
+
+
+async def _assign_event_user(
+    event: PlannedOperationalEvent,
+    condominium: Condominium,
+    company_id,
+    assigned_user_id: UUID | None,
+    *,
+    clear: bool = False,
+) -> None:
+    if assigned_user_id:
+        staff = await _operational_staff(condominium, company_id)
+        staff_by_user = {row.user_id: row for row in staff}
+        selected = staff_by_user.get(assigned_user_id)
+        if not selected:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Usuario no disponible en el equipo operativo de este condominio",
+            )
+        event.assigned_user_id = selected.user_id
+        event.assigned_profile = selected.portal_profile
+    elif clear:
+        event.assigned_user_id = None
+        event.assigned_profile = None
+
+
+@router.get("/", response_model=PortalOperationalPlanResponse)
+async def list_operational_plan(
+    request: Request,
+    year: int = Query(default_factory=lambda: date.today().year, ge=2020, le=2100),
+    month: int | None = Query(default=None, ge=1, le=12),
+    status_filter: str | None = Query(default=None, alias="status"),
+) -> PortalOperationalPlanResponse:
+    condominium = await _current_condominium(request)
 
     start_date, end_date = _period_bounds(year, month)
     filters = {
@@ -214,21 +281,7 @@ async def assign_operational_event(
     payload: PortalOperationalAssignmentRequest,
     request: Request,
 ) -> PortalOperationalEventOut:
-    if not request.state.company_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario no tiene empresa asociada",
-        )
-
-    condominium = await Condominium.get_or_none(
-        id=request.state.condominium_id,
-        company_id=request.state.company_id,
-    )
-    if not condominium:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Condominio no encontrado para la empresa del usuario",
-        )
+    condominium = await _current_condominium(request)
 
     event = await PlannedOperationalEvent.get_or_none(
         id=event_id,
@@ -238,22 +291,197 @@ async def assign_operational_event(
     if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evento no encontrado")
 
-    if payload.assigned_user_id:
-        staff = await _operational_staff(condominium, request.state.company_id)
-        staff_by_user = {row.user_id: row for row in staff}
-        selected = staff_by_user.get(payload.assigned_user_id)
-        if not selected:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Usuario no disponible en el equipo operativo de este condominio",
-            )
-        event.assigned_user_id = selected.user_id
-        event.assigned_profile = selected.portal_profile
-    else:
-        event.assigned_user_id = None
+    await _assign_event_user(
+        event,
+        condominium,
+        request.state.company_id,
+        payload.assigned_user_id,
+        clear=True,
+    )
 
     actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
     event.updated_by = actor
+    await event.save()
+
+    event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")
+    return _event_out(event)
+
+
+@router.patch("/unplanned-incidents/{event_id}", response_model=PortalOperationalEventOut)
+async def update_unplanned_incident_event(
+    event_id: UUID,
+    payload: PortalUnplannedIncidentUpdateRequest,
+    request: Request,
+) -> PortalOperationalEventOut:
+    condominium = await _current_condominium(request)
+
+    event = await PlannedOperationalEvent.get_or_none(
+        id=event_id,
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        source_type="unplanned_incident",
+    )
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incidencia no encontrada")
+
+    if payload.title is not None:
+        title = payload.title.strip()
+        if not title:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El título es obligatorio")
+        event.title = title
+    if "description" in payload.model_fields_set:
+        event.description = payload.description.strip() if payload.description else None
+    if payload.planned_date is not None:
+        event.planned_date = payload.planned_date
+    if "planned_start_time" in payload.model_fields_set:
+        event.planned_start_time = payload.planned_start_time
+    if payload.priority is not None:
+        event.priority = payload.priority
+    if payload.status is not None:
+        event.status = payload.status
+
+    if "assigned_user_id" in payload.model_fields_set:
+        await _assign_event_user(
+            event,
+            condominium,
+            request.state.company_id,
+            payload.assigned_user_id,
+            clear=True,
+        )
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    event.updated_by = actor
+    await event.save()
+
+    event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")
+    return _event_out(event)
+
+
+@router.post("/unplanned-incidents", response_model=PortalOperationalEventOut, status_code=status.HTTP_201_CREATED)
+async def create_unplanned_incident_event(
+    payload: PortalUnplannedIncidentRequest,
+    request: Request,
+) -> PortalOperationalEventOut:
+    condominium = await _current_condominium(request)
+
+    title = payload.title.strip()
+    if not title:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El título es obligatorio")
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    event = await PlannedOperationalEvent.create(
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        title=title,
+        description=payload.description.strip() if payload.description else None,
+        planned_date=payload.planned_date,
+        planned_start_time=payload.planned_start_time,
+        priority=payload.priority,
+        status="pending",
+        source_type="unplanned_incident",
+        metadata={
+            "section_name": "Incidencia no programada",
+            "origin": "portal_admin",
+            "created_from": "operational_plan",
+        },
+        created_by=actor,
+        updated_by=actor,
+    )
+    await _assign_event_user(
+        event,
+        condominium,
+        request.state.company_id,
+        payload.assigned_user_id,
+    )
+    await event.save()
+
+    event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")
+    return _event_out(event)
+
+
+@router.patch("/manual-tasks/{event_id}", response_model=PortalOperationalEventOut)
+async def update_manual_task_event(
+    event_id: UUID,
+    payload: PortalManualTaskUpdateRequest,
+    request: Request,
+) -> PortalOperationalEventOut:
+    condominium = await _current_condominium(request)
+    event = await PlannedOperationalEvent.get_or_none(
+        id=event_id,
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        source_type="manual_task",
+    )
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
+
+    if payload.title is not None:
+        title = payload.title.strip()
+        if not title:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El titulo es obligatorio")
+        event.title = title
+    if "description" in payload.model_fields_set:
+        event.description = payload.description.strip() if payload.description else None
+    if payload.planned_date is not None:
+        event.planned_date = payload.planned_date
+    if "planned_start_time" in payload.model_fields_set:
+        event.planned_start_time = payload.planned_start_time
+    if payload.priority is not None:
+        event.priority = payload.priority
+    if payload.status is not None:
+        event.status = payload.status
+    if "assigned_user_id" in payload.model_fields_set:
+        await _assign_event_user(
+            event,
+            condominium,
+            request.state.company_id,
+            payload.assigned_user_id,
+            clear=True,
+        )
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    event.updated_by = actor
+    await event.save()
+
+    event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")
+    return _event_out(event)
+
+
+@router.post("/manual-tasks", response_model=PortalOperationalEventOut, status_code=status.HTTP_201_CREATED)
+async def create_manual_task_event(
+    payload: PortalManualTaskRequest,
+    request: Request,
+) -> PortalOperationalEventOut:
+    condominium = await _current_condominium(request)
+    title = payload.title.strip()
+    if not title:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El titulo es obligatorio")
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    event = await PlannedOperationalEvent.create(
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        title=title,
+        description=payload.description.strip() if payload.description else None,
+        planned_date=payload.planned_date,
+        planned_start_time=payload.planned_start_time,
+        priority=payload.priority,
+        status="pending",
+        source_type="manual_task",
+        metadata={
+            "section_name": "Tarea manual",
+            "origin": "portal_admin",
+            "created_from": "manual_tasks",
+        },
+        created_by=actor,
+        updated_by=actor,
+    )
+    await _assign_event_user(
+        event,
+        condominium,
+        request.state.company_id,
+        payload.assigned_user_id,
+    )
     await event.save()
 
     event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")

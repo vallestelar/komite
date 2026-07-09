@@ -17,6 +17,7 @@ class PlannedOperationalEvent(TimestampAuditMixin):
     planned_date = fields.DateField()
     planned_start_time = fields.TimeField(null=True)
     planned_end_time = fields.TimeField(null=True)
+    estimated_duration_minutes = fields.IntField(null=True)
     assigned_profile = fields.CharField(max_length=60, null=True)
     priority = fields.CharField(max_length=30, default="medium")
     status = fields.CharField(max_length=40, default="pending")
@@ -27,4 +28,3 @@ class PlannedOperationalEvent(TimestampAuditMixin):
     class Meta:
         table = "planned_operational_events"
         indexes = (("company_id",), ("condominium_id", "status"), ("condominium_template_item_id",), ("calendar_id",), ("assigned_user_id",), ("planned_date",), ("priority",))
-

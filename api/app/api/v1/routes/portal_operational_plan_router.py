@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, time
+from math import isfinite
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -24,6 +25,8 @@ class PortalOperationalEventOut(BaseModel):
     planned_date: date
     planned_start_time: str | None = None
     planned_end_time: str | None = None
+    estimated_duration_hours: float | None = None
+    estimated_duration_minutes: int | None = None
     assigned_profile: str | None = None
     assigned_user_id: UUID | None = None
     assigned_user_name: str | None = None
@@ -34,6 +37,7 @@ class PortalOperationalEventOut(BaseModel):
     section_name: str | None = None
     asset_name: str | None = None
     template_item_id: UUID | None = None
+    agenda_order: int = 0
 
 
 class PortalOperationalPlanSummary(BaseModel):
@@ -67,11 +71,33 @@ class PortalOperationalAssignmentRequest(BaseModel):
     assigned_user_id: UUID | None = None
 
 
+class PortalOperationalScheduleRequest(BaseModel):
+    planned_date: date
+    planned_start_time: time | None = None
+
+
+class PortalOperationalEventUpdateRequest(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    planned_date: date | None = None
+    planned_start_time: time | None = None
+    estimated_duration_hours: float | None = None
+    assigned_user_id: UUID | None = None
+    priority: str | None = None
+    status: str | None = None
+
+
+class PortalOperationalReorderRequest(BaseModel):
+    planned_date: date
+    ordered_event_ids: list[UUID]
+
+
 class PortalUnplannedIncidentRequest(BaseModel):
     title: str
     description: str | None = None
     planned_date: date
     planned_start_time: time | None = None
+    estimated_duration_hours: float | None = None
     assigned_user_id: UUID | None = None
     priority: str = "medium"
 
@@ -81,6 +107,7 @@ class PortalUnplannedIncidentUpdateRequest(BaseModel):
     description: str | None = None
     planned_date: date | None = None
     planned_start_time: time | None = None
+    estimated_duration_hours: float | None = None
     assigned_user_id: UUID | None = None
     priority: str | None = None
     status: str | None = None
@@ -91,6 +118,7 @@ class PortalManualTaskRequest(BaseModel):
     description: str | None = None
     planned_date: date
     planned_start_time: time | None = None
+    estimated_duration_hours: float | None = None
     assigned_user_id: UUID | None = None
     priority: str = "medium"
 
@@ -100,6 +128,7 @@ class PortalManualTaskUpdateRequest(BaseModel):
     description: str | None = None
     planned_date: date | None = None
     planned_start_time: time | None = None
+    estimated_duration_hours: float | None = None
     assigned_user_id: UUID | None = None
     priority: str | None = None
     status: str | None = None
@@ -109,10 +138,35 @@ def _time_to_text(value) -> str | None:
     return value.strftime("%H:%M") if value else None
 
 
+def _hours_to_minutes(value: float | None) -> int | None:
+    if value is None:
+        return None
+    if not isfinite(value) or value <= 0:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La duracion debe ser mayor que 0")
+    minutes = round(value * 60)
+    if minutes <= 0:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La duracion debe ser mayor que 0")
+    return minutes
+
+
+def _minutes_to_hours(value: int | None) -> float | None:
+    if value is None:
+        return None
+    return round(value / 60, 2)
+
+
 def _metadata_value(event: PlannedOperationalEvent, key: str) -> str | None:
     metadata = event.metadata or {}
     value = metadata.get(key)
     return str(value) if value not in (None, "") else None
+
+
+def _agenda_order(event: PlannedOperationalEvent) -> int:
+    metadata = event.metadata or {}
+    try:
+        return int(metadata.get("agenda_order") or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _event_out(event: PlannedOperationalEvent) -> PortalOperationalEventOut:
@@ -124,6 +178,8 @@ def _event_out(event: PlannedOperationalEvent) -> PortalOperationalEventOut:
         planned_date=event.planned_date,
         planned_start_time=_time_to_text(event.planned_start_time),
         planned_end_time=_time_to_text(event.planned_end_time),
+        estimated_duration_hours=_minutes_to_hours(event.estimated_duration_minutes),
+        estimated_duration_minutes=event.estimated_duration_minutes,
         assigned_profile=event.assigned_profile,
         assigned_user_id=event.assigned_user_id,
         assigned_user_name=getattr(assigned_user, "full_name", None),
@@ -134,6 +190,7 @@ def _event_out(event: PlannedOperationalEvent) -> PortalOperationalEventOut:
         section_name=_metadata_value(event, "section_name"),
         asset_name=_metadata_value(event, "asset_name"),
         template_item_id=event.condominium_template_item_id,
+        agenda_order=_agenda_order(event),
     )
 
 
@@ -254,6 +311,7 @@ async def list_operational_plan(
         .select_related("assigned_user")
         .order_by("planned_date", "priority", "title")
     )
+    events.sort(key=lambda event: (event.planned_date, _agenda_order(event), event.priority, event.title))
     staff = await _operational_staff(condominium, request.state.company_id)
     today = date.today()
     summary = PortalOperationalPlanSummary(
@@ -307,6 +365,135 @@ async def assign_operational_event(
     return _event_out(event)
 
 
+@router.patch("/events/reorder", response_model=list[PortalOperationalEventOut])
+async def reorder_operational_events(
+    payload: PortalOperationalReorderRequest,
+    request: Request,
+) -> list[PortalOperationalEventOut]:
+    if not payload.ordered_event_ids:
+        return []
+
+    events = await (
+        PlannedOperationalEvent.filter(
+            id__in=payload.ordered_event_ids,
+            company_id=request.state.company_id,
+            condominium_id=request.state.condominium_id,
+        )
+        .select_related("assigned_user")
+    )
+    events_by_id = {event.id: event for event in events}
+    if len(events_by_id) != len(set(payload.ordered_event_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Uno o mas eventos no existen en este condominio")
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    updated_events: list[PlannedOperationalEvent] = []
+    for index, event_id in enumerate(payload.ordered_event_ids):
+        event = events_by_id[event_id]
+        metadata = dict(event.metadata or {})
+        metadata["agenda_order"] = (index + 1) * 1000
+        event.planned_date = payload.planned_date
+        event.metadata = metadata
+        event.updated_by = actor
+        await event.save()
+        updated_events.append(event)
+
+    return [_event_out(event) for event in updated_events]
+
+
+@router.patch("/events/{event_id}", response_model=PortalOperationalEventOut)
+async def update_operational_event(
+    event_id: UUID,
+    payload: PortalOperationalEventUpdateRequest,
+    request: Request,
+) -> PortalOperationalEventOut:
+    condominium = await _current_condominium(request)
+
+    event = await PlannedOperationalEvent.get_or_none(
+        id=event_id,
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+    )
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evento no encontrado")
+
+    if payload.title is not None:
+        title = payload.title.strip()
+        if not title:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El titulo es obligatorio")
+        event.title = title
+    if "description" in payload.model_fields_set:
+        event.description = payload.description.strip() if payload.description else None
+    if payload.planned_date is not None:
+        event.planned_date = payload.planned_date
+    if "planned_start_time" in payload.model_fields_set:
+        event.planned_start_time = payload.planned_start_time
+    if "estimated_duration_hours" in payload.model_fields_set:
+        event.estimated_duration_minutes = _hours_to_minutes(payload.estimated_duration_hours)
+    if payload.priority is not None:
+        event.priority = payload.priority
+    if payload.status is not None:
+        event.status = payload.status
+    if "assigned_user_id" in payload.model_fields_set:
+        await _assign_event_user(
+            event,
+            condominium,
+            request.state.company_id,
+            payload.assigned_user_id,
+            clear=True,
+        )
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    event.updated_by = actor
+    await event.save()
+
+    event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")
+    return _event_out(event)
+
+
+@router.patch("/events/{event_id}/schedule", response_model=PortalOperationalEventOut)
+async def reschedule_operational_event(
+    event_id: UUID,
+    payload: PortalOperationalScheduleRequest,
+    request: Request,
+) -> PortalOperationalEventOut:
+    event = await PlannedOperationalEvent.get_or_none(
+        id=event_id,
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+    )
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evento no encontrado")
+
+    event.planned_date = payload.planned_date
+    if "planned_start_time" in payload.model_fields_set:
+        event.planned_start_time = payload.planned_start_time
+    metadata = dict(event.metadata or {})
+    metadata["agenda_order"] = int(metadata.get("agenda_order") or 0) or 1000
+    event.metadata = metadata
+
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    event.updated_by = actor
+    await event.save()
+
+    event = await PlannedOperationalEvent.get(id=event.id).select_related("assigned_user")
+    return _event_out(event)
+
+
+@router.delete("/events/{event_id}", status_code=status.HTTP_200_OK)
+async def delete_operational_event(
+    event_id: UUID,
+    request: Request,
+) -> dict[str, int]:
+    deleted = await PlannedOperationalEvent.filter(
+        id=event_id,
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+    ).delete()
+    if deleted == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evento no encontrado")
+    return {"deleted": deleted}
+
+
 @router.patch("/unplanned-incidents/{event_id}", response_model=PortalOperationalEventOut)
 async def update_unplanned_incident_event(
     event_id: UUID,
@@ -335,6 +522,8 @@ async def update_unplanned_incident_event(
         event.planned_date = payload.planned_date
     if "planned_start_time" in payload.model_fields_set:
         event.planned_start_time = payload.planned_start_time
+    if "estimated_duration_hours" in payload.model_fields_set:
+        event.estimated_duration_minutes = _hours_to_minutes(payload.estimated_duration_hours)
     if payload.priority is not None:
         event.priority = payload.priority
     if payload.status is not None:
@@ -376,6 +565,7 @@ async def create_unplanned_incident_event(
         description=payload.description.strip() if payload.description else None,
         planned_date=payload.planned_date,
         planned_start_time=payload.planned_start_time,
+        estimated_duration_minutes=_hours_to_minutes(payload.estimated_duration_hours),
         priority=payload.priority,
         status="pending",
         source_type="unplanned_incident",
@@ -426,6 +616,8 @@ async def update_manual_task_event(
         event.planned_date = payload.planned_date
     if "planned_start_time" in payload.model_fields_set:
         event.planned_start_time = payload.planned_start_time
+    if "estimated_duration_hours" in payload.model_fields_set:
+        event.estimated_duration_minutes = _hours_to_minutes(payload.estimated_duration_hours)
     if payload.priority is not None:
         event.priority = payload.priority
     if payload.status is not None:
@@ -465,6 +657,7 @@ async def create_manual_task_event(
         description=payload.description.strip() if payload.description else None,
         planned_date=payload.planned_date,
         planned_start_time=payload.planned_start_time,
+        estimated_duration_minutes=_hours_to_minutes(payload.estimated_duration_hours),
         priority=payload.priority,
         status="pending",
         source_type="manual_task",

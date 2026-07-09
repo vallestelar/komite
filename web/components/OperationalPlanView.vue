@@ -6,6 +6,8 @@ type OperationalEvent = {
   planned_date: string;
   planned_start_time?: string | null;
   planned_end_time?: string | null;
+  estimated_duration_hours?: number | null;
+  estimated_duration_minutes?: number | null;
   assigned_profile?: string | null;
   assigned_user_id?: string | null;
   assigned_user_name?: string | null;
@@ -16,6 +18,7 @@ type OperationalEvent = {
   section_name?: string | null;
   asset_name?: string | null;
   template_item_id?: string | null;
+  agenda_order?: number | null;
 };
 
 type OperationalStaff = {
@@ -66,13 +69,21 @@ const agendaView = ref<"list" | "week">("list");
 const selectedWeekStart = ref<Date | null>(null);
 const showIncidentForm = ref(false);
 const showTaskForm = ref(false);
+const showEditForm = ref(false);
 const savingIncident = ref(false);
 const savingTask = ref(false);
+const savingEdit = ref(false);
+const draggingEventId = ref("");
+const dragOverDate = ref("");
+const dragTargetKey = ref("");
+const deletingEventId = ref("");
+const deleteCandidate = ref<OperationalEvent | null>(null);
 const incidentForm = reactive({
   title: "",
   description: "",
   planned_date: new Date().toISOString().slice(0, 10),
   planned_start_time: "",
+  estimated_duration_hours: "",
   assigned_user_id: "",
   priority: "medium",
 });
@@ -81,8 +92,20 @@ const taskForm = reactive({
   description: "",
   planned_date: new Date().toISOString().slice(0, 10),
   planned_start_time: "",
+  estimated_duration_hours: "",
   assigned_user_id: "",
   priority: "medium",
+});
+const editForm = reactive({
+  id: "",
+  title: "",
+  description: "",
+  planned_date: "",
+  planned_start_time: "",
+  estimated_duration_hours: "",
+  assigned_user_id: "",
+  priority: "medium",
+  status: "pending",
 });
 
 const monthOptions = [
@@ -126,7 +149,10 @@ const groupedEvents = computed(() => {
   for (const event of visibleEvents.value) {
     groups.set(event.planned_date, [...(groups.get(event.planned_date) || []), event]);
   }
-  return Array.from(groups.entries()).map(([dateKey, items]) => ({ dateKey, items }));
+  return Array.from(groups.entries()).map(([dateKey, items]) => ({
+    dateKey,
+    items: sortAgendaEvents(items),
+  }));
 });
 
 const defaultWeekStartDate = computed(() => {
@@ -169,7 +195,7 @@ const weekDays = computed(() => Array.from({ length: 7 }, (_, index) => {
     dateKey,
     label: new Intl.DateTimeFormat("es-CL", { weekday: "short" }).format(value),
     day: new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short" }).format(value),
-    items: visibleEvents.value.filter((event) => event.planned_date === dateKey),
+    items: sortAgendaEvents(visibleEvents.value.filter((event) => event.planned_date === dateKey)),
   };
 }));
 
@@ -228,11 +254,195 @@ const assignEvent = async (event: OperationalEvent, assignedUserId: string) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assigned_user_id: assignedUserId || null }),
     });
-    events.value = events.value.map((item) => item.id === updated.id ? updated : item);
+    replaceEvent(updated);
   } catch (error) {
     errorMessage.value = readableError(error);
   } finally {
     savingAssignment.value = "";
+  }
+};
+
+const replaceEvent = (updated: OperationalEvent) => {
+  events.value = events.value.map((item) => item.id === updated.id ? updated : item);
+  recomputeSummary();
+};
+
+const recomputeSummary = () => {
+  const today = toDateKey(new Date());
+  summary.total = events.value.length;
+  summary.pending = events.value.filter((event) => event.status === "pending").length;
+  summary.in_progress = events.value.filter((event) => event.status === "in_progress").length;
+  summary.completed = events.value.filter((event) => event.status === "completed" || event.status === "done").length;
+  summary.overdue = events.value.filter((event) => !["completed", "done", "cancelled"].includes(event.status) && event.planned_date < today).length;
+};
+
+const moveEventToDate = async (event: OperationalEvent, plannedDate: string) => {
+  if (event.planned_date === plannedDate || deletingEventId.value === event.id) return;
+  errorMessage.value = "";
+  try {
+    const updated = await request<OperationalEvent>(`/api/v1/portal/operational-plan/events/${event.id}/schedule`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planned_date: plannedDate }),
+    });
+    events.value = events.value.map((item) => item.id === updated.id ? updated : item);
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  }
+};
+
+const sortAgendaEvents = (items: OperationalEvent[]) => [...items].sort((left, right) => {
+  const orderCompare = (left.agenda_order || 0) - (right.agenda_order || 0);
+  if (orderCompare) return orderCompare;
+  const timeCompare = (left.planned_start_time || "").localeCompare(right.planned_start_time || "");
+  return timeCompare || left.title.localeCompare(right.title);
+});
+
+const startEventDrag = (event: DragEvent, item: OperationalEvent) => {
+  draggingEventId.value = item.id;
+  event.dataTransfer?.setData("text/plain", item.id);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+};
+
+const endEventDrag = () => {
+  draggingEventId.value = "";
+  dragOverDate.value = "";
+  dragTargetKey.value = "";
+};
+
+const setDropTarget = (dayDate: string, beforeEventId = "") => {
+  dragOverDate.value = dayDate;
+  dragTargetKey.value = `${dayDate}:${beforeEventId || "end"}`;
+};
+
+const beforeIdFromCardPosition = (
+  event: DragEvent,
+  dayItems: OperationalEvent[],
+  index: number,
+) => {
+  const target = event.currentTarget as HTMLElement | null;
+  if (!target) return dayItems[index]?.id || "";
+  const rect = target.getBoundingClientRect();
+  const isUpperHalf = event.clientY < rect.top + rect.height / 2;
+  return isUpperHalf ? dayItems[index]?.id || "" : dayItems[index + 1]?.id || "";
+};
+
+const setCardDropTarget = (
+  event: DragEvent,
+  dayDate: string,
+  dayItems: OperationalEvent[],
+  index: number,
+) => {
+  setDropTarget(dayDate, beforeIdFromCardPosition(event, dayItems, index));
+};
+
+const dropEventOnCard = async (
+  event: DragEvent,
+  dayDate: string,
+  dayItems: OperationalEvent[],
+  index: number,
+) => {
+  await dropEventOnPosition(dayDate, beforeIdFromCardPosition(event, dayItems, index));
+};
+
+const dropEventOnPosition = async (dayDate: string, beforeEventId = "") => {
+  const draggedEvent = events.value.find((item) => item.id === draggingEventId.value);
+  endEventDrag();
+  if (!draggedEvent) return;
+  if (beforeEventId === draggedEvent.id) return;
+  await reorderEventToPosition(draggedEvent, dayDate, beforeEventId);
+};
+
+const reorderEventToPosition = async (event: OperationalEvent, dayDate: string, beforeEventId = "") => {
+  if (deletingEventId.value === event.id) return;
+  const targetEvents = sortAgendaEvents(events.value.filter((item) => item.planned_date === dayDate && item.id !== event.id));
+  const insertIndex = beforeEventId ? targetEvents.findIndex((item) => item.id === beforeEventId) : targetEvents.length;
+  const nextEvents = [...targetEvents];
+  nextEvents.splice(insertIndex >= 0 ? insertIndex : nextEvents.length, 0, { ...event, planned_date: dayDate });
+  const orderedEventIds = nextEvents.map((item) => item.id);
+
+  errorMessage.value = "";
+  try {
+    const updated = await request<OperationalEvent[]>("/api/v1/portal/operational-plan/events/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planned_date: dayDate, ordered_event_ids: orderedEventIds }),
+    });
+    const updatedById = new Map(updated.map((item) => [item.id, item]));
+    events.value = events.value.map((item) => updatedById.get(item.id) || item);
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  }
+};
+
+const sendEventToNextWeek = async (event: OperationalEvent) => {
+  const targetDate = targetDateForWeekOffset(1);
+  if (!targetDate) return;
+  await reorderEventToPosition(event, targetDate);
+};
+
+const sendEventToPreviousWeek = async (event: OperationalEvent) => {
+  const targetDate = targetDateForWeekOffset(-1);
+  if (!targetDate) return;
+  await reorderEventToPosition(event, targetDate);
+};
+
+const todayDate = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+const targetDateForWeekOffset = (offset: number) => {
+  const targetStart = new Date(weekStartDate.value);
+  targetStart.setDate(targetStart.getDate() + offset * 7);
+  targetStart.setHours(0, 0, 0, 0);
+
+  const targetEnd = new Date(targetStart);
+  targetEnd.setDate(targetStart.getDate() + 6);
+
+  const today = todayDate();
+  if (targetEnd < today) return offset > 0 ? toDateKey(today) : "";
+  return toDateKey(targetStart < today ? today : targetStart);
+};
+
+const canSendToPreviousWeek = computed(() => Boolean(targetDateForWeekOffset(-1)));
+
+const weekMoveTitle = (offset: number) => {
+  const targetDate = targetDateForWeekOffset(offset);
+  if (!targetDate) return "No se puede mover al pasado";
+  return offset < 0 ? `Enviar a la semana anterior (${shortDate(targetDate)})` : `Enviar a la próxima semana (${shortDate(targetDate)})`;
+};
+
+const openDeleteEvent = (event: OperationalEvent) => {
+  deleteCandidate.value = event;
+};
+
+const closeDeleteEvent = () => {
+  if (deletingEventId.value) return;
+  deleteCandidate.value = null;
+};
+
+const confirmDeleteEvent = async () => {
+  if (!deleteCandidate.value) return;
+  const candidate = deleteCandidate.value;
+  deletingEventId.value = candidate.id;
+  errorMessage.value = "";
+  try {
+    await request(`/api/v1/portal/operational-plan/events/${candidate.id}`, { method: "DELETE" });
+    events.value = events.value.filter((event) => event.id !== candidate.id);
+    summary.total = Math.max(0, summary.total - 1);
+    if (candidate.status === "pending") summary.pending = Math.max(0, summary.pending - 1);
+    if (candidate.status === "in_progress") summary.in_progress = Math.max(0, summary.in_progress - 1);
+    if (candidate.status === "completed" || candidate.status === "done") summary.completed = Math.max(0, summary.completed - 1);
+    if (!["completed", "done", "cancelled"].includes(candidate.status) && candidate.planned_date < toDateKey(new Date())) {
+      summary.overdue = Math.max(0, summary.overdue - 1);
+    }
+    deleteCandidate.value = null;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    deletingEventId.value = "";
   }
 };
 
@@ -241,6 +451,7 @@ const openIncidentForm = () => {
   incidentForm.description = "";
   incidentForm.planned_date = toDateKey(new Date());
   incidentForm.planned_start_time = "";
+  incidentForm.estimated_duration_hours = "";
   incidentForm.assigned_user_id = "";
   incidentForm.priority = "medium";
   showIncidentForm.value = true;
@@ -256,6 +467,7 @@ const openTaskForm = () => {
   taskForm.description = "";
   taskForm.planned_date = toDateKey(new Date());
   taskForm.planned_start_time = "";
+  taskForm.estimated_duration_hours = "";
   taskForm.assigned_user_id = "";
   taskForm.priority = "medium";
   showTaskForm.value = true;
@@ -264,6 +476,55 @@ const openTaskForm = () => {
 const closeTaskForm = () => {
   if (savingTask.value) return;
   showTaskForm.value = false;
+};
+
+const openEditEvent = (event: OperationalEvent) => {
+  editForm.id = event.id;
+  editForm.title = event.title || "";
+  editForm.description = event.description || "";
+  editForm.planned_date = event.planned_date;
+  editForm.planned_start_time = event.planned_start_time || "";
+  editForm.estimated_duration_hours = event.estimated_duration_hours ? String(event.estimated_duration_hours) : "";
+  editForm.assigned_user_id = event.assigned_user_id || "";
+  editForm.priority = event.priority || "medium";
+  editForm.status = event.status || "pending";
+  showEditForm.value = true;
+};
+
+const closeEditEvent = () => {
+  if (savingEdit.value) return;
+  showEditForm.value = false;
+};
+
+const updateEditedEvent = async () => {
+  if (!editForm.id || !editForm.title.trim()) {
+    errorMessage.value = "Indica el título de la tarea.";
+    return;
+  }
+  savingEdit.value = true;
+  errorMessage.value = "";
+  try {
+    const updated = await request<OperationalEvent>(`/api/v1/portal/operational-plan/events/${editForm.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || null,
+        planned_date: editForm.planned_date,
+        planned_start_time: editForm.planned_start_time || null,
+        estimated_duration_hours: optionalNumber(editForm.estimated_duration_hours),
+        assigned_user_id: editForm.assigned_user_id || null,
+        priority: editForm.priority,
+        status: editForm.status,
+      }),
+    });
+    replaceEvent(updated);
+    showEditForm.value = false;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    savingEdit.value = false;
+  }
 };
 
 const addCreatedEventToAgenda = (created: OperationalEvent) => {
@@ -297,6 +558,7 @@ const createManualTask = async () => {
         description: taskForm.description.trim() || null,
         planned_date: taskForm.planned_date,
         planned_start_time: taskForm.planned_start_time || null,
+        estimated_duration_hours: optionalNumber(taskForm.estimated_duration_hours),
         assigned_user_id: taskForm.assigned_user_id || null,
         priority: taskForm.priority,
       }),
@@ -326,6 +588,7 @@ const createUnplannedIncident = async () => {
         description: incidentForm.description.trim() || null,
         planned_date: incidentForm.planned_date,
         planned_start_time: incidentForm.planned_start_time || null,
+        estimated_duration_hours: optionalNumber(incidentForm.estimated_duration_hours),
         assigned_user_id: incidentForm.assigned_user_id || null,
         priority: incidentForm.priority,
       }),
@@ -352,6 +615,18 @@ const formatDate = (value: string) => {
 const shortDate = (value: string) => {
   const [year, month, day] = value.split("-").map(Number);
   return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short" }).format(new Date(year, month - 1, day));
+};
+
+const optionalNumber = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const truncatedCardTitle = (value: string) => {
+  const maxLength = 42;
+  const clean = value.trim();
+  return clean.length > maxLength ? `${clean.slice(0, maxLength).trim()}...` : clean;
 };
 
 const toDateKey = (value: Date) => {
@@ -544,23 +819,86 @@ onMounted(loadPlan);
           <span>{{ day.label }}</span>
           <strong>{{ day.day }}</strong>
         </header>
-        <div class="week-column-body">
-          <article
-            v-for="event in day.items"
+        <div
+          class="week-column-body"
+          :class="{ 'is-drop-target': dragOverDate === day.dateKey }"
+          @dragover.prevent="setDropTarget(day.dateKey)"
+          @dragleave="dragOverDate === day.dateKey && (dragOverDate = '')"
+          @drop.prevent="dropEventOnPosition(day.dateKey)"
+        >
+          <div
+            v-for="(event, index) in day.items"
             :key="event.id"
-            class="week-task-card"
-            :class="{ 'is-unplanned': isUnplannedIncident(event), 'is-manual': isManualTask(event) }"
+            class="week-card-wrap"
           >
-            <h3>{{ event.title }}</h3>
-            <span class="status-badge week-status" :class="statusBadgeClass(event.status)">
-              <span aria-hidden="true"></span>
-              {{ statusLabel(event.status) }}
-            </span>
-            <p v-if="isUnplannedIncident(event)" class="week-source">{{ sourceLabel(event.source_type) }}</p>
-            <p class="week-condominium">{{ activeCondominium?.name || "Sin condominio" }}</p>
-            <p>{{ assigneeLabel(event) }}</p>
-          </article>
-          <p v-if="!day.items.length" class="week-empty">Sin tareas</p>
+            <div
+              class="week-drop-zone is-between"
+              :class="{ 'is-active': dragTargetKey === `${day.dateKey}:${event.id}` }"
+              @dragover.prevent.stop="setDropTarget(day.dateKey, event.id)"
+              @drop.prevent.stop="dropEventOnPosition(day.dateKey, event.id)"
+            ></div>
+            <article
+              class="week-task-card"
+              :class="{ 'is-unplanned': isUnplannedIncident(event), 'is-manual': isManualTask(event) }"
+              draggable="true"
+              @dragstart="startEventDrag($event, event)"
+              @dragend="endEventDrag"
+              @dragover.prevent.stop="setCardDropTarget($event, day.dateKey, day.items, index)"
+              @drop.prevent.stop="dropEventOnCard($event, day.dateKey, day.items, index)"
+              @click="openEditEvent(event)"
+            >
+              <div class="week-card-actions">
+                <button
+                  class="week-card-action is-remove"
+                  type="button"
+                  :disabled="deletingEventId === event.id"
+                  aria-label="Eliminar de la agenda"
+                  title="Eliminar de la agenda"
+                  @click.stop="openDeleteEvent(event)"
+                >
+                  <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+                </button>
+              </div>
+              <h3>{{ truncatedCardTitle(event.title) }}</h3>
+              <span class="status-badge week-status" :class="statusBadgeClass(event.status)">
+                <span aria-hidden="true"></span>
+                {{ statusLabel(event.status) }}
+              </span>
+              <p v-if="isUnplannedIncident(event)" class="week-source">{{ sourceLabel(event.source_type) }}</p>
+              <p class="week-condominium">{{ activeCondominium?.name || "Sin condominio" }}</p>
+              <p class="week-assignee" :title="assigneeLabel(event)">{{ assigneeLabel(event) }}</p>
+              <div class="week-move-actions">
+                <button
+                  v-if="canSendToPreviousWeek"
+                  class="week-card-action is-previous-week"
+                  type="button"
+                  :disabled="deletingEventId === event.id"
+                  aria-label="Enviar a la semana anterior"
+                  :title="weekMoveTitle(-1)"
+                  @click.stop="sendEventToPreviousWeek(event)"
+                >
+                  <svg class="icon" aria-hidden="true"><use href="#icon-chevrons-left" /></svg>
+                </button>
+                <button
+                  class="week-card-action is-next-week"
+                  type="button"
+                  :disabled="deletingEventId === event.id"
+                  aria-label="Enviar a la proxima semana"
+                  :title="weekMoveTitle(1)"
+                  @click.stop="sendEventToNextWeek(event)"
+                >
+                  <svg class="icon" aria-hidden="true"><use href="#icon-chevrons-right" /></svg>
+                </button>
+              </div>
+            </article>
+          </div>
+          <div
+            class="week-drop-zone"
+            :class="{ 'is-active': dragTargetKey === `${day.dateKey}:end` }"
+            @dragover.prevent.stop="setDropTarget(day.dateKey)"
+            @drop.prevent.stop="dropEventOnPosition(day.dateKey)"
+          ></div>
+          <p v-if="!day.items.length && !draggingEventId" class="week-empty">Sin tareas</p>
         </div>
       </section>
     </div>
@@ -580,6 +918,7 @@ onMounted(loadPlan);
             :key="event.id"
             class="operational-event"
             :class="{ 'is-manual': isManualTask(event) }"
+            @click="openEditEvent(event)"
           >
             <div class="event-date-dot" aria-hidden="true"></div>
             <div class="event-content">
@@ -588,10 +927,45 @@ onMounted(loadPlan);
                   <p class="event-section">{{ sourceLabel(event.source_type) }} · {{ event.section_name || "Sin sección" }}</p>
                   <h3>{{ event.title }}</h3>
                 </div>
-                <span class="status-badge" :class="statusBadgeClass(event.status)">
-                  <span aria-hidden="true"></span>
-                  {{ statusLabel(event.status) }}
-                </span>
+                <div class="event-row-right">
+                  <span class="status-badge" :class="statusBadgeClass(event.status)">
+                    <span aria-hidden="true"></span>
+                    {{ statusLabel(event.status) }}
+                  </span>
+                  <div class="event-row-actions">
+                    <button
+                      v-if="canSendToPreviousWeek"
+                      class="week-card-action is-previous-week"
+                      type="button"
+                      :disabled="deletingEventId === event.id"
+                      aria-label="Enviar a la semana anterior"
+                      :title="weekMoveTitle(-1)"
+                      @click.stop="sendEventToPreviousWeek(event)"
+                    >
+                      <svg class="icon" aria-hidden="true"><use href="#icon-chevrons-left" /></svg>
+                    </button>
+                    <button
+                      class="week-card-action is-next-week"
+                      type="button"
+                      :disabled="deletingEventId === event.id"
+                      aria-label="Enviar a la próxima semana"
+                      :title="weekMoveTitle(1)"
+                      @click.stop="sendEventToNextWeek(event)"
+                    >
+                      <svg class="icon" aria-hidden="true"><use href="#icon-chevrons-right" /></svg>
+                    </button>
+                    <button
+                      class="week-card-action is-remove"
+                      type="button"
+                      :disabled="deletingEventId === event.id"
+                      aria-label="Eliminar de la agenda"
+                      title="Eliminar de la agenda"
+                      @click.stop="openDeleteEvent(event)"
+                    >
+                      <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+                    </button>
+                  </div>
+                </div>
               </div>
               <p v-if="event.description" class="event-description">{{ event.description }}</p>
               <div class="event-meta">
@@ -603,7 +977,7 @@ onMounted(loadPlan);
                   <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
                   {{ profileLabel(event.assigned_profile) }}
                 </span>
-                <label class="event-assignee">
+                <label class="event-assignee" @click.stop>
                   <svg class="icon" aria-hidden="true"><use href="#icon-user" /></svg>
                   <select
                     :value="event.assigned_user_id || ''"
@@ -634,6 +1008,75 @@ onMounted(loadPlan);
       <h2>Sin eventos operativos</h2>
       <p class="placeholder-copy">Genera la planificación desde el plan de mantenciones para visualizarla aquí.</p>
     </div>
+    <div v-if="showEditForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-event-title">
+      <form class="confirm-modal operational-incident-modal" @submit.prevent="updateEditedEvent">
+        <div>
+          <p class="eyebrow">Agenda operativa</p>
+          <h2 id="edit-event-title">Editar tarea</h2>
+          <p class="placeholder-copy">Actualiza la planificacion, responsable o estado de esta tarjeta.</p>
+        </div>
+
+        <div class="entity-form-grid">
+          <label class="span-two">
+            Titulo
+            <input v-model="editForm.title" type="text" maxlength="180" required />
+          </label>
+          <label>
+            Fecha
+            <input v-model="editForm.planned_date" type="date" required />
+          </label>
+          <label>
+            Hora estimada
+            <input v-model="editForm.planned_start_time" type="time" />
+          </label>
+          <label>
+            Duración estimada (horas)
+            <input v-model="editForm.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
+          </label>
+          <label>
+            Prioridad
+            <select v-model="editForm.priority">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label>
+            Estado
+            <select v-model="editForm.status">
+              <option value="pending">Pendiente</option>
+              <option value="in_progress">En curso</option>
+              <option value="completed">Completado</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </label>
+          <label class="span-two">
+            Responsable
+            <select v-model="editForm.assigned_user_id">
+              <option value="">Sin persona asignada</option>
+              <option v-for="member in staff" :key="member.user_id" :value="member.user_id">
+                {{ staffOptionLabel(member) }}
+              </option>
+            </select>
+          </label>
+          <label class="wide-field">
+            Descripcion
+            <textarea v-model="editForm.description" rows="4"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingEdit" @click="closeEditEvent">
+            Cancelar
+          </button>
+          <button class="button navy" type="submit" :disabled="savingEdit">
+            <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+            <span>{{ savingEdit ? "Guardando..." : "Guardar cambios" }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
     <div v-if="showIncidentForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-form-title">
       <form class="confirm-modal operational-incident-modal" @submit.prevent="createUnplannedIncident">
         <div>
@@ -654,6 +1097,10 @@ onMounted(loadPlan);
           <label>
             Hora estimada
             <input v-model="incidentForm.planned_start_time" type="time" />
+          </label>
+          <label>
+            Duración estimada (horas)
+            <input v-model="incidentForm.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
           </label>
           <label>
             Prioridad
@@ -712,6 +1159,10 @@ onMounted(loadPlan);
             <input v-model="taskForm.planned_start_time" type="time" />
           </label>
           <label>
+            Duración estimada (horas)
+            <input v-model="taskForm.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
+          </label>
+          <label>
             Prioridad
             <select v-model="taskForm.priority">
               <option value="low">Baja</option>
@@ -745,6 +1196,26 @@ onMounted(loadPlan);
           </button>
         </div>
       </form>
+    </div>
+    <div v-if="deleteCandidate" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
+      <div class="confirm-modal">
+        <div>
+          <p class="eyebrow">Agenda operativa</p>
+          <h2 id="delete-event-title">Eliminar de la planificación</h2>
+          <p class="placeholder-copy">
+            Se eliminará "{{ deleteCandidate.title }}" de la semana operativa del condominio activo.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="!!deletingEventId" @click="closeDeleteEvent">
+            Cancelar
+          </button>
+          <button class="button danger" type="button" :disabled="!!deletingEventId" @click="confirmDeleteEvent">
+            <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+            <span>{{ deletingEventId ? "Eliminando..." : "Eliminar" }}</span>
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 </template>

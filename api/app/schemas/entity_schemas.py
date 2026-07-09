@@ -1088,6 +1088,7 @@ class PlannedOperationalEventCreate(BaseModel):
     planned_date: date
     planned_start_time: Optional[time] = None
     planned_end_time: Optional[time] = None
+    estimated_duration_minutes: Optional[int] = None
     assigned_profile: Optional[str] = Field(default=None, max_length=60)
     priority: str = Field(default="medium", max_length=30)
     status: str = Field(default="pending", max_length=40)
@@ -1107,6 +1108,7 @@ class PlannedOperationalEventUpdate(BaseModel):
     planned_date: Optional[date] = None
     planned_start_time: Optional[time] = None
     planned_end_time: Optional[time] = None
+    estimated_duration_minutes: Optional[int] = None
     assigned_profile: Optional[str] = Field(default=None, max_length=60)
     priority: Optional[str] = Field(default=None, max_length=30)
     status: Optional[str] = Field(default=None, max_length=40)
@@ -1127,6 +1129,7 @@ class PlannedOperationalEventOut(AuditOut):
     planned_date: date
     planned_start_time: Optional[time] = None
     planned_end_time: Optional[time] = None
+    estimated_duration_minutes: Optional[int] = None
     assigned_profile: Optional[str] = None
     priority: str
     status: str

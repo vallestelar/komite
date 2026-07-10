@@ -278,6 +278,17 @@ textarea:focus {
   box-shadow: 0 14px 28px rgba(71, 85, 105, 0.18);
 }
 
+.button.inspection-action {
+  color: var(--white);
+  background: var(--orange);
+  box-shadow: 0 10px 22px rgba(247, 148, 29, 0.2);
+}
+
+.button.inspection-action:hover:not(:disabled) {
+  background: #e47f12;
+  box-shadow: 0 14px 28px rgba(247, 148, 29, 0.26);
+}
+
 .button.navy {
   color: var(--white);
   background: var(--navy);
@@ -1368,6 +1379,24 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  margin: 12px 0 14px;
+}
+
+.assemblies-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 12px 0 14px;
+}
+
+.assemblies-actions-row .placeholder-copy {
+  max-width: 920px;
+  margin: 0;
+}
+
+.assemblies-actions-row .button {
+  flex: 0 0 auto;
 }
 
 .operational-actions {
@@ -1588,6 +1617,16 @@ h3 {
   border-left-color: #1362ad;
 }
 
+.week-task-card.is-assembly {
+  border-left-color: #6b7280;
+  background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
+}
+
+.week-task-card.is-inspection {
+  border-left-color: var(--orange);
+  background: linear-gradient(180deg, #ffffff 0%, #fff4e5 100%);
+}
+
 .week-task-card h3 {
   margin: 0;
   color: var(--navy);
@@ -1711,6 +1750,18 @@ h3 {
   background: #f8fafc;
 }
 
+.operational-event.is-unplanned {
+  background: linear-gradient(90deg, #fff8f7 0%, #ffffff 55%);
+}
+
+.operational-event.is-assembly {
+  background: linear-gradient(90deg, #f3f4f6 0%, #ffffff 55%);
+}
+
+.operational-event.is-inspection {
+  background: linear-gradient(90deg, #fff4e5 0%, #ffffff 55%);
+}
+
 .event-date-dot {
   width: 12px;
   height: 12px;
@@ -1761,6 +1812,10 @@ h3 {
 
 .operational-event.is-manual .event-title-row h3 {
   color: #1362ad;
+}
+
+.operational-event.is-inspection .event-title-row h3 {
+  color: #c76a08;
 }
 
 .event-section {
@@ -2539,6 +2594,17 @@ h3 {
   box-shadow: 0 22px 60px rgba(16, 36, 55, 0.22);
 }
 
+.modal-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modal-title-row .placeholder-copy {
+  margin-bottom: 0;
+}
+
 .import-confirm-modal {
   width: min(760px, 100%);
 }
@@ -2557,8 +2623,110 @@ h3 {
   overflow: auto;
 }
 
-.assemblies-panel .table-wrap {
-  overflow-x: auto;
+.assemblies-list {
+  display: grid;
+  gap: 12px;
+}
+
+.assembly-card {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-left: 4px solid #6b7280;
+  border-radius: 8px;
+  padding: 14px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 12px 26px rgba(16, 36, 55, 0.06);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.assembly-card:hover {
+  border-color: #b8c4d2;
+  box-shadow: 0 16px 34px rgba(16, 36, 55, 0.1);
+  transform: translateY(-1px);
+}
+
+.assembly-date-block {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  border: 1px solid #d8e2ee;
+  border-radius: 8px;
+  padding: 10px 8px;
+  color: var(--navy);
+  background: #eef2f7;
+  text-align: center;
+}
+
+.assembly-date-block strong {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.assembly-date-block span {
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.assembly-date-block small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.assembly-card-main {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.assembly-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assembly-card-header h3 {
+  margin: 2px 0 0;
+  color: var(--navy);
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.assembly-description {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.assembly-meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assembly-meta-grid span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d8e2ee;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--navy);
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.assembly-card-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .assembly-editor-block {
@@ -2619,21 +2787,53 @@ h3 {
 
 .inspections-table-card {
   overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--white);
+  box-shadow: 0 12px 28px rgba(16, 36, 55, 0.05);
 }
 
 .inspections-table {
+  width: 100%;
   min-width: 1160px;
+  border-collapse: collapse;
   table-layout: fixed;
+}
+
+.inspections-table thead {
+  background: #f8fafc;
 }
 
 .inspections-table th,
 .inspections-table td {
-  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px;
   vertical-align: middle;
 }
 
+.inspections-table th {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.inspections-table tbody tr {
+  transition: background 0.16s ease;
+}
+
+.inspections-table tbody tr:hover {
+  background: #fffaf4;
+}
+
+.inspections-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .inspection-col-date {
-  width: 82px;
+  width: 96px;
 }
 
 .inspection-col-main {
@@ -2666,12 +2866,12 @@ h3 {
 
 .inspection-date {
   display: inline-grid;
-  min-width: 58px;
+  min-width: 64px;
   gap: 2px;
   border-radius: 8px;
-  padding: 7px 9px;
-  color: var(--navy);
-  background: #f8fafc;
+  padding: 8px 10px;
+  color: #9a3412;
+  background: #fff7ed;
   line-height: 1.1;
   text-align: center;
 }
@@ -2704,7 +2904,7 @@ h3 {
 .inspection-title {
   color: var(--navy);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
 }
@@ -2888,6 +3088,15 @@ h3 {
     grid-column: 1 / -1;
   }
 
+  .assembly-card {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .assembly-card-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
   .assembly-inline-row,
   .assembly-point-row {
     grid-template-columns: 1fr;
@@ -2919,6 +3128,21 @@ h3 {
 
   .side-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assembly-card {
+    grid-template-columns: 1fr;
+  }
+
+  .assembly-date-block {
+    justify-items: start;
+    grid-template-columns: auto auto 1fr;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .assembly-card-actions {
+    grid-column: auto;
   }
 
   .office-shell.sidebar-collapsed .nav-section span,

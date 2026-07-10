@@ -46,18 +46,32 @@ type InspectionResponse = {
   };
 };
 
+type StaffMember = {
+  user_id: string;
+  full_name: string;
+  portal_profile: string;
+  responsibility?: string | null;
+};
+
+type OperationalPlanStaffResponse = {
+  staff: StaffMember[];
+};
+
 const { request } = useApi();
 const { activeCondominium, token } = useAuth();
 
 const inspections = ref<InspectionItem[]>([]);
+const staff = ref<StaffMember[]>([]);
 const loading = ref(false);
 const saving = ref(false);
+const savingCreate = ref(false);
 const errorMessage = ref("");
 const selectedYear = ref(new Date().getFullYear());
 const selectedMonth = ref(String(new Date().getMonth() + 1));
 const selectedStatus = ref("");
 const search = ref("");
 const activeInspection = ref<InspectionItem | null>(null);
+const showCreateForm = ref(false);
 const summary = reactive({
   total: 0,
   pending: 0,
@@ -67,6 +81,20 @@ const summary = reactive({
   requires_action: 0,
 });
 const executionForm = reactive({
+  result: "in_progress",
+  comments: "",
+  requires_follow_up: false,
+  close_event: false,
+  checklist: [] as InspectionChecklistItem[],
+});
+const createForm = reactive({
+  title: "",
+  description: "",
+  planned_date: new Date().toISOString().slice(0, 10),
+  planned_start_time: "",
+  estimated_duration_hours: "",
+  assigned_user_id: "",
+  priority: "medium",
   result: "in_progress",
   comments: "",
   requires_follow_up: false,
@@ -142,11 +170,134 @@ const loadInspections = async () => {
     const data = await request<InspectionResponse>(`/api/v1/portal/inspections/?${params}`);
     inspections.value = data.items || [];
     Object.assign(summary, data.summary);
+    const plan = await request<OperationalPlanStaffResponse>(`/api/v1/portal/operational-plan/?year=${selectedYear.value}${selectedMonth.value ? `&month=${selectedMonth.value}` : ""}`);
+    staff.value = plan.staff || [];
   } catch (error) {
     inspections.value = [];
     errorMessage.value = readableError(error);
   } finally {
     loading.value = false;
+  }
+};
+
+const resetCreateForm = () => {
+  createForm.title = "";
+  createForm.description = "";
+  createForm.planned_date = new Date().toISOString().slice(0, 10);
+  createForm.planned_start_time = "";
+  createForm.estimated_duration_hours = "";
+  createForm.assigned_user_id = "";
+  createForm.priority = "medium";
+  createForm.result = "in_progress";
+  createForm.comments = "";
+  createForm.requires_follow_up = false;
+  createForm.close_event = false;
+  createForm.checklist = [{
+    id: "main",
+    label: "",
+    status: "pending",
+    observations: "",
+    requires_action: false,
+  }];
+};
+
+const openCreateForm = () => {
+  resetCreateForm();
+  showCreateForm.value = true;
+};
+
+const closeCreateForm = () => {
+  if (savingCreate.value) return;
+  showCreateForm.value = false;
+};
+
+const addCreateChecklistItem = () => {
+  createForm.checklist.push({
+    id: `manual-${Date.now()}-${createForm.checklist.length + 1}`,
+    label: "",
+    status: "pending",
+    observations: "",
+    requires_action: false,
+  });
+};
+
+const removeCreateChecklistItem = (index: number) => {
+  createForm.checklist.splice(index, 1);
+  if (!createForm.checklist.length) addCreateChecklistItem();
+};
+
+const optionalNumber = (value: string) => {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const staffOptionLabel = (member: StaffMember) => {
+  const parts = [member.full_name, portalProfileLabel(member.portal_profile), member.responsibility].filter(Boolean);
+  return parts.join(" - ");
+};
+
+const portalProfileLabel = (profile: string | null | undefined) => {
+  if (profile === "project_manager") return "Project manager";
+  if (profile === "supervisor") return "Supervisor";
+  if (profile === "executive") return "Ejecutivo/a";
+  return "Sin perfil";
+};
+
+const createInspection = async () => {
+  if (!createForm.title.trim()) {
+    errorMessage.value = "Indica el titulo de la inspeccion.";
+    return;
+  }
+  savingCreate.value = true;
+  errorMessage.value = "";
+  try {
+    const created = await request<InspectionItem>("/api/v1/portal/operational-plan/manual-tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: createForm.title.trim(),
+        description: createForm.description.trim() || null,
+        planned_date: createForm.planned_date,
+        planned_start_time: createForm.planned_start_time || null,
+        estimated_duration_hours: optionalNumber(createForm.estimated_duration_hours),
+        assigned_user_id: createForm.assigned_user_id || null,
+        priority: createForm.priority,
+        event_type: "inspection",
+      }),
+    });
+    const checklist = createForm.checklist
+      .filter((item) => item.label.trim() || item.observations?.trim())
+      .map((item, index) => ({
+        id: item.id || `item-${index + 1}`,
+        label: item.label.trim() || createForm.title.trim(),
+        status: item.status,
+        observations: item.observations?.trim() || null,
+        requires_action: item.requires_action,
+      }));
+    await request(`/api/v1/portal/inspections/${created.id}/execution`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        result: createForm.result,
+        comments: createForm.comments.trim() || null,
+        requires_follow_up: createForm.requires_follow_up,
+        close_event: createForm.close_event,
+        checklist: checklist.length ? checklist : [{
+          id: "main",
+          label: createForm.title.trim(),
+          status: "pending",
+          observations: null,
+          requires_action: false,
+        }],
+      }),
+    });
+    showCreateForm.value = false;
+    await loadInspections();
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    savingCreate.value = false;
   }
 };
 
@@ -296,7 +447,7 @@ onMounted(loadInspections);
 </script>
 
 <template>
-  <section class="content-grid">
+  <section class="content-grid inspections-panel">
     <div class="dashboard-hero">
       <div>
         <p class="eyebrow">Inspecciones</p>
@@ -352,6 +503,14 @@ onMounted(loadInspections);
           <span>Actualizar</span>
         </button>
       </div>
+    </div>
+
+    <div class="operational-view-row">
+      <p class="placeholder-copy">Crea inspecciones puntuales o revisa las inspecciones planificadas del condominio activo.</p>
+      <button class="button inspection-action" type="button" @click="openCreateForm">
+        <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+        <span>Nueva inspeccion</span>
+      </button>
     </div>
 
     <p v-if="errorMessage" class="form-error">{{ errorMessage }}</p>
@@ -489,6 +648,120 @@ onMounted(loadInspections);
           <button class="button navy" type="submit" :disabled="saving">
             <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
             <span>{{ saving ? "Guardando..." : "Guardar inspección" }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    <div v-if="showCreateForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="inspection-create-title">
+      <form class="confirm-modal inspection-execution-modal" @submit.prevent="createInspection">
+        <div class="inspection-modal-header">
+          <div>
+            <p class="eyebrow">Inspeccion</p>
+            <h2 id="inspection-create-title">Nueva inspeccion</h2>
+            <p class="placeholder-copy">Crea una inspeccion puntual y deja preparado su checklist de revision.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingCreate" title="Cerrar" @click="closeCreateForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
+        </div>
+
+        <div class="entity-form-grid">
+          <label class="span-two">
+            Titulo
+            <input v-model="createForm.title" type="text" maxlength="180" placeholder="Ej. Revisar sala de bombas" required />
+          </label>
+          <label>
+            Fecha
+            <input v-model="createForm.planned_date" type="date" required />
+          </label>
+          <label>
+            Hora estimada
+            <input v-model="createForm.planned_start_time" type="time" />
+          </label>
+          <label>
+            Duracion estimada (horas)
+            <input v-model="createForm.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
+          </label>
+          <label>
+            Prioridad
+            <select v-model="createForm.priority">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label>
+            Responsable
+            <select v-model="createForm.assigned_user_id">
+              <option value="">Sin persona asignada</option>
+              <option v-for="member in staff" :key="member.user_id" :value="member.user_id">
+                {{ staffOptionLabel(member) }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Resultado
+            <select v-model="createForm.result">
+              <option v-for="[value, label] in resultOptions" :key="value" :value="value">{{ label }}</option>
+            </select>
+          </label>
+          <label class="switch-field inspection-switch">
+            <input v-model="createForm.requires_follow_up" type="checkbox" />
+            <span>Requiere seguimiento</span>
+          </label>
+          <label class="switch-field inspection-switch">
+            <input v-model="createForm.close_event" type="checkbox" />
+            <span>Cerrar inspeccion</span>
+          </label>
+          <label class="wide-field">
+            Descripcion
+            <textarea v-model="createForm.description" rows="3" placeholder="Describe brevemente que debe revisarse."></textarea>
+          </label>
+          <label class="wide-field">
+            Observaciones generales
+            <textarea v-model="createForm.comments" rows="3" placeholder="Resumen de lo revisado, hallazgos o proximos pasos."></textarea>
+          </label>
+        </div>
+
+        <section class="inspection-checklist">
+          <div class="inspection-checklist-header">
+            <h3>Checklist</h3>
+            <button class="button ghost" type="button" @click="addCreateChecklistItem">
+              <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+              <span>Agregar item</span>
+            </button>
+          </div>
+          <article v-for="(item, index) in createForm.checklist" :key="item.id" class="inspection-checklist-item">
+            <label>
+              Item
+              <input v-model="item.label" type="text" :placeholder="index === 0 ? createForm.title || 'Punto a revisar' : 'Punto a revisar'" />
+            </label>
+            <label>
+              Estado
+              <select v-model="item.status">
+                <option v-for="[value, label] in checklistStatusOptions" :key="value" :value="value">{{ label }}</option>
+              </select>
+            </label>
+            <label class="switch-field inspection-switch">
+              <input v-model="item.requires_action" type="checkbox" />
+              <span>Accion requerida</span>
+            </label>
+            <label class="wide-field">
+              Observaciones
+              <textarea v-model="item.observations" rows="2" placeholder="Detalle del hallazgo, si aplica."></textarea>
+            </label>
+            <button class="button danger icon-only" type="button" title="Quitar item" @click="removeCreateChecklistItem(index)">
+              <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+            </button>
+          </article>
+        </section>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingCreate" @click="closeCreateForm">Cancelar</button>
+          <button class="button inspection-action" type="submit" :disabled="savingCreate">
+            <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+            <span>{{ savingCreate ? "Guardando..." : "Crear inspeccion" }}</span>
           </button>
         </div>
       </form>

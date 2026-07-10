@@ -17,6 +17,7 @@ type MaintenanceItem = {
   task_name: string;
   instructions?: string | null;
   periodicity?: string | null;
+  event_type?: string | null;
   planned_months: Array<number | string>;
   responsible_user_id?: string | null;
   responsible_profile?: string | null;
@@ -45,6 +46,7 @@ type ItemForm = {
   task_name: string;
   instructions: string;
   periodicity: string;
+  event_type: string;
   planned_months: number[];
   responsible_profile: string;
   estimated_duration_minutes: string;
@@ -78,6 +80,7 @@ const itemForm = reactive<ItemForm>({
   task_name: "",
   instructions: "",
   periodicity: "monthly",
+  event_type: "maintenance",
   planned_months: [],
   responsible_profile: "supervisor",
   estimated_duration_minutes: "",
@@ -114,6 +117,11 @@ const periodicityOptions = [
   ["permanent", "Permanente"],
   ["on_demand", "Según necesidad"],
 ];
+
+const itemTypeOptions = [
+  ["maintenance", "Mantencion"],
+  ["inspection", "Inspeccion"],
+] as const;
 
 const profileOptions = [
   ["", "Sin responsable sugerido"],
@@ -195,6 +203,7 @@ const resetItemForm = () => {
   itemForm.task_name = "";
   itemForm.instructions = "";
   itemForm.periodicity = "monthly";
+  itemForm.event_type = "maintenance";
   itemForm.planned_months = [];
   itemForm.responsible_profile = "supervisor";
   itemForm.estimated_duration_minutes = "";
@@ -216,6 +225,7 @@ const openEditItem = (item: MaintenanceItem) => {
   itemForm.task_name = item.task_name || "";
   itemForm.instructions = item.instructions || "";
   itemForm.periodicity = item.periodicity || "monthly";
+  itemForm.event_type = item.event_type || "maintenance";
   itemForm.planned_months = (item.planned_months || []).map((month) => Number(month)).filter((month) => Number.isFinite(month));
   itemForm.responsible_profile = item.responsible_profile || "";
   itemForm.estimated_duration_minutes = item.estimated_duration_minutes ? String(item.estimated_duration_minutes) : "";
@@ -249,6 +259,7 @@ const saveItem = async () => {
       task_name: itemForm.task_name.trim(),
       instructions: itemForm.instructions || null,
       periodicity: itemForm.periodicity || null,
+      event_type: itemForm.event_type,
       planned_months: itemForm.planned_months,
       responsible_profile: itemForm.responsible_profile || null,
       estimated_duration_minutes: itemForm.estimated_duration_minutes ? Number(itemForm.estimated_duration_minutes) : null,
@@ -304,6 +315,7 @@ const generatePlan = async () => {
 };
 
 const periodicityLabel = (value: string | null | undefined) => periodicityOptions.find(([key]) => key === value)?.[1] || value || "";
+const itemTypeLabel = (value: string | null | undefined) => itemTypeOptions.find(([key]) => key === value)?.[1] || "Mantencion";
 const profileLabel = (value: string | null | undefined) => profileOptions.find(([key]) => key === value)?.[1] || value || "Sin responsable";
 const priorityLabel = (value: string | null | undefined) => priorityOptions.find(([key]) => key === value)?.[1] || value || "";
 const statusLabel = (value: string | null | undefined) => statusOptions.find(([key]) => key === value)?.[1] || value || "Sin estado";
@@ -451,6 +463,7 @@ onMounted(loadPlan);
                 <tr>
                   <th>Activo / zona</th>
                   <th>Tarea</th>
+                  <th>Tipo</th>
                   <th>Periodicidad</th>
                   <th>Meses</th>
                   <th>Responsable</th>
@@ -465,6 +478,7 @@ onMounted(loadPlan);
                     <strong>{{ item.task_name }}</strong>
                     <small v-if="item.instructions">{{ item.instructions }}</small>
                   </td>
+                  <td>{{ itemTypeLabel(item.event_type) }}</td>
                   <td>{{ periodicityLabel(item.periodicity) }}</td>
                   <td>
                     <span v-if="item.planned_months?.length" class="month-list">
@@ -524,6 +538,12 @@ onMounted(loadPlan);
             Periodicidad
             <select v-model="itemForm.periodicity">
               <option v-for="[value, label] in periodicityOptions" :key="value" :value="value">{{ label }}</option>
+            </select>
+          </label>
+          <label>
+            Tipo de tarea
+            <select v-model="itemForm.event_type">
+              <option v-for="[value, label] in itemTypeOptions" :key="value" :value="value">{{ label }}</option>
             </select>
           </label>
           <label>

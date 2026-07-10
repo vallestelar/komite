@@ -38,6 +38,7 @@ class PortalMaintenanceItemOut(BaseModel):
     asset_name: str | None = None
     task_name: str
     instructions: str | None = None
+    event_type: str
     periodicity: str | None = None
     planned_months: list = Field(default_factory=list)
     responsible_user_id: UUID | None = None
@@ -58,6 +59,7 @@ class PortalMaintenanceItemUpdate(BaseModel):
     asset_name: str | None = Field(default=None, max_length=180)
     task_name: str | None = Field(default=None, max_length=255)
     instructions: str | None = None
+    event_type: str | None = Field(default=None, max_length=40)
     periodicity: str | None = Field(default=None, max_length=80)
     planned_months: list | None = None
     responsible_profile: str | None = Field(default=None, max_length=60)
@@ -73,6 +75,7 @@ class PortalMaintenanceItemCreate(BaseModel):
     asset_name: str | None = Field(default=None, max_length=180)
     task_name: str = Field(..., max_length=255)
     instructions: str | None = None
+    event_type: str = Field(default="maintenance", max_length=40)
     periodicity: str | None = Field(default=None, max_length=80)
     planned_months: list = Field(default_factory=list)
     responsible_profile: str | None = Field(default=None, max_length=60)
@@ -116,6 +119,7 @@ def _item_out(item: CondominiumInspectionItem) -> PortalMaintenanceItemOut:
         asset_name=item.asset_name,
         task_name=item.task_name,
         instructions=item.instructions,
+        event_type=item.event_type,
         periodicity=item.periodicity,
         planned_months=item.planned_months or [],
         responsible_user_id=item.responsible_user_id,
@@ -249,6 +253,7 @@ async def create_maintenance_item(
         asset_name=payload.asset_name,
         task_name=payload.task_name,
         instructions=payload.instructions,
+        event_type=payload.event_type,
         periodicity=payload.periodicity,
         planned_months=payload.planned_months,
         responsible_profile=payload.responsible_profile,
@@ -331,7 +336,7 @@ async def generate_maintenance_plan(
                     existing.assigned_profile = item.responsible_profile
                     existing.priority = item.priority
                     existing.status = "pending"
-                    existing.event_type = "maintenance"
+                    existing.event_type = item.event_type or "maintenance"
                     existing.calendar_id = calendar.id if calendar else None
                     existing.metadata = {
                         **(existing.metadata or {}),
@@ -355,7 +360,7 @@ async def generate_maintenance_plan(
                     assigned_profile=item.responsible_profile,
                     priority=item.priority,
                     status="pending",
-                    event_type="maintenance",
+                    event_type=item.event_type or "maintenance",
                     source_type="maintenance_template",
                     source_id=template.id,
                     metadata={

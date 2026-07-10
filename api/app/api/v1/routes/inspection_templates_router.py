@@ -266,6 +266,7 @@ async def duplicate_template_to_condominium(
                 asset_name=base_item.asset_name,
                 task_name=base_item.task_name,
                 instructions=base_item.instructions,
+                event_type=base_item.event_type,
                 periodicity=base_item.periodicity,
                 planned_months=base_item.planned_months,
                 responsible_profile=base_item.default_responsible_profile,

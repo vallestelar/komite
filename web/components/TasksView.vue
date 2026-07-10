@@ -14,6 +14,7 @@ type OperationalEvent = {
   status: string;
   event_type?: string | null;
   source_type?: string | null;
+  source_id?: string | null;
 };
 
 type OperationalStaff = {
@@ -80,11 +81,13 @@ const statusOptions = [
 ] as const;
 
 const eventTypeOptions = [
-  ["task", "Tarea"],
+  ["task", "Generica"],
   ["administrative", "Administrativa"],
-  ["meeting", "Reunión"],
-  ["inspection", "Inspección"],
-  ["maintenance", "Mantención"],
+  ["assembly", "Asamblea"],
+  ["meeting", "Reunion"],
+  ["inspection", "Inspeccion"],
+  ["maintenance", "Mantencion"],
+  ["incident", "Incidencia"],
 ] as const;
 
 const yearOptions = computed(() => {
@@ -116,7 +119,9 @@ const loadTasks = async () => {
     if (selectedMonth.value) params.set("month", selectedMonth.value);
     if (selectedStatus.value) params.set("status", selectedStatus.value);
     const data = await request<OperationalPlanResponse>(`/api/v1/portal/operational-plan/?${params}`);
-    tasks.value = (data.items || []).filter((item) => item.event_type ? ["task", "administrative", "meeting"].includes(item.event_type) : item.source_type === "manual_task");
+    tasks.value = (data.items || []).filter((item) => item.event_type
+      ? ["task", "administrative", "assembly", "meeting", "inspection", "maintenance", "incident"].includes(item.event_type)
+      : ["manual_task", "unplanned_incident", "assembly", "maintenance_template"].includes(item.source_type || ""));
     staff.value = data.staff || [];
   } catch (error) {
     tasks.value = [];
@@ -173,10 +178,6 @@ const saveTask = async () => {
   saving.value = true;
   errorMessage.value = "";
   try {
-    const endpoint = editingTask.value
-      ? `/api/v1/portal/operational-plan/manual-tasks/${editingTask.value.id}`
-      : "/api/v1/portal/operational-plan/manual-tasks";
-    const method = editingTask.value ? "PATCH" : "POST";
     const payload: Record<string, unknown> = {
       title: form.title.trim(),
       description: form.description.trim() || null,
@@ -187,12 +188,52 @@ const saveTask = async () => {
       priority: form.priority,
       event_type: form.event_type,
     };
-    if (editingTask.value) payload.status = form.status;
-    const saved = await request<OperationalEvent>(endpoint, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    let saved: OperationalEvent;
+    if (editingTask.value) {
+      payload.status = form.status;
+      saved = await request<OperationalEvent>(`/api/v1/portal/operational-plan/events/${editingTask.value.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else if (form.event_type === "assembly") {
+      const created = await request<{ event?: OperationalEvent }>("/api/v1/portal/assemblies/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          description: form.description.trim() || null,
+          assembly_type: "ordinary",
+          status: "scheduled",
+          scheduled_date: form.planned_date,
+          scheduled_start_time: form.planned_start_time || null,
+          estimated_duration_hours: form.estimated_duration_hours ? Number(form.estimated_duration_hours) : null,
+          location: null,
+          modality: "presential",
+          attendees: [],
+          agenda_items: [],
+          conclusions: null,
+        }),
+      });
+      if (!created.event) {
+        await loadTasks();
+        closeForm();
+        return;
+      }
+      saved = created.event;
+    } else if (form.event_type === "incident") {
+      saved = await request<OperationalEvent>("/api/v1/portal/operational-plan/unplanned-incidents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      saved = await request<OperationalEvent>("/api/v1/portal/operational-plan/manual-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
     tasks.value = editingTask.value
       ? tasks.value.map((task) => task.id === saved.id ? saved : task)
       : [...tasks.value, saved];
@@ -344,7 +385,7 @@ onMounted(loadTasks);
 
     <div class="operational-view-row">
       <p class="placeholder-copy">Crea tareas puntuales para organizar el trabajo del día o de la semana sin depender todavía de una plantilla.</p>
-      <button class="button orange" type="button" @click="openCreate">
+      <button class="button manual-task-action" type="button" @click="openCreate">
         <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
         <span>Nueva tarea</span>
       </button>
@@ -407,10 +448,15 @@ onMounted(loadTasks);
 
     <div v-if="showTaskForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="task-form-title">
       <form class="confirm-modal operational-incident-modal" @submit.prevent="saveTask">
-        <div>
-          <p class="eyebrow">Tareas</p>
-          <h2 id="task-form-title">{{ editingTask ? "Editar tarea" : "Nueva tarea manual" }}</h2>
-          <p class="placeholder-copy">La tarea quedará disponible en esta pantalla y también en la agenda operativa.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Tareas</p>
+            <h2 id="task-form-title">{{ editingTask ? "Editar tarea" : "Nueva tarea manual" }}</h2>
+            <p class="placeholder-copy">La tarea quedará disponible en esta pantalla y también en la agenda operativa.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="saving" title="Cerrar" @click="closeForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">

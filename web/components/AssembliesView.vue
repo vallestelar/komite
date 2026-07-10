@@ -329,6 +329,16 @@ const formatDate = (value: string) => {
   return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(year, month - 1, day));
 };
 
+const dayNumber = (value: string) => {
+  const [, , day] = value.split("-").map(Number);
+  return String(day).padStart(2, "0");
+};
+
+const monthShort = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-CL", { month: "short" }).format(new Date(year, month - 1, day)).replace(".", "");
+};
+
 const statusLabel = (status: string | null | undefined) => {
   if (status === "scheduled") return "Programada";
   if (status === "in_progress") return "En curso";
@@ -431,7 +441,7 @@ onMounted(loadAssemblies);
       </button>
     </div>
 
-    <div class="operational-view-row">
+    <div class="assemblies-actions-row">
       <p class="placeholder-copy">Registra convocatorias, asistentes, puntos tratados y conclusiones para generar actas rápidas.</p>
       <button class="button assembly-action" type="button" @click="openCreate">
         <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
@@ -439,51 +449,53 @@ onMounted(loadAssemblies);
       </button>
     </div>
 
-    <div v-if="visibleAssemblies.length" class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Asamblea</th>
-            <th>Tipo</th>
-            <th>Modalidad</th>
-            <th>Asistentes</th>
-            <th>Puntos</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="assembly in visibleAssemblies" :key="assembly.id">
-            <td>
-              <strong>{{ formatDate(assembly.scheduled_date) }}</strong>
-              <small v-if="assembly.scheduled_start_time">{{ assembly.scheduled_start_time }}</small>
-            </td>
-            <td>
-              <strong>{{ assembly.title }}</strong>
-              <small>{{ assembly.location || "Sin lugar definido" }}</small>
-            </td>
-            <td>{{ assemblyTypeLabel(assembly.assembly_type) }}</td>
-            <td>{{ modalityLabel(assembly.modality) }}</td>
-            <td>{{ assembly.attendees?.length || 0 }}</td>
-            <td>{{ assembly.agenda_items?.length || 0 }}</td>
-            <td>
-              <span class="status-badge" :class="statusBadgeClass(assembly.status)">
-                <span aria-hidden="true"></span>
-                {{ statusLabel(assembly.status) }}
-              </span>
-            </td>
-            <td class="actions-cell">
-              <button class="button compact icon-action navy" type="button" title="Editar asamblea" @click="openEdit(assembly)">
-                <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>
-              </button>
-              <button class="button compact icon-action ghost" type="button" title="Descargar resumen PDF" :disabled="downloadingId === assembly.id" @click="downloadPdf(assembly)">
-                <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="visibleAssemblies.length" class="assemblies-list">
+      <article v-for="assembly in visibleAssemblies" :key="assembly.id" class="assembly-card">
+        <div class="assembly-date-block">
+          <strong>{{ dayNumber(assembly.scheduled_date) }}</strong>
+          <span>{{ monthShort(assembly.scheduled_date) }}</span>
+          <small v-if="assembly.scheduled_start_time">{{ assembly.scheduled_start_time }}</small>
+        </div>
+        <div class="assembly-card-main">
+          <div class="assembly-card-header">
+            <div>
+              <p class="event-section">{{ assemblyTypeLabel(assembly.assembly_type) }} · {{ modalityLabel(assembly.modality) }}</p>
+              <h3>{{ assembly.title }}</h3>
+            </div>
+            <span class="status-badge" :class="statusBadgeClass(assembly.status)">
+              <span aria-hidden="true"></span>
+              {{ statusLabel(assembly.status) }}
+            </span>
+          </div>
+          <p v-if="assembly.description" class="assembly-description">{{ assembly.description }}</p>
+          <div class="assembly-meta-grid">
+            <span>
+              <svg class="icon" aria-hidden="true"><use href="#icon-building" /></svg>
+              {{ assembly.location || "Sin lugar definido" }}
+            </span>
+            <span>
+              <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
+              {{ assembly.attendees?.length || 0 }} asistentes
+            </span>
+            <span>
+              <svg class="icon" aria-hidden="true"><use href="#icon-clipboard" /></svg>
+              {{ assembly.agenda_items?.length || 0 }} puntos
+            </span>
+            <span v-if="assembly.quorum_required">
+              <svg class="icon" aria-hidden="true"><use href="#icon-shield" /></svg>
+              Quórum {{ assembly.quorum_required }}
+            </span>
+          </div>
+        </div>
+        <div class="assembly-card-actions">
+          <button class="button compact icon-action navy" type="button" title="Editar asamblea" @click="openEdit(assembly)">
+            <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>
+          </button>
+          <button class="button compact icon-action ghost" type="button" title="Descargar resumen PDF" :disabled="downloadingId === assembly.id" @click="downloadPdf(assembly)">
+            <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
+          </button>
+        </div>
+      </article>
     </div>
 
     <div v-else-if="!errorMessage" class="committee-empty">
@@ -496,10 +508,15 @@ onMounted(loadAssemblies);
 
     <div v-if="showForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="assembly-form-title">
       <form class="confirm-modal assembly-modal" @submit.prevent="saveAssembly">
-        <div>
-          <p class="eyebrow">Asambleas</p>
-          <h2 id="assembly-form-title">{{ editingAssembly ? "Editar asamblea" : "Nueva asamblea" }}</h2>
-          <p class="placeholder-copy">Define convocatoria, asistentes, puntos a tratar y conclusiones. La fecha quedará visible en la agenda operativa.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Asambleas</p>
+            <h2 id="assembly-form-title">{{ editingAssembly ? "Editar asamblea" : "Nueva asamblea" }}</h2>
+            <p class="placeholder-copy">Define convocatoria, asistentes, puntos a tratar y conclusiones. La fecha quedará visible en la agenda operativa.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="saving" title="Cerrar" @click="closeForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">

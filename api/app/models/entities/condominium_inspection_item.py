@@ -15,6 +15,7 @@ class CondominiumInspectionItem(TimestampAuditMixin):
     asset_name = fields.CharField(max_length=180, null=True)
     task_name = fields.CharField(max_length=255)
     instructions = fields.TextField(null=True)
+    event_type = fields.CharField(max_length=40, default="maintenance")
     periodicity = fields.CharField(max_length=80, null=True)
     planned_months = fields.JSONField(default=list)
     responsible_user = fields.ForeignKeyField("models.User", related_name="responsible_condominium_inspection_items", null=True, on_delete=fields.SET_NULL)
@@ -27,5 +28,4 @@ class CondominiumInspectionItem(TimestampAuditMixin):
 
     class Meta:
         table = "condominium_inspection_items"
-        indexes = (("company_id",), ("condominium_id",), ("condominium_template_id",), ("base_item_id",), ("responsible_user_id",), ("priority",), ("status",))
-
+        indexes = (("company_id",), ("condominium_id",), ("condominium_template_id",), ("base_item_id",), ("event_type",), ("responsible_user_id",), ("priority",), ("status",))

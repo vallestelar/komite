@@ -13,6 +13,7 @@ class InspectionTemplateItem(TimestampAuditMixin):
     asset_name = fields.CharField(max_length=180, null=True)
     task_name = fields.CharField(max_length=255)
     instructions = fields.TextField(null=True)
+    event_type = fields.CharField(max_length=40, default="maintenance")
     periodicity = fields.CharField(max_length=80, null=True)
     planned_months = fields.JSONField(default=list)
     requires_evidence = fields.BooleanField(default=False)
@@ -24,5 +25,4 @@ class InspectionTemplateItem(TimestampAuditMixin):
 
     class Meta:
         table = "inspection_template_items"
-        indexes = (("company_id",), ("template_id",), ("section_id",), ("periodicity",), ("status",), ("display_order",))
-
+        indexes = (("company_id",), ("template_id",), ("section_id",), ("event_type",), ("periodicity",), ("status",), ("display_order",))

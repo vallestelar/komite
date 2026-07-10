@@ -38,6 +38,7 @@ class PortalOperationalEventOut(BaseModel):
     status: str
     event_type: str
     source_type: str | None = None
+    source_id: UUID | None = None
     section_name: str | None = None
     asset_name: str | None = None
     template_item_id: UUID | None = None
@@ -215,6 +216,7 @@ def _event_out(event: PlannedOperationalEvent) -> PortalOperationalEventOut:
         status=event.status,
         event_type=event.event_type,
         source_type=event.source_type,
+        source_id=event.source_id,
         section_name=_metadata_value(event, "section_name"),
         asset_name=_metadata_value(event, "asset_name"),
         template_item_id=event.condominium_template_item_id,
@@ -462,7 +464,7 @@ async def update_operational_event(
     if payload.status is not None:
         event.status = payload.status
     if payload.event_type is not None:
-        event.event_type = _normalize_manual_task_type(payload.event_type, event.event_type)
+        event.event_type = _normalize_event_type(payload.event_type, event.event_type)
     if "assigned_user_id" in payload.model_fields_set:
         await _assign_event_user(
             event,
@@ -654,7 +656,7 @@ async def update_manual_task_event(
     if payload.status is not None:
         event.status = payload.status
     if payload.event_type is not None:
-        event.event_type = _normalize_event_type(payload.event_type, event.event_type)
+        event.event_type = _normalize_manual_task_type(payload.event_type, event.event_type)
     if "assigned_user_id" in payload.model_fields_set:
         await _assign_event_user(
             event,

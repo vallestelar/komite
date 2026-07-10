@@ -806,6 +806,7 @@ class InspectionTemplateItemCreate(BaseModel):
     asset_name: Optional[str] = Field(default=None, max_length=180)
     task_name: str = Field(..., max_length=255)
     instructions: Optional[str] = None
+    event_type: str = Field(default="maintenance", max_length=40)
     periodicity: Optional[str] = Field(default=None, max_length=80)
     planned_months: list[Any] = Field(default_factory=list)
     requires_evidence: bool = False
@@ -823,6 +824,7 @@ class InspectionTemplateItemUpdate(BaseModel):
     asset_name: Optional[str] = Field(default=None, max_length=180)
     task_name: Optional[str] = Field(default=None, max_length=255)
     instructions: Optional[str] = None
+    event_type: Optional[str] = Field(default=None, max_length=40)
     periodicity: Optional[str] = Field(default=None, max_length=80)
     planned_months: Optional[list[Any]] = None
     requires_evidence: Optional[bool] = None
@@ -841,6 +843,7 @@ class InspectionTemplateItemOut(AuditOut):
     asset_name: Optional[str] = None
     task_name: str
     instructions: Optional[str] = None
+    event_type: str
     periodicity: Optional[str] = None
     planned_months: list[Any] = Field(default_factory=list)
     requires_evidence: bool
@@ -921,6 +924,7 @@ class CondominiumInspectionItemCreate(BaseModel):
     asset_name: Optional[str] = Field(default=None, max_length=180)
     task_name: str = Field(..., max_length=255)
     instructions: Optional[str] = None
+    event_type: str = Field(default="maintenance", max_length=40)
     periodicity: Optional[str] = Field(default=None, max_length=80)
     planned_months: list[Any] = Field(default_factory=list)
     responsible_user_id: Optional[UUID] = None
@@ -941,6 +945,7 @@ class CondominiumInspectionItemUpdate(BaseModel):
     asset_name: Optional[str] = Field(default=None, max_length=180)
     task_name: Optional[str] = Field(default=None, max_length=255)
     instructions: Optional[str] = None
+    event_type: Optional[str] = Field(default=None, max_length=40)
     periodicity: Optional[str] = Field(default=None, max_length=80)
     planned_months: Optional[list[Any]] = None
     responsible_user_id: Optional[UUID] = None
@@ -962,6 +967,7 @@ class CondominiumInspectionItemOut(AuditOut):
     asset_name: Optional[str] = None
     task_name: str
     instructions: Optional[str] = None
+    event_type: str
     periodicity: Optional[str] = None
     planned_months: list[Any] = Field(default_factory=list)
     responsible_user_id: Optional[UUID] = None

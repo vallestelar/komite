@@ -5,6 +5,7 @@ type OperationalEvent = {
   description?: string | null;
   planned_date: string;
   planned_start_time?: string | null;
+  estimated_duration_hours?: number | null;
   assigned_profile?: string | null;
   assigned_user_id?: string | null;
   assigned_user_name?: string | null;
@@ -41,11 +42,13 @@ const selectedMonth = ref(String(new Date().getMonth() + 1));
 const selectedStatus = ref("");
 const search = ref("");
 const editingIncident = ref<OperationalEvent | null>(null);
+const showIncidentForm = ref(false);
 const form = reactive({
   title: "",
   description: "",
-  planned_date: "",
+  planned_date: new Date().toISOString().slice(0, 10),
   planned_start_time: "",
+  estimated_duration_hours: "",
   assigned_user_id: "",
   priority: "medium",
   status: "pending",
@@ -108,24 +111,43 @@ const loadIncidents = async () => {
   }
 };
 
+const resetForm = () => {
+  editingIncident.value = null;
+  form.title = "";
+  form.description = "";
+  form.planned_date = new Date().toISOString().slice(0, 10);
+  form.planned_start_time = "";
+  form.estimated_duration_hours = "";
+  form.assigned_user_id = "";
+  form.priority = "medium";
+  form.status = "pending";
+};
+
+const openCreate = () => {
+  resetForm();
+  showIncidentForm.value = true;
+};
+
 const openEdit = (incident: OperationalEvent) => {
   editingIncident.value = incident;
   form.title = incident.title;
   form.description = incident.description || "";
   form.planned_date = incident.planned_date;
   form.planned_start_time = incident.planned_start_time || "";
+  form.estimated_duration_hours = incident.estimated_duration_hours ? String(incident.estimated_duration_hours) : "";
   form.assigned_user_id = incident.assigned_user_id || "";
   form.priority = incident.priority || "medium";
   form.status = incident.status || "pending";
+  showIncidentForm.value = true;
 };
 
-const closeEdit = () => {
+const closeForm = () => {
   if (saving.value) return;
   editingIncident.value = null;
+  showIncidentForm.value = false;
 };
 
 const saveIncident = async () => {
-  if (!editingIncident.value) return;
   if (!form.title.trim()) {
     errorMessage.value = "Indica el título de la incidencia.";
     return;
@@ -133,26 +155,39 @@ const saveIncident = async () => {
   saving.value = true;
   errorMessage.value = "";
   try {
-    const updated = await request<OperationalEvent>(`/api/v1/portal/operational-plan/unplanned-incidents/${editingIncident.value.id}`, {
-      method: "PATCH",
+    const endpoint = editingIncident.value
+      ? `/api/v1/portal/operational-plan/unplanned-incidents/${editingIncident.value.id}`
+      : "/api/v1/portal/operational-plan/unplanned-incidents";
+    const updated = await request<OperationalEvent>(endpoint, {
+      method: editingIncident.value ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: form.title.trim(),
         description: form.description.trim() || null,
         planned_date: form.planned_date,
         planned_start_time: form.planned_start_time || null,
+        estimated_duration_hours: optionalNumber(form.estimated_duration_hours),
         assigned_user_id: form.assigned_user_id || null,
         priority: form.priority,
         status: form.status,
       }),
     });
-    incidents.value = incidents.value.map((incident) => incident.id === updated.id ? updated : incident);
+    incidents.value = editingIncident.value
+      ? incidents.value.map((incident) => incident.id === updated.id ? updated : incident)
+      : [...incidents.value, updated];
     editingIncident.value = null;
+    showIncidentForm.value = false;
   } catch (error) {
     errorMessage.value = readableError(error);
   } finally {
     saving.value = false;
   }
+};
+
+const optionalNumber = (value: string) => {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 const formatDate = (value: string) => {
@@ -272,6 +307,14 @@ onMounted(loadIncidents);
       </button>
     </div>
 
+    <div class="operational-view-row">
+      <p class="placeholder-copy">Registra incidencias no programadas para incorporarlas a la agenda del condominio activo.</p>
+      <button class="button incident-action" type="button" @click="openCreate">
+        <svg class="icon" aria-hidden="true"><use href="#icon-alert" /></svg>
+        <span>Nueva incidencia</span>
+      </button>
+    </div>
+
     <div v-if="visibleIncidents.length" class="table-wrap">
       <table>
         <thead>
@@ -322,12 +365,18 @@ onMounted(loadIncidents);
       <p class="placeholder-copy">Las incidencias creadas desde la agenda aparecerán aquí para su seguimiento y edición.</p>
     </div>
 
-    <div v-if="editingIncident" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-edit-title">
+    <div v-if="showIncidentForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-edit-title">
       <form class="confirm-modal operational-incident-modal" @submit.prevent="saveIncident">
-        <div>
+        <div class="modal-title-row">
+          <div>
           <p class="eyebrow">Incidencias</p>
-          <h2 id="incident-edit-title">Editar incidencia</h2>
+          <h2 id="incident-edit-title">{{ editingIncident ? "Editar incidencia" : "Nueva incidencia" }}</h2>
           <p class="placeholder-copy">Actualiza la planificación, estado o responsable de esta incidencia.</p>
+        </div>
+
+          <button class="button ghost icon-only" type="button" :disabled="saving" title="Cerrar" @click="closeForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">
@@ -342,6 +391,10 @@ onMounted(loadIncidents);
           <label>
             Hora estimada
             <input v-model="form.planned_start_time" type="time" />
+          </label>
+          <label>
+            Duracion estimada (horas)
+            <input v-model="form.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
           </label>
           <label>
             Prioridad
@@ -377,10 +430,10 @@ onMounted(loadIncidents);
         </div>
 
         <div class="modal-actions">
-          <button class="button ghost" type="button" :disabled="saving" @click="closeEdit">Cancelar</button>
-          <button class="button orange" type="submit" :disabled="saving">
+          <button class="button ghost" type="button" :disabled="saving" @click="closeForm">Cancelar</button>
+          <button class="button incident-action" type="submit" :disabled="saving">
             <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
-            <span>{{ saving ? "Guardando..." : "Guardar incidencia" }}</span>
+            <span>{{ saving ? "Guardando..." : (editingIncident ? "Guardar incidencia" : "Crear incidencia") }}</span>
           </button>
         </div>
       </form>

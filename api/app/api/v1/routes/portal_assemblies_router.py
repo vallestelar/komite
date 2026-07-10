@@ -54,6 +54,7 @@ class PortalAssemblyEventOut(BaseModel):
     status: str
     event_type: str
     source_type: str | None = None
+    source_id: UUID | None = None
 
 
 class PortalAssemblyOut(BaseModel):
@@ -197,6 +198,7 @@ def _event_out(event: PlannedOperationalEvent | None) -> PortalAssemblyEventOut 
         status=event.status,
         event_type=event.event_type,
         source_type=event.source_type,
+        source_id=event.source_id,
     )
 
 

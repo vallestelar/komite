@@ -28,7 +28,7 @@ const menuGroups: MenuGroup[] = [
   {
     id: "inicio",
     label: "Inicio",
-    items: [{ id: "dashboard", label: "Dashboard", icon: "dashboard", view: "dashboard" }],
+    items: [{ id: "dashboard", label: "Panel", icon: "dashboard", view: "dashboard" }],
   },
   {
     id: "comunidades",
@@ -43,13 +43,11 @@ const menuGroups: MenuGroup[] = [
     id: "operacion",
     label: "Operación diaria",
     items: [
-      { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
-      { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
-      { id: "assemblies", label: "Asambleas", icon: "users", view: "assemblies" },
-      { id: "maintenance", label: "Plan de mantenciones", icon: "calendar", view: "maintenance" },
       { id: "operational-plan", label: "Agenda operativa", icon: "calendar", view: "operational-plan" },
+      { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
-      { id: "files", label: "Archivos", icon: "file-text", view: "files" },
+      { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
+      { id: "assemblies", label: "Asambleas", icon: "users", view: "assemblies" },
     ],
   },
   {
@@ -58,6 +56,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { id: "reports", label: "Informes", icon: "file-text", view: "reports" },
       { id: "communications", label: "Comunicados", icon: "message", view: "communications" },
+      { id: "files", label: "Archivos", icon: "file-text", view: "files" },
     ],
   },
   {
@@ -65,6 +64,7 @@ const menuGroups: MenuGroup[] = [
     label: "Herramientas",
     items: [
       { id: "tools", label: "Centro de herramientas", icon: "tool", view: "tools" },
+      { id: "maintenance", label: "Plan de mantenciones", icon: "calendar", view: "maintenance" },
       { id: "audio", label: "Audio IA", icon: "mic", view: "audio" },
       { id: "support", label: "Soporte Komite", icon: "help-circle", view: "support" },
     ],
@@ -81,7 +81,7 @@ const toolViewTitles: Record<string, string> = {
 
 const currentTitle = computed(() => {
   const item = menuGroups.flatMap((group) => group.items).find((entry) => entry.view === currentView.value);
-  return item?.label || toolViewTitles[currentView.value] || "Modulo";
+  return item?.label || toolViewTitles[currentView.value] || "Módulo";
 });
 
 const userName = computed(() => user.value?.full_name || user.value?.email || "Usuario");

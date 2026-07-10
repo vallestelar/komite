@@ -240,7 +240,7 @@ const resources = {
   inspectionTemplateItems: {
     title: "\u00cdtems de plantilla",
     endpoint: "/api/v1/inspection-template-items/",
-    columns: ["template_id", "section_id", "asset_name", "task_name", "periodicity", "default_responsible_profile", "default_duration_minutes", "requires_evidence", "status"],
+    columns: ["template_id", "section_id", "asset_name", "task_name", "event_type", "periodicity", "default_responsible_profile", "default_duration_minutes", "requires_evidence", "status"],
     createLabel: "Nuevo \u00edtem",
     singular: "\u00edtem",
     fields: [
@@ -250,6 +250,7 @@ const resources = {
       { name: "asset_name", label: "Activo / zona", maxLength: 180 },
       { name: "task_name", label: "Tarea", required: true, maxLength: 255 },
       { name: "instructions", label: "Instrucciones", type: "textarea" },
+      { name: "event_type", label: "Tipo de tarea", type: "select", options: [["maintenance", "Mantencion"], ["inspection", "Inspeccion"]], defaultValue: "maintenance" },
       { name: "periodicity", label: "Periodicidad", type: "select", options: [["daily", "Diaria"], ["weekly", "Semanal"], ["biweekly", "Quincenal"], ["monthly", "Mensual"], ["bimonthly", "Cada 2 meses"], ["quarterly", "Trimestral"], ["four_monthly", "Cada 4 meses"], ["semiannual", "Semestral"], ["annual", "Anual"], ["biennial", "Cada 2 a\u00f1os"], ["permanent", "Permanente"], ["on_demand", "Seg\u00fan necesidad"]], defaultValue: "monthly" },
       { name: "planned_months", label: "Meses planificados", type: "json", defaultValue: [] },
       { name: "requires_evidence", label: "Requiere evidencia", type: "checkbox", defaultValue: false },
@@ -318,6 +319,7 @@ const columnLabels = {
   source_file_name: "Archivo origen",
   asset_name: "Activo / zona",
   task_name: "Tarea",
+  event_type: "Tipo de tarea",
   instructions: "Instrucciones",
   periodicity: "Periodicidad",
   planned_months: "Meses planificados",
@@ -416,6 +418,16 @@ const templateTypeLabels = {
   inspection: "Inspecci\u00f3n",
   maintenance: "Mantenci\u00f3n",
   mixed: "Mixta",
+};
+
+const eventTypeLabels = {
+  task: "Generica",
+  administrative: "Administrativa",
+  assembly: "Asamblea",
+  meeting: "Reunion",
+  inspection: "Inspeccion",
+  maintenance: "Mantencion",
+  incident: "Incidencia",
 };
 
 const inspectionTypeLabels = {
@@ -1280,6 +1292,7 @@ function formatTableCell(column, value) {
   if (column === "position") return escapeHtml(positionLabels[value] || formatCell(value));
   if (["company_profile", "role_code", "default_responsible_profile"].includes(column)) return escapeHtml(roleLabels[value] || formatCell(value));
   if (column === "template_type") return escapeHtml(templateTypeLabels[value] || formatCell(value));
+  if (column === "event_type") return escapeHtml(eventTypeLabels[value] || formatCell(value));
   if (column === "inspection_type") return escapeHtml(inspectionTypeLabels[value] || formatCell(value));
   if (column === "periodicity") return escapeHtml(periodicityLabels[value] || formatCell(value));
   return escapeHtml(formatCell(value));

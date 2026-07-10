@@ -16,6 +16,7 @@ type OperationalEvent = {
   status: string;
   event_type?: string | null;
   source_type?: string | null;
+  source_id?: string | null;
   section_name?: string | null;
   asset_name?: string | null;
   template_item_id?: string | null;
@@ -47,6 +48,40 @@ type OperationalPlanResponse = {
   };
 };
 
+type AssemblyDetail = {
+  id: string;
+  title: string;
+  description?: string | null;
+  assembly_type: string;
+  status: string;
+  scheduled_date: string;
+  scheduled_start_time?: string | null;
+  estimated_duration_hours?: number | null;
+  location?: string | null;
+  modality: string;
+  attendees?: Array<{ name?: string | null; email?: string | null; role?: string | null; attendance_status?: string | null }>;
+  agenda_items?: Array<{ id?: string | null; title?: string | null; description?: string | null; owner?: string | null; conclusion?: string | null; status?: string | null }>;
+  conclusions?: string | null;
+  event?: OperationalEvent | null;
+};
+
+type InspectionChecklistItem = {
+  id: string;
+  label: string;
+  status: string;
+  observations?: string | null;
+  requires_action: boolean;
+};
+
+type InspectionDetail = OperationalEvent & {
+  execution?: {
+    result?: string | null;
+    comments?: string | null;
+    requires_follow_up?: boolean;
+    checklist?: InspectionChecklistItem[];
+  } | null;
+};
+
 const { request } = useApi();
 const { activeCondominium, token } = useAuth();
 
@@ -70,12 +105,17 @@ const agendaView = ref<"list" | "week">("list");
 const selectedWeekStart = ref<Date | null>(null);
 const showIncidentForm = ref(false);
 const showTaskForm = ref(false);
+const showInspectionForm = ref(false);
 const showAssemblyForm = ref(false);
 const showEditForm = ref(false);
 const savingIncident = ref(false);
 const savingTask = ref(false);
+const savingInspection = ref(false);
 const savingAssembly = ref(false);
 const savingEdit = ref(false);
+const editingIncidentEventId = ref("");
+const editingAssemblyId = ref("");
+const editingInspectionEventId = ref("");
 const draggingEventId = ref("");
 const dragOverDate = ref("");
 const dragTargetKey = ref("");
@@ -89,6 +129,7 @@ const incidentForm = reactive({
   estimated_duration_hours: "",
   assigned_user_id: "",
   priority: "medium",
+  status: "pending",
 });
 const taskForm = reactive({
   title: "",
@@ -100,6 +141,20 @@ const taskForm = reactive({
   priority: "medium",
   event_type: "task",
 });
+const inspectionForm = reactive({
+  title: "",
+  description: "",
+  planned_date: new Date().toISOString().slice(0, 10),
+  planned_start_time: "",
+  estimated_duration_hours: "",
+  assigned_user_id: "",
+  priority: "medium",
+  result: "in_progress",
+  comments: "",
+  requires_follow_up: false,
+  close_event: false,
+  checklist: [] as InspectionChecklistItem[],
+});
 const assemblyForm = reactive({
   title: "",
   description: "",
@@ -109,6 +164,7 @@ const assemblyForm = reactive({
   location: "",
   modality: "presential",
   assembly_type: "ordinary",
+  status: "scheduled",
   attendees: [{ name: "", email: "", role: "", attendance_status: "expected" }],
   agenda_items: [{ id: "point-1", title: "", description: "", owner: "", conclusion: "", status: "pending" }],
   conclusions: "",
@@ -149,12 +205,29 @@ const statusOptions = [
   ["cancelled", "Cancelado"],
 ] as const;
 
+const inspectionResultOptions = [
+  ["in_progress", "En curso"],
+  ["conforme", "Conforme"],
+  ["observed", "Con observaciones"],
+  ["requires_action", "Requiere accion"],
+  ["not_executed", "No ejecutada"],
+] as const;
+
+const checklistStatusOptions = [
+  ["pending", "Pendiente"],
+  ["ok", "Conforme"],
+  ["observed", "Observado"],
+  ["requires_action", "Requiere accion"],
+] as const;
+
 const eventTypeOptions = [
-  ["task", "Tarea"],
+  ["task", "Generica"],
   ["administrative", "Administrativa"],
-  ["meeting", "Reunión"],
-  ["inspection", "Inspección"],
-  ["maintenance", "Mantención"],
+  ["assembly", "Asamblea"],
+  ["meeting", "Reunion"],
+  ["inspection", "Inspeccion"],
+  ["maintenance", "Mantencion"],
+  ["incident", "Incidencia"],
 ] as const;
 
 const yearOptions = computed(() => {
@@ -473,6 +546,7 @@ const confirmDeleteEvent = async () => {
 };
 
 const openIncidentForm = () => {
+  editingIncidentEventId.value = "";
   incidentForm.title = "";
   incidentForm.description = "";
   incidentForm.planned_date = toDateKey(new Date());
@@ -480,12 +554,14 @@ const openIncidentForm = () => {
   incidentForm.estimated_duration_hours = "";
   incidentForm.assigned_user_id = "";
   incidentForm.priority = "medium";
+  incidentForm.status = "pending";
   showIncidentForm.value = true;
 };
 
 const closeIncidentForm = () => {
   if (savingIncident.value) return;
   showIncidentForm.value = false;
+  editingIncidentEventId.value = "";
 };
 
 const openTaskForm = () => {
@@ -500,12 +576,57 @@ const openTaskForm = () => {
   showTaskForm.value = true;
 };
 
+const openInspectionForm = () => {
+  editingInspectionEventId.value = "";
+  inspectionForm.title = "";
+  inspectionForm.description = "";
+  inspectionForm.planned_date = toDateKey(new Date());
+  inspectionForm.planned_start_time = "";
+  inspectionForm.estimated_duration_hours = "";
+  inspectionForm.assigned_user_id = "";
+  inspectionForm.priority = "medium";
+  inspectionForm.result = "in_progress";
+  inspectionForm.comments = "";
+  inspectionForm.requires_follow_up = false;
+  inspectionForm.close_event = false;
+  inspectionForm.checklist = [{
+    id: "main",
+    label: "",
+    status: "pending",
+    observations: "",
+    requires_action: false,
+  }];
+  showInspectionForm.value = true;
+};
+
+const closeInspectionForm = () => {
+  if (savingInspection.value) return;
+  showInspectionForm.value = false;
+  editingInspectionEventId.value = "";
+};
+
+const addInspectionChecklistItem = () => {
+  inspectionForm.checklist.push({
+    id: `manual-${Date.now()}-${inspectionForm.checklist.length + 1}`,
+    label: "",
+    status: "pending",
+    observations: "",
+    requires_action: false,
+  });
+};
+
+const removeInspectionChecklistItem = (index: number) => {
+  inspectionForm.checklist.splice(index, 1);
+  if (!inspectionForm.checklist.length) addInspectionChecklistItem();
+};
+
 const closeTaskForm = () => {
   if (savingTask.value) return;
   showTaskForm.value = false;
 };
 
 const resetAssemblyForm = () => {
+  editingAssemblyId.value = "";
   assemblyForm.title = "";
   assemblyForm.description = "";
   assemblyForm.scheduled_date = toDateKey(new Date());
@@ -514,6 +635,7 @@ const resetAssemblyForm = () => {
   assemblyForm.location = "";
   assemblyForm.modality = "presential";
   assemblyForm.assembly_type = "ordinary";
+  assemblyForm.status = "scheduled";
   assemblyForm.attendees = [{ name: "", email: "", role: "", attendance_status: "expected" }];
   assemblyForm.agenda_items = [{ id: "point-1", title: "", description: "", owner: "", conclusion: "", status: "pending" }];
   assemblyForm.conclusions = "";
@@ -527,6 +649,7 @@ const openAssemblyForm = () => {
 const closeAssemblyForm = () => {
   if (savingAssembly.value) return;
   showAssemblyForm.value = false;
+  editingAssemblyId.value = "";
 };
 
 const addAssemblyAttendee = () => {
@@ -554,7 +677,92 @@ const removeAssemblyPoint = (index: number) => {
   if (!assemblyForm.agenda_items.length) addAssemblyPoint();
 };
 
-const openEditEvent = (event: OperationalEvent) => {
+const openIncidentEdit = (event: OperationalEvent) => {
+  editingIncidentEventId.value = event.id;
+  incidentForm.title = event.title || "";
+  incidentForm.description = event.description || "";
+  incidentForm.planned_date = event.planned_date;
+  incidentForm.planned_start_time = event.planned_start_time || "";
+  incidentForm.estimated_duration_hours = event.estimated_duration_hours ? String(event.estimated_duration_hours) : "";
+  incidentForm.assigned_user_id = event.assigned_user_id || "";
+  incidentForm.priority = event.priority || "medium";
+  incidentForm.status = event.status || "pending";
+  showIncidentForm.value = true;
+};
+
+const openAssemblyEdit = async (event: OperationalEvent) => {
+  if (!event.source_id) {
+    openGenericEditEvent(event);
+    return;
+  }
+  errorMessage.value = "";
+  try {
+    const detail = await request<AssemblyDetail>(`/api/v1/portal/assemblies/${event.source_id}`);
+    editingAssemblyId.value = detail.id;
+    assemblyForm.title = detail.title || "";
+    assemblyForm.description = detail.description || "";
+    assemblyForm.scheduled_date = detail.scheduled_date;
+    assemblyForm.scheduled_start_time = detail.scheduled_start_time || "";
+    assemblyForm.estimated_duration_hours = detail.estimated_duration_hours ? String(detail.estimated_duration_hours) : "";
+    assemblyForm.location = detail.location || "";
+    assemblyForm.modality = detail.modality || "presential";
+    assemblyForm.assembly_type = detail.assembly_type || "ordinary";
+    assemblyForm.status = detail.status || "scheduled";
+    assemblyForm.attendees = detail.attendees?.length
+      ? detail.attendees.map((item) => ({
+          name: item.name || "",
+          email: item.email || "",
+          role: item.role || "",
+          attendance_status: item.attendance_status || "expected",
+        }))
+      : [{ name: "", email: "", role: "", attendance_status: "expected" }];
+    assemblyForm.agenda_items = detail.agenda_items?.length
+      ? detail.agenda_items.map((item, index) => ({
+          id: item.id || `point-${index + 1}`,
+          title: item.title || "",
+          description: item.description || "",
+          owner: item.owner || "",
+          conclusion: item.conclusion || "",
+          status: item.status || "pending",
+        }))
+      : [{ id: "point-1", title: "", description: "", owner: "", conclusion: "", status: "pending" }];
+    assemblyForm.conclusions = detail.conclusions || "";
+    showAssemblyForm.value = true;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  }
+};
+
+const openInspectionEdit = async (event: OperationalEvent) => {
+  errorMessage.value = "";
+  try {
+    const detail = await request<InspectionDetail>(`/api/v1/portal/inspections/${event.id}`);
+    editingInspectionEventId.value = event.id;
+    inspectionForm.title = detail.title || event.title || "";
+    inspectionForm.description = detail.description || event.description || "";
+    inspectionForm.planned_date = detail.planned_date || event.planned_date;
+    inspectionForm.planned_start_time = detail.planned_start_time || event.planned_start_time || "";
+    inspectionForm.estimated_duration_hours = detail.estimated_duration_hours ? String(detail.estimated_duration_hours) : "";
+    inspectionForm.assigned_user_id = detail.assigned_user_id || event.assigned_user_id || "";
+    inspectionForm.priority = detail.priority || event.priority || "medium";
+    inspectionForm.result = detail.execution?.result || (detail.status === "completed" ? "conforme" : "in_progress");
+    inspectionForm.comments = detail.execution?.comments || "";
+    inspectionForm.requires_follow_up = Boolean(detail.execution?.requires_follow_up);
+    inspectionForm.close_event = detail.status === "completed";
+    inspectionForm.checklist = (detail.execution?.checklist?.length ? detail.execution.checklist : [{
+      id: "main",
+      label: detail.title || event.title,
+      status: "pending",
+      observations: "",
+      requires_action: false,
+    }]).map((item) => ({ ...item }));
+    showInspectionForm.value = true;
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  }
+};
+
+const openGenericEditEvent = (event: OperationalEvent) => {
   editForm.id = event.id;
   editForm.title = event.title || "";
   editForm.description = event.description || "";
@@ -568,10 +776,34 @@ const openEditEvent = (event: OperationalEvent) => {
   showEditForm.value = true;
 };
 
+const openEditEvent = (event: OperationalEvent) => {
+  if (isAssemblyEvent(event)) {
+    void openAssemblyEdit(event);
+    return;
+  }
+  if (isUnplannedIncident(event)) {
+    openIncidentEdit(event);
+    return;
+  }
+  if (isInspectionEvent(event)) {
+    void openInspectionEdit(event);
+    return;
+  }
+  openGenericEditEvent(event);
+};
+
 const closeEditEvent = () => {
   if (savingEdit.value) return;
   showEditForm.value = false;
 };
+
+const editEventTitle = computed(() => {
+  if (editForm.event_type === "inspection") return "Editar inspeccion";
+  if (editForm.event_type === "maintenance") return "Editar mantencion";
+  if (editForm.event_type === "administrative") return "Editar tarea administrativa";
+  if (editForm.event_type === "meeting") return "Editar reunion";
+  return "Editar tarea";
+});
 
 const updateEditedEvent = async () => {
   if (!editForm.id || !editForm.title.trim()) {
@@ -628,26 +860,131 @@ const createManualTask = async () => {
   savingTask.value = true;
   errorMessage.value = "";
   try {
-    const created = await request<OperationalEvent>("/api/v1/portal/operational-plan/manual-tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: taskForm.title.trim(),
-        description: taskForm.description.trim() || null,
-        planned_date: taskForm.planned_date,
-        planned_start_time: taskForm.planned_start_time || null,
-        estimated_duration_hours: optionalNumber(taskForm.estimated_duration_hours),
-        assigned_user_id: taskForm.assigned_user_id || null,
-        priority: taskForm.priority,
-        event_type: taskForm.event_type,
-      }),
-    });
-    addCreatedEventToAgenda(created);
+    if (taskForm.event_type === "assembly") {
+      const created = await request<{ event?: OperationalEvent }>("/api/v1/portal/assemblies/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: taskForm.title.trim(),
+          description: taskForm.description.trim() || null,
+          assembly_type: "ordinary",
+          status: "scheduled",
+          scheduled_date: taskForm.planned_date,
+          scheduled_start_time: taskForm.planned_start_time || null,
+          estimated_duration_hours: optionalNumber(taskForm.estimated_duration_hours),
+          location: null,
+          modality: "presential",
+          attendees: [],
+          agenda_items: [],
+          conclusions: null,
+        }),
+      });
+      if (created.event) addCreatedEventToAgenda(created.event);
+      else await loadPlan();
+    } else if (taskForm.event_type === "incident") {
+      const created = await request<OperationalEvent>("/api/v1/portal/operational-plan/unplanned-incidents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: taskForm.title.trim(),
+          description: taskForm.description.trim() || null,
+          planned_date: taskForm.planned_date,
+          planned_start_time: taskForm.planned_start_time || null,
+          estimated_duration_hours: optionalNumber(taskForm.estimated_duration_hours),
+          assigned_user_id: taskForm.assigned_user_id || null,
+          priority: taskForm.priority,
+        }),
+      });
+      addCreatedEventToAgenda(created);
+    } else {
+      const created = await request<OperationalEvent>("/api/v1/portal/operational-plan/manual-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: taskForm.title.trim(),
+          description: taskForm.description.trim() || null,
+          planned_date: taskForm.planned_date,
+          planned_start_time: taskForm.planned_start_time || null,
+          estimated_duration_hours: optionalNumber(taskForm.estimated_duration_hours),
+          assigned_user_id: taskForm.assigned_user_id || null,
+          priority: taskForm.priority,
+          event_type: taskForm.event_type,
+        }),
+      });
+      addCreatedEventToAgenda(created);
+    }
     showTaskForm.value = false;
   } catch (error) {
     errorMessage.value = readableError(error);
   } finally {
     savingTask.value = false;
+  }
+};
+
+const createInspection = async () => {
+  if (!inspectionForm.title.trim()) {
+    errorMessage.value = "Indica el título de la inspección.";
+    return;
+  }
+  savingInspection.value = true;
+  errorMessage.value = "";
+  try {
+    const eventPayload = {
+      title: inspectionForm.title.trim(),
+      description: inspectionForm.description.trim() || null,
+      planned_date: inspectionForm.planned_date,
+      planned_start_time: inspectionForm.planned_start_time || null,
+      estimated_duration_hours: optionalNumber(inspectionForm.estimated_duration_hours),
+      assigned_user_id: inspectionForm.assigned_user_id || null,
+      priority: inspectionForm.priority,
+      event_type: "inspection",
+    };
+    const savedEvent = editingInspectionEventId.value
+      ? await request<OperationalEvent>(`/api/v1/portal/operational-plan/events/${editingInspectionEventId.value}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventPayload),
+        })
+      : await request<OperationalEvent>("/api/v1/portal/operational-plan/manual-tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventPayload),
+        });
+    const checklist = inspectionForm.checklist
+      .filter((item) => item.label.trim() || item.observations?.trim())
+      .map((item, index) => ({
+        id: item.id || `item-${index + 1}`,
+        label: item.label.trim() || inspectionForm.title.trim(),
+        status: item.status,
+        observations: item.observations?.trim() || null,
+        requires_action: item.requires_action,
+      }));
+    await request(`/api/v1/portal/inspections/${savedEvent.id}/execution`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        result: inspectionForm.result,
+        comments: inspectionForm.comments.trim() || null,
+        requires_follow_up: inspectionForm.requires_follow_up,
+        close_event: inspectionForm.close_event,
+        checklist: checklist.length ? checklist : [{
+          id: "main",
+          label: inspectionForm.title.trim(),
+          status: "pending",
+          observations: null,
+          requires_action: false,
+        }],
+      }),
+    });
+    if (editingInspectionEventId.value) replaceEvent(savedEvent);
+    else addCreatedEventToAgenda(savedEvent);
+    await loadPlan();
+    showInspectionForm.value = false;
+    editingInspectionEventId.value = "";
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    savingInspection.value = false;
   }
 };
 
@@ -659,14 +996,18 @@ const createAssembly = async () => {
   savingAssembly.value = true;
   errorMessage.value = "";
   try {
-    const created = await request<{ event?: OperationalEvent }>("/api/v1/portal/assemblies/", {
-      method: "POST",
+    const endpoint = editingAssemblyId.value
+      ? `/api/v1/portal/assemblies/${editingAssemblyId.value}`
+      : "/api/v1/portal/assemblies/";
+    const method = editingAssemblyId.value ? "PATCH" : "POST";
+    const saved = await request<{ event?: OperationalEvent }>(endpoint, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: assemblyForm.title.trim(),
         description: assemblyForm.description.trim() || null,
         assembly_type: assemblyForm.assembly_type,
-        status: "scheduled",
+        status: assemblyForm.status,
         scheduled_date: assemblyForm.scheduled_date,
         scheduled_start_time: assemblyForm.scheduled_start_time || null,
         estimated_duration_hours: optionalNumber(assemblyForm.estimated_duration_hours),
@@ -689,9 +1030,11 @@ const createAssembly = async () => {
         conclusions: assemblyForm.conclusions.trim() || null,
       }),
     });
-    if (created.event) addCreatedEventToAgenda(created.event);
+    if (saved.event && editingAssemblyId.value) replaceEvent(saved.event);
+    else if (saved.event) addCreatedEventToAgenda(saved.event);
     else await loadPlan();
     showAssemblyForm.value = false;
+    editingAssemblyId.value = "";
   } catch (error) {
     errorMessage.value = readableError(error);
   } finally {
@@ -707,8 +1050,12 @@ const createUnplannedIncident = async () => {
   savingIncident.value = true;
   errorMessage.value = "";
   try {
-    const created = await request<OperationalEvent>("/api/v1/portal/operational-plan/unplanned-incidents", {
-      method: "POST",
+    const endpoint = editingIncidentEventId.value
+      ? `/api/v1/portal/operational-plan/unplanned-incidents/${editingIncidentEventId.value}`
+      : "/api/v1/portal/operational-plan/unplanned-incidents";
+    const method = editingIncidentEventId.value ? "PATCH" : "POST";
+    const saved = await request<OperationalEvent>(endpoint, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: incidentForm.title.trim(),
@@ -718,10 +1065,13 @@ const createUnplannedIncident = async () => {
         estimated_duration_hours: optionalNumber(incidentForm.estimated_duration_hours),
         assigned_user_id: incidentForm.assigned_user_id || null,
         priority: incidentForm.priority,
+        status: incidentForm.status,
       }),
     });
-    addCreatedEventToAgenda(created);
+    if (editingIncidentEventId.value) replaceEvent(saved);
+    else addCreatedEventToAgenda(saved);
     showIncidentForm.value = false;
+    editingIncidentEventId.value = "";
   } catch (error) {
     errorMessage.value = readableError(error);
   } finally {
@@ -825,11 +1175,11 @@ const sourceLabel = (sourceType: string | null | undefined) => {
 const eventTypeLabel = (eventType: string | null | undefined) => {
   if (eventType === "administrative") return "Administrativa";
   if (eventType === "assembly") return "Asamblea";
-  if (eventType === "meeting") return "Reunión";
-  if (eventType === "inspection") return "Inspección";
-  if (eventType === "maintenance") return "Mantención";
+  if (eventType === "meeting") return "Reunion";
+  if (eventType === "inspection") return "Inspeccion";
+  if (eventType === "maintenance") return "Mantencion";
   if (eventType === "incident") return "Incidencia";
-  return "Tarea";
+  return "Generica";
 };
 
 const eventFunctionalLabel = (event: OperationalEvent) => {
@@ -839,6 +1189,8 @@ const eventFunctionalLabel = (event: OperationalEvent) => {
 };
 
 const isUnplannedIncident = (event: OperationalEvent) => event.event_type ? event.event_type === "incident" : event.source_type === "unplanned_incident";
+const isAssemblyEvent = (event: OperationalEvent) => event.event_type === "assembly" || event.source_type === "assembly";
+const isInspectionEvent = (event: OperationalEvent) => event.event_type === "inspection";
 const isManualTask = (event: OperationalEvent) => event.source_type === "manual_task";
 
 const staffOptionLabel = (member: OperationalStaff) => {
@@ -926,6 +1278,10 @@ onMounted(loadPlan);
           <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
           <span>Nueva asamblea</span>
         </button>
+        <button class="button inspection-action" type="button" @click="openInspectionForm">
+          <svg class="icon" aria-hidden="true"><use href="#icon-clipboard" /></svg>
+          <span>Nueva inspeccion</span>
+        </button>
         <button class="button manual-task-action" type="button" @click="openTaskForm">
           <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
           <span>Nueva tarea</span>
@@ -986,7 +1342,7 @@ onMounted(loadPlan);
             ></div>
             <article
               class="week-task-card"
-              :class="{ 'is-unplanned': isUnplannedIncident(event), 'is-manual': isManualTask(event) }"
+              :class="{ 'is-unplanned': isUnplannedIncident(event), 'is-manual': isManualTask(event), 'is-assembly': isAssemblyEvent(event), 'is-inspection': isInspectionEvent(event) }"
               draggable="true"
               @dragstart="startEventDrag($event, event)"
               @dragend="endEventDrag"
@@ -1064,7 +1420,7 @@ onMounted(loadPlan);
             v-for="event in group.items"
             :key="event.id"
             class="operational-event"
-            :class="{ 'is-manual': isManualTask(event) }"
+            :class="{ 'is-manual': isManualTask(event), 'is-unplanned': isUnplannedIncident(event), 'is-assembly': isAssemblyEvent(event), 'is-inspection': isInspectionEvent(event) }"
             @click="openEditEvent(event)"
           >
             <div class="event-date-dot" aria-hidden="true"></div>
@@ -1157,10 +1513,15 @@ onMounted(loadPlan);
     </div>
     <div v-if="showEditForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-event-title">
       <form class="confirm-modal operational-incident-modal" @submit.prevent="updateEditedEvent">
-        <div>
-          <p class="eyebrow">Agenda operativa</p>
-          <h2 id="edit-event-title">Editar tarea</h2>
-          <p class="placeholder-copy">Actualiza la planificacion, responsable o estado de esta tarjeta.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Agenda operativa</p>
+            <h2 id="edit-event-title">{{ editEventTitle }}</h2>
+            <p class="placeholder-copy">Actualiza la planificacion, responsable o estado de esta tarjeta.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingEdit" title="Cerrar" @click="closeEditEvent">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">
@@ -1236,10 +1597,15 @@ onMounted(loadPlan);
     </div>
     <div v-if="showIncidentForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="incident-form-title">
       <form class="confirm-modal operational-incident-modal" @submit.prevent="createUnplannedIncident">
-        <div>
-          <p class="eyebrow">Agenda operativa</p>
-          <h2 id="incident-form-title">Nueva incidencia no programada</h2>
-          <p class="placeholder-copy">Se añadirá como tarea pendiente dentro de la planificación del condominio activo.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Agenda operativa</p>
+            <h2 id="incident-form-title">{{ editingIncidentEventId ? "Editar incidencia" : "Nueva incidencia no programada" }}</h2>
+            <p class="placeholder-copy">Se añadirá como tarea pendiente dentro de la planificación del condominio activo.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingIncident" title="Cerrar" @click="closeIncidentForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">
@@ -1268,6 +1634,15 @@ onMounted(loadPlan);
               <option value="urgent">Urgente</option>
             </select>
           </label>
+          <label v-if="editingIncidentEventId">
+            Estado
+            <select v-model="incidentForm.status">
+              <option value="pending">Pendiente</option>
+              <option value="in_progress">En curso</option>
+              <option value="completed">Completado</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </label>
           <label>
             Responsable
             <select v-model="incidentForm.assigned_user_id">
@@ -1289,17 +1664,136 @@ onMounted(loadPlan);
           </button>
           <button class="button incident-action" type="submit" :disabled="savingIncident">
             <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
-            <span>{{ savingIncident ? "Guardando..." : "Añadir a la agenda" }}</span>
+            <span>{{ savingIncident ? "Guardando..." : (editingIncidentEventId ? "Guardar cambios" : "Añadir a la agenda") }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    <div v-if="showInspectionForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="inspection-form-title">
+      <form class="confirm-modal inspection-execution-modal" @submit.prevent="createInspection">
+        <div class="inspection-modal-header">
+          <div>
+            <p class="eyebrow">Inspeccion</p>
+            <h2 id="inspection-form-title">{{ editingInspectionEventId ? "Editar inspeccion" : "Nueva inspeccion" }}</h2>
+            <p class="placeholder-copy">Registra la inspeccion con su responsable, resultado y checklist de revision.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingInspection" title="Cerrar" @click="closeInspectionForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
+        </div>
+
+        <div class="entity-form-grid">
+          <label class="span-two">
+            Titulo
+            <input v-model="inspectionForm.title" type="text" maxlength="180" placeholder="Ej. Revisar sala de bombas" required />
+          </label>
+          <label>
+            Fecha
+            <input v-model="inspectionForm.planned_date" type="date" required />
+          </label>
+          <label>
+            Hora estimada
+            <input v-model="inspectionForm.planned_start_time" type="time" />
+          </label>
+          <label>
+            Duracion estimada (horas)
+            <input v-model="inspectionForm.estimated_duration_hours" type="number" min="0.25" step="0.25" placeholder="Ej. 0.5" />
+          </label>
+          <label>
+            Prioridad
+            <select v-model="inspectionForm.priority">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </label>
+          <label>
+            Responsable
+            <select v-model="inspectionForm.assigned_user_id">
+              <option value="">Sin persona asignada</option>
+              <option v-for="member in staff" :key="member.user_id" :value="member.user_id">
+                {{ staffOptionLabel(member) }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Resultado
+            <select v-model="inspectionForm.result">
+              <option v-for="[value, label] in inspectionResultOptions" :key="value" :value="value">{{ label }}</option>
+            </select>
+          </label>
+          <label class="switch-field inspection-switch">
+            <input v-model="inspectionForm.requires_follow_up" type="checkbox" />
+            <span>Requiere seguimiento</span>
+          </label>
+          <label class="switch-field inspection-switch">
+            <input v-model="inspectionForm.close_event" type="checkbox" />
+            <span>Cerrar inspeccion</span>
+          </label>
+          <label class="wide-field">
+            Descripcion
+            <textarea v-model="inspectionForm.description" rows="3" placeholder="Describe brevemente que debe revisarse."></textarea>
+          </label>
+          <label class="wide-field">
+            Observaciones generales
+            <textarea v-model="inspectionForm.comments" rows="3" placeholder="Resumen de lo revisado, hallazgos o proximos pasos."></textarea>
+          </label>
+        </div>
+
+        <section class="inspection-checklist">
+          <div class="inspection-checklist-header">
+            <h3>Checklist</h3>
+            <button class="button ghost" type="button" @click="addInspectionChecklistItem">
+              <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+              <span>Agregar item</span>
+            </button>
+          </div>
+          <article v-for="(item, index) in inspectionForm.checklist" :key="item.id" class="inspection-checklist-item">
+            <label>
+              Item
+              <input v-model="item.label" type="text" :placeholder="index === 0 ? inspectionForm.title || 'Punto a revisar' : 'Punto a revisar'" />
+            </label>
+            <label>
+              Estado
+              <select v-model="item.status">
+                <option v-for="[value, label] in checklistStatusOptions" :key="value" :value="value">{{ label }}</option>
+              </select>
+            </label>
+            <label class="switch-field inspection-switch">
+              <input v-model="item.requires_action" type="checkbox" />
+              <span>Accion requerida</span>
+            </label>
+            <label class="wide-field">
+              Observaciones
+              <textarea v-model="item.observations" rows="2" placeholder="Detalle del hallazgo, si aplica."></textarea>
+            </label>
+            <button class="button danger icon-only" type="button" title="Quitar item" @click="removeInspectionChecklistItem(index)">
+              <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+            </button>
+          </article>
+        </section>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingInspection" @click="closeInspectionForm">Cancelar</button>
+          <button class="button inspection-action" type="submit" :disabled="savingInspection">
+            <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+            <span>{{ savingInspection ? "Guardando..." : (editingInspectionEventId ? "Guardar inspeccion" : "Anadir inspeccion") }}</span>
           </button>
         </div>
       </form>
     </div>
     <div v-if="showTaskForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="task-form-title">
       <form class="confirm-modal operational-incident-modal" @submit.prevent="createManualTask">
-        <div>
-          <p class="eyebrow">Agenda operativa</p>
-          <h2 id="task-form-title">Nueva tarea manual</h2>
-          <p class="placeholder-copy">Se añadirá como tarea pendiente dentro de la planificación del condominio activo.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Agenda operativa</p>
+            <h2 id="task-form-title">{{ taskForm.event_type === "inspection" ? "Nueva inspeccion" : "Nueva tarea" }}</h2>
+            <p class="placeholder-copy">Se añadirá como tarea pendiente dentro de la planificación del condominio activo.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingTask" title="Cerrar" @click="closeTaskForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">
@@ -1362,10 +1856,15 @@ onMounted(loadPlan);
     </div>
     <div v-if="showAssemblyForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="assembly-form-title">
       <form class="confirm-modal assembly-modal" @submit.prevent="createAssembly">
-        <div>
-          <p class="eyebrow">Agenda operativa</p>
-          <h2 id="assembly-form-title">Nueva asamblea</h2>
-          <p class="placeholder-copy">Se creará como entidad de asamblea y quedará visible en la agenda del condominio activo.</p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Agenda operativa</p>
+            <h2 id="assembly-form-title">{{ editingAssemblyId ? "Editar asamblea" : "Nueva asamblea" }}</h2>
+            <p class="placeholder-copy">Se creará como entidad de asamblea y quedará visible en la agenda del condominio activo.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingAssembly" title="Cerrar" @click="closeAssemblyForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
 
         <div class="entity-form-grid">
@@ -1396,6 +1895,15 @@ onMounted(loadPlan);
               <option value="presential">Presencial</option>
               <option value="online">Online</option>
               <option value="hybrid">Híbrida</option>
+            </select>
+          </label>
+          <label>
+            Estado
+            <select v-model="assemblyForm.status">
+              <option value="scheduled">Programada</option>
+              <option value="in_progress">En curso</option>
+              <option value="closed">Cerrada</option>
+              <option value="cancelled">Cancelada</option>
             </select>
           </label>
           <label>
@@ -1489,12 +1997,17 @@ onMounted(loadPlan);
     </div>
     <div v-if="deleteCandidate" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
       <div class="confirm-modal">
-        <div>
-          <p class="eyebrow">Agenda operativa</p>
-          <h2 id="delete-event-title">Eliminar de la planificación</h2>
-          <p class="placeholder-copy">
-            Se eliminará "{{ deleteCandidate.title }}" de la semana operativa del condominio activo.
-          </p>
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Agenda operativa</p>
+            <h2 id="delete-event-title">Eliminar de la planificación</h2>
+            <p class="placeholder-copy">
+              Se eliminará "{{ deleteCandidate.title }}" de la semana operativa del condominio activo.
+            </p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="!!deletingEventId" title="Cerrar" @click="closeDeleteEvent">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
         </div>
         <div class="modal-actions">
           <button class="button ghost" type="button" :disabled="!!deletingEventId" @click="closeDeleteEvent">

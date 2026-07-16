@@ -34,7 +34,7 @@ const menuGroups: MenuGroup[] = [
     id: "comunidades",
     label: "Nucleos",
     items: [
-      { id: "neighbors", label: "Comunidad", icon: "home", view: "neighbors" },
+      { id: "neighbors", label: "Condominio", icon: "layers", view: "neighbors" },
       { id: "committee", label: "Comité", icon: "network-users", view: "committee" },
       { id: "team", label: "Administración", icon: "briefcase", view: "team" },
     ],

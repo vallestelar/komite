@@ -28,6 +28,7 @@
     <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></symbol>
     <symbol id="icon-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.9" /><path d="M16 3.1a4 4 0 0 1 0 7.8" /></symbol>
     <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8" /><path d="M5 10v11h14V10" /><path d="M9 21v-6h6v6" /></symbol>
+    <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 16 9 5 9-5" /></symbol>
     <symbol id="icon-paw" viewBox="0 0 24 24"><path d="M11.2 17.8c-1.4 1.4-3.9 2.6-5.4 1.1-1.5-1.5-.3-4 1.1-5.4l1.8-1.8a4.7 4.7 0 0 1 6.6 0l1.8 1.8c1.4 1.4 2.6 3.9 1.1 5.4-1.5 1.5-4 .3-5.4-1.1a1.1 1.1 0 0 0-1.6 0Z" /><circle cx="6.5" cy="8.5" r="2.2" /><circle cx="11" cy="5.5" r="2.2" /><circle cx="16.8" cy="8.5" r="2.2" /><circle cx="19" cy="13.2" r="1.8" /></symbol>
     <symbol id="icon-plant" viewBox="0 0 24 24"><path d="M12 21V10" /><path d="M12 10c-3.5 0-6-2.5-6-6 3.5 0 6 2.5 6 6Z" /><path d="M12 12c3.8 0 6.5-2.7 6.5-6.5C14.7 5.5 12 8.2 12 12Z" /><path d="M7 21h10" /><path d="M9 21h6l1-4H8Z" /></symbol>
     <symbol id="icon-amenity" viewBox="0 0 24 24"><path d="M4 19h16" /><path d="M5 15c1.4-1 2.8-1 4.2 0s2.8 1 4.2 0 2.8-1 4.2 0" /><path d="M5 11c1.4-1 2.8-1 4.2 0s2.8 1 4.2 0 2.8-1 4.2 0" /><path d="M7 6h10" /><path d="M9 6v5" /><path d="M15 6v5" /></symbol>

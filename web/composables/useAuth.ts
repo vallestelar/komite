@@ -33,8 +33,7 @@ const USER_KEY = "komite_user";
 const COMPANY_KEY = "komite_company";
 const CONDOMINIUMS_KEY = "komite_condominiums";
 const ACTIVE_CONDOMINIUM_KEY = "komite_active_condominium";
-const ACCESS_TOKEN_MAX_AGE_SECONDS = 1800;
-const REFRESH_TOKEN_MAX_AGE_SECONDS = 604800;
+const SESSION_KEYS = [TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY, COMPANY_KEY, CONDOMINIUMS_KEY, ACTIVE_CONDOMINIUM_KEY];
 
 export const useAuth = () => {
   const token = useState<string | null>("komite_token", () => null);
@@ -46,18 +45,19 @@ export const useAuth = () => {
 
   const hydrate = () => {
     if (!import.meta.client) return;
-    const storedToken = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
-    refreshToken.value = localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    clearPersistentAuthStorage();
+    const storedToken = sessionStorage.getItem(TOKEN_KEY);
+    refreshToken.value = sessionStorage.getItem(REFRESH_TOKEN_KEY);
     if (storedToken && isJwtExpired(storedToken) && !refreshToken.value) {
       clearSession();
       return;
     }
 
     token.value = storedToken;
-    const rawUser = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
-    const rawCompany = localStorage.getItem(COMPANY_KEY) || sessionStorage.getItem(COMPANY_KEY);
-    const rawCondominiums = localStorage.getItem(CONDOMINIUMS_KEY) || sessionStorage.getItem(CONDOMINIUMS_KEY);
-    const rawActiveCondominium = localStorage.getItem(ACTIVE_CONDOMINIUM_KEY) || sessionStorage.getItem(ACTIVE_CONDOMINIUM_KEY);
+    const rawUser = sessionStorage.getItem(USER_KEY);
+    const rawCompany = sessionStorage.getItem(COMPANY_KEY);
+    const rawCondominiums = sessionStorage.getItem(CONDOMINIUMS_KEY);
+    const rawActiveCondominium = sessionStorage.getItem(ACTIVE_CONDOMINIUM_KEY);
     user.value = rawUser ? safeJsonParse<KomiteUser>(rawUser) : null;
     company.value = rawCompany ? safeJsonParse<KomiteCompany>(rawCompany) : null;
     condominiums.value = uniqueCondominiumsById(rawCondominiums ? safeJsonParse<KomiteCondominium[]>(rawCondominiums) || [] : []);
@@ -81,24 +81,19 @@ export const useAuth = () => {
     const companyPayload = JSON.stringify(session.company || null);
     const condominiumsPayload = JSON.stringify(uniqueCondominiums);
     const activeCondominiumPayload = JSON.stringify(activeCondominium.value);
-    localStorage.setItem(TOKEN_KEY, session.access_token);
-    if (refreshToken.value) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken.value);
-    localStorage.setItem(USER_KEY, userPayload);
-    localStorage.setItem(COMPANY_KEY, companyPayload);
-    localStorage.setItem(CONDOMINIUMS_KEY, condominiumsPayload);
-    localStorage.setItem(ACTIVE_CONDOMINIUM_KEY, activeCondominiumPayload);
+    clearPersistentAuthStorage();
     sessionStorage.setItem(TOKEN_KEY, session.access_token);
     if (refreshToken.value) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken.value);
     sessionStorage.setItem(USER_KEY, userPayload);
     sessionStorage.setItem(COMPANY_KEY, companyPayload);
     sessionStorage.setItem(CONDOMINIUMS_KEY, condominiumsPayload);
     sessionStorage.setItem(ACTIVE_CONDOMINIUM_KEY, activeCondominiumPayload);
-    document.cookie = `${TOKEN_KEY}=${encodeURIComponent(session.access_token)}; path=/; max-age=${ACCESS_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+    document.cookie = `${TOKEN_KEY}=${encodeURIComponent(session.access_token)}; path=/; SameSite=Lax`;
     if (refreshToken.value) {
-      document.cookie = `${REFRESH_TOKEN_KEY}=${encodeURIComponent(refreshToken.value)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+      document.cookie = `${REFRESH_TOKEN_KEY}=${encodeURIComponent(refreshToken.value)}; path=/; SameSite=Lax`;
     }
-    document.cookie = `${USER_KEY}=${encodeURIComponent(userPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
-    document.cookie = `${ACTIVE_CONDOMINIUM_KEY}=${encodeURIComponent(activeCondominiumPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+    document.cookie = `${USER_KEY}=${encodeURIComponent(userPayload)}; path=/; SameSite=Lax`;
+    document.cookie = `${ACTIVE_CONDOMINIUM_KEY}=${encodeURIComponent(activeCondominiumPayload)}; path=/; SameSite=Lax`;
   };
 
   const setActiveCondominium = (selectedCondominium: KomiteCondominium) => {
@@ -106,9 +101,9 @@ export const useAuth = () => {
 
     if (!import.meta.client) return;
     const activeCondominiumPayload = JSON.stringify(selectedCondominium);
-    localStorage.setItem(ACTIVE_CONDOMINIUM_KEY, activeCondominiumPayload);
+    clearPersistentAuthStorage();
     sessionStorage.setItem(ACTIVE_CONDOMINIUM_KEY, activeCondominiumPayload);
-    document.cookie = `${ACTIVE_CONDOMINIUM_KEY}=${encodeURIComponent(activeCondominiumPayload)}; path=/; max-age=${REFRESH_TOKEN_MAX_AGE_SECONDS}; SameSite=Lax`;
+    document.cookie = `${ACTIVE_CONDOMINIUM_KEY}=${encodeURIComponent(activeCondominiumPayload)}; path=/; SameSite=Lax`;
   };
 
   const clearSession = () => {
@@ -120,18 +115,10 @@ export const useAuth = () => {
     activeCondominium.value = null;
 
     if (!import.meta.client) return;
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(COMPANY_KEY);
-    localStorage.removeItem(CONDOMINIUMS_KEY);
-    localStorage.removeItem(ACTIVE_CONDOMINIUM_KEY);
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem(COMPANY_KEY);
-    sessionStorage.removeItem(CONDOMINIUMS_KEY);
-    sessionStorage.removeItem(ACTIVE_CONDOMINIUM_KEY);
+    clearPersistentAuthStorage();
+    for (const key of SESSION_KEYS) {
+      sessionStorage.removeItem(key);
+    }
     document.cookie = `${TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
     document.cookie = `${REFRESH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
     document.cookie = `${USER_KEY}=; path=/; max-age=0; SameSite=Lax`;
@@ -173,6 +160,12 @@ function isJwtExpired(token: string): boolean {
 function base64UrlToBase64(value: string): string {
   const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
   return base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+}
+
+function clearPersistentAuthStorage() {
+  for (const key of SESSION_KEYS) {
+    localStorage.removeItem(key);
+  }
 }
 
 function uniqueCondominiumsById(items: KomiteCondominium[]): KomiteCondominium[] {

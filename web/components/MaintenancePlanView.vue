@@ -468,7 +468,7 @@ onMounted(loadPlan);
                   <th>Meses</th>
                   <th>Responsable</th>
                   <th>Estado</th>
-                  <th>Acciones</th>
+                  <th class="maintenance-actions-header" aria-label="Acciones"></th>
                 </tr>
               </thead>
               <tbody>

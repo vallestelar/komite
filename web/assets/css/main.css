@@ -1034,12 +1034,13 @@ h3 {
 }
 
 .maintenance-table.edifito-table {
-  min-width: 940px;
+  width: 100%;
+  min-width: 0;
   table-layout: fixed;
 }
 
 .maintenance-layout.is-editing .maintenance-table.edifito-table {
-  min-width: 900px;
+  min-width: 0;
 }
 
 .edifito-table.maintenance-table th,
@@ -1052,27 +1053,27 @@ h3 {
 
 .maintenance-table th:nth-child(1),
 .maintenance-table td:nth-child(1) {
-  width: 15%;
+  width: 13%;
 }
 
 .maintenance-table th:nth-child(2),
 .maintenance-table td:nth-child(2) {
-  width: 34%;
+  width: 28%;
 }
 
 .maintenance-table th:nth-child(3),
 .maintenance-table td:nth-child(3) {
-  width: 10%;
+  width: 8%;
 }
 
 .maintenance-table th:nth-child(4),
 .maintenance-table td:nth-child(4) {
-  width: 18%;
+  width: 10%;
 }
 
 .maintenance-table th:nth-child(5),
 .maintenance-table td:nth-child(5) {
-  width: 11%;
+  width: 16%;
 }
 
 .maintenance-table th:nth-child(6),
@@ -1086,10 +1087,26 @@ h3 {
   text-align: center;
 }
 
+.maintenance-table th:nth-child(8),
+.maintenance-table td:nth-child(8) {
+  width: 68px;
+}
+
+.maintenance-table .maintenance-actions-header {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .maintenance-table .actions-cell {
   display: table-cell;
+  padding-left: 10px;
+  padding-right: 16px;
   text-align: center;
   white-space: nowrap;
+}
+
+.maintenance-layout.is-editing .maintenance-table .actions-cell {
+  padding-right: 20px;
 }
 
 .maintenance-table .actions-inline {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { KomiteCondominium } from "~/composables/useAuth";
 
-const email = ref("admin@komite.cl");
+const email = ref("");
 const password = ref("");
 const error = ref("");
 const loading = ref(false);

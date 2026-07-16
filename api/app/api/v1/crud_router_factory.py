@@ -27,6 +27,7 @@ from app.models.entities import (
     PlannedOperationalEvent,
     Report,
     Task,
+    Unit,
 )
 from app.services.service_factory import service_factory
 
@@ -107,6 +108,7 @@ async def _derive_company_id(data: dict[str, Any]) -> Any:
     parent_lookups = (
         ("incident_id", Incident),
         ("task_id", Task),
+        ("unit_id", Unit),
         ("inspection_id", Inspection),
         ("report_id", Report),
         ("communication_id", Communication),
@@ -213,6 +215,7 @@ def create_crud_router(
         status: str | None = Query(None),
         filter_company_id: UUID | None = Query(None),
         filter_condominium_id: UUID | None = Query(None),
+        filter_unit_id: UUID | None = Query(None),
         filter_status: str | None = Query(None),
         order_by: list[str] | None = Query(None),
         svc=Depends(get_service),
@@ -229,8 +232,12 @@ def create_crud_router(
                 filters["company_id"] = selected_company_id
             if selected_condominium_id and "condominium_id" in db_fields:
                 filters["condominium_id"] = selected_condominium_id
+            if filter_unit_id and "unit_id" in db_fields:
+                filters["unit_id"] = filter_unit_id
             if selected_status and "status" in db_fields:
                 filters["status"] = selected_status
+        elif filter_unit_id and "unit_id" in db_fields:
+            filters["unit_id"] = filter_unit_id
         result = await svc.list_paginated(
             page,
             page_size,

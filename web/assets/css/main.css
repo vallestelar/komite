@@ -2439,6 +2439,119 @@ h3 {
   background: #ecfdf3;
 }
 
+.unit-related-panel {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: #fff;
+}
+
+.unit-related-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.unit-related-panel h3,
+.unit-related-card h4 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.unit-related-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+}
+
+.unit-related-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+.unit-related-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.unit-related-card-title {
+  margin-bottom: 12px;
+}
+
+.unit-related-card-title span {
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--navy);
+  background: #eaf3fb;
+  font-size: 12px;
+}
+
+.unit-related-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.unit-related-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d8e2ee;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.unit-related-item .status-badge {
+  flex: 0 0 auto;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.unit-related-item > div {
+  min-width: 0;
+}
+
+.unit-related-item > div > strong,
+.unit-related-item > div > span,
+.unit-related-item > div > small {
+  display: block;
+}
+
+.unit-related-item > div > strong {
+  color: var(--navy);
+}
+
+.unit-related-item > div > span,
+.unit-related-item > div > small {
+  color: var(--muted);
+}
+
+.unit-related-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.unit-related-form .button {
+  align-self: end;
+  justify-content: center;
+}
+
 .boolean-chip.is-off {
   border-color: #e2e8f0;
   color: #64748b;
@@ -3103,6 +3216,11 @@ h3 {
 
   .inspection-checklist-item .wide-field {
     grid-column: 1 / -1;
+  }
+
+  .unit-related-grid,
+  .unit-related-form {
+    grid-template-columns: 1fr;
   }
 
   .assembly-card {

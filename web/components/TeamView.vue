@@ -87,7 +87,7 @@ onMounted(loadTeam);
   <section class="panel team-panel">
     <div class="dashboard-hero team-hero">
       <div>
-        <p class="eyebrow">Equipo</p>
+        <p class="eyebrow">Administración</p>
         <h2>Quién es quién en la empresa</h2>
         <p class="hero-copy">{{ company?.name || "Empresa administradora" }}</p>
       </div>

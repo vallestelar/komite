@@ -223,6 +223,111 @@ class BuildingPage(BaseModel):
     meta: PageMeta
 
 
+class CommonAreaCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    name: str = Field(..., max_length=120)
+    area_type: str = Field(default="other", max_length=40)
+    location: Optional[str] = Field(default=None, max_length=160)
+    capacity: Optional[int] = None
+    requires_reservation: bool = False
+    status: str = Field(default="active", max_length=30)
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonAreaUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=120)
+    area_type: Optional[str] = Field(default=None, max_length=40)
+    location: Optional[str] = Field(default=None, max_length=160)
+    capacity: Optional[int] = None
+    requires_reservation: Optional[bool] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CommonAreaOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    name: str
+    area_type: str
+    location: Optional[str] = None
+    capacity: Optional[int] = None
+    requires_reservation: bool
+    status: str
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonAreaPage(BaseModel):
+    items: list[CommonAreaOut]
+    meta: PageMeta
+
+
+class CondominiumAssetCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    name: str = Field(..., max_length=140)
+    asset_type: str = Field(default="other", max_length=50)
+    location: Optional[str] = Field(default=None, max_length=160)
+    brand: Optional[str] = Field(default=None, max_length=100)
+    model: Optional[str] = Field(default=None, max_length=100)
+    serial_number: Optional[str] = Field(default=None, max_length=100)
+    provider: Optional[str] = Field(default=None, max_length=160)
+    installation_date: Optional[date] = None
+    requires_maintenance: bool = True
+    maintenance_frequency: Optional[str] = Field(default=None, max_length=80)
+    status: str = Field(default="active", max_length=30)
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumAssetUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=140)
+    asset_type: Optional[str] = Field(default=None, max_length=50)
+    location: Optional[str] = Field(default=None, max_length=160)
+    brand: Optional[str] = Field(default=None, max_length=100)
+    model: Optional[str] = Field(default=None, max_length=100)
+    serial_number: Optional[str] = Field(default=None, max_length=100)
+    provider: Optional[str] = Field(default=None, max_length=160)
+    installation_date: Optional[date] = None
+    requires_maintenance: Optional[bool] = None
+    maintenance_frequency: Optional[str] = Field(default=None, max_length=80)
+    status: Optional[str] = Field(default=None, max_length=30)
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CondominiumAssetOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    name: str
+    asset_type: str
+    location: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    provider: Optional[str] = None
+    installation_date: Optional[date] = None
+    requires_maintenance: bool
+    maintenance_frequency: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CondominiumAssetPage(BaseModel):
+    items: list[CondominiumAssetOut]
+    meta: PageMeta
+
+
 class UnitCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: UUID
@@ -274,6 +379,93 @@ class UnitOut(AuditOut):
 
 class UnitPage(BaseModel):
     items: list[UnitOut]
+    meta: PageMeta
+
+
+class UnitAnnexCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    unit_id: UUID
+    annex_type: str = Field(default="parking", max_length=40)
+    identifier: str = Field(..., max_length=80)
+    description: Optional[str] = Field(default=None, max_length=255)
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class UnitAnnexUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    annex_type: Optional[str] = Field(default=None, max_length=40)
+    identifier: Optional[str] = Field(default=None, max_length=80)
+    description: Optional[str] = Field(default=None, max_length=255)
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class UnitAnnexOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    unit_id: UUID
+    annex_type: str
+    identifier: str
+    description: Optional[str] = None
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class UnitAnnexPage(BaseModel):
+    items: list[UnitAnnexOut]
+    meta: PageMeta
+
+
+class UnitPetCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    unit_id: UUID
+    name: str = Field(..., max_length=120)
+    species: str = Field(default="dog", max_length=40)
+    breed: Optional[str] = Field(default=None, max_length=120)
+    color: Optional[str] = Field(default=None, max_length=80)
+    chip_number: Optional[str] = Field(default=None, max_length=80)
+    status: str = Field(default="active", max_length=30)
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class UnitPetUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=120)
+    species: Optional[str] = Field(default=None, max_length=40)
+    breed: Optional[str] = Field(default=None, max_length=120)
+    color: Optional[str] = Field(default=None, max_length=80)
+    chip_number: Optional[str] = Field(default=None, max_length=80)
+    status: Optional[str] = Field(default=None, max_length=30)
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class UnitPetOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    unit_id: UUID
+    name: str
+    species: str
+    breed: Optional[str] = None
+    color: Optional[str] = None
+    chip_number: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class UnitPetPage(BaseModel):
+    items: list[UnitPetOut]
     meta: PageMeta
 
 

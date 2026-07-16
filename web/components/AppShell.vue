@@ -32,11 +32,11 @@ const menuGroups: MenuGroup[] = [
   },
   {
     id: "comunidades",
-    label: "Comunidades",
+    label: "Nucleos",
     items: [
-      { id: "neighbors", label: "Vecinos y unidades", icon: "home", view: "neighbors" },
-      { id: "committee", label: "Comité", icon: "users", view: "committee" },
-      { id: "team", label: "Equipo", icon: "network-users", view: "team" },
+      { id: "neighbors", label: "Comunidad", icon: "home", view: "neighbors" },
+      { id: "committee", label: "Comité", icon: "network-users", view: "committee" },
+      { id: "team", label: "Administración", icon: "briefcase", view: "team" },
     ],
   },
   {

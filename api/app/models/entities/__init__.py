@@ -1,9 +1,13 @@
 from app.models.entities.company import Company
 from app.models.entities.condominium import Condominium
+from app.models.entities.condominium_asset import CondominiumAsset
 from app.models.entities.condominium_operational_staff import CondominiumOperationalStaff
+from app.models.entities.common_area import CommonArea
 from app.models.entities.building import Building
 from app.models.entities.unit import Unit
+from app.models.entities.unit_annex import UnitAnnex
 from app.models.entities.unit_contact import UnitContact
+from app.models.entities.unit_pet import UnitPet
 from app.models.entities.committee_member import CommitteeMember
 from app.models.entities.role import Role
 from app.models.entities.bank import Bank
@@ -41,10 +45,14 @@ from app.models.entities.support_ticket import SupportTicket
 __all__ = [
     "Company",
     "Condominium",
+    "CondominiumAsset",
     "CondominiumOperationalStaff",
+    "CommonArea",
     "Building",
     "Unit",
+    "UnitAnnex",
     "UnitContact",
+    "UnitPet",
     "CommitteeMember",
     "Role",
     "Bank",

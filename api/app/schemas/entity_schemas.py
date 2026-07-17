@@ -1764,6 +1764,375 @@ class CommunicationRecipientPage(BaseModel):
     meta: PageMeta
 
 
+class AccountingPeriodCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    name: str = Field(..., max_length=120)
+    description: Optional[str] = None
+    start_date: date
+    end_date: date
+    status: str = Field(default="draft", max_length=30)
+    is_active: bool = False
+    reserve_fund_rate: Decimal = Decimal("0")
+    closed_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingPeriodUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=120)
+    description: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    is_active: Optional[bool] = None
+    reserve_fund_rate: Optional[Decimal] = None
+    closed_at: Optional[datetime] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingPeriodOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    name: str
+    description: Optional[str] = None
+    start_date: date
+    end_date: date
+    status: str
+    is_active: bool
+    reserve_fund_rate: Decimal
+    closed_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingPeriodPage(BaseModel):
+    items: list[AccountingPeriodOut]
+    meta: PageMeta
+
+
+class AccountingSupplierCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: str = Field(..., max_length=180)
+    rut: Optional[str] = Field(default=None, max_length=30)
+    email: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    category: Optional[str] = Field(default=None, max_length=80)
+    status: str = Field(default="active", max_length=30)
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingSupplierUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=180)
+    rut: Optional[str] = Field(default=None, max_length=30)
+    email: Optional[str] = Field(default=None, max_length=255)
+    phone: Optional[str] = Field(default=None, max_length=40)
+    category: Optional[str] = Field(default=None, max_length=80)
+    status: Optional[str] = Field(default=None, max_length=30)
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingSupplierOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: str
+    rut: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    category: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingSupplierPage(BaseModel):
+    items: list[AccountingSupplierOut]
+    meta: PageMeta
+
+
+class AccountingIncomeTypeCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: str = Field(..., max_length=120)
+    code: Optional[str] = Field(default=None, max_length=60)
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingIncomeTypeUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=120)
+    code: Optional[str] = Field(default=None, max_length=60)
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingIncomeTypeOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: str
+    code: Optional[str] = None
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingIncomeTypePage(BaseModel):
+    items: list[AccountingIncomeTypeOut]
+    meta: PageMeta
+
+
+class AccountingIncomeCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    period_id: UUID
+    unit_id: Optional[UUID] = None
+    income_type_id: Optional[UUID] = None
+    bank_id: Optional[UUID] = None
+    income_date: date
+    description: str
+    amount: Decimal
+    payment_method: Optional[str] = Field(default=None, max_length=60)
+    status: str = Field(default="confirmed", max_length=30)
+    reference: Optional[str] = Field(default=None, max_length=120)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingIncomeUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    period_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    income_type_id: Optional[UUID] = None
+    bank_id: Optional[UUID] = None
+    income_date: Optional[date] = None
+    description: Optional[str] = None
+    amount: Optional[Decimal] = None
+    payment_method: Optional[str] = Field(default=None, max_length=60)
+    status: Optional[str] = Field(default=None, max_length=30)
+    reference: Optional[str] = Field(default=None, max_length=120)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingIncomeOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    period_id: UUID
+    unit_id: Optional[UUID] = None
+    income_type_id: Optional[UUID] = None
+    bank_id: Optional[UUID] = None
+    income_date: date
+    description: str
+    amount: Decimal
+    payment_method: Optional[str] = None
+    status: str
+    reference: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingIncomePage(BaseModel):
+    items: list[AccountingIncomeOut]
+    meta: PageMeta
+
+
+class AccountingExpenseCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    period_id: UUID
+    supplier_id: Optional[UUID] = None
+    attachment_id: Optional[UUID] = None
+    expense_date: date
+    description: str
+    amount: Decimal
+    category: Optional[str] = Field(default=None, max_length=80)
+    document_number: Optional[str] = Field(default=None, max_length=120)
+    is_common_expense: bool = True
+    status: str = Field(default="approved", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingExpenseUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    period_id: Optional[UUID] = None
+    supplier_id: Optional[UUID] = None
+    attachment_id: Optional[UUID] = None
+    expense_date: Optional[date] = None
+    description: Optional[str] = None
+    amount: Optional[Decimal] = None
+    category: Optional[str] = Field(default=None, max_length=80)
+    document_number: Optional[str] = Field(default=None, max_length=120)
+    is_common_expense: Optional[bool] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingExpenseOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    period_id: UUID
+    supplier_id: Optional[UUID] = None
+    attachment_id: Optional[UUID] = None
+    expense_date: date
+    description: str
+    amount: Decimal
+    category: Optional[str] = None
+    document_number: Optional[str] = None
+    is_common_expense: bool
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingExpensePage(BaseModel):
+    items: list[AccountingExpenseOut]
+    meta: PageMeta
+
+
+class CommonExpenseRunCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    period_id: UUID
+    status: str = Field(default="draft", max_length=30)
+    total_expenses: Decimal = Decimal("0")
+    reserve_fund_rate: Decimal = Decimal("0")
+    total_reserve_fund: Decimal = Decimal("0")
+    total_charged: Decimal = Decimal("0")
+    calculated_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonExpenseRunUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    period_id: Optional[UUID] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    total_expenses: Optional[Decimal] = None
+    reserve_fund_rate: Optional[Decimal] = None
+    total_reserve_fund: Optional[Decimal] = None
+    total_charged: Optional[Decimal] = None
+    calculated_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CommonExpenseRunOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    period_id: UUID
+    status: str
+    total_expenses: Decimal
+    reserve_fund_rate: Decimal
+    total_reserve_fund: Decimal
+    total_charged: Decimal
+    calculated_at: Optional[datetime] = None
+    published_at: Optional[datetime] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonExpenseRunPage(BaseModel):
+    items: list[CommonExpenseRunOut]
+    meta: PageMeta
+
+
+class CommonExpenseChargeCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    run_id: UUID
+    period_id: UUID
+    unit_id: UUID
+    proration: Decimal = Decimal("0")
+    expense_amount: Decimal = Decimal("0")
+    reserve_fund_amount: Decimal = Decimal("0")
+    total_amount: Decimal = Decimal("0")
+    status: str = Field(default="draft", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonExpenseChargeUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    run_id: Optional[UUID] = None
+    period_id: Optional[UUID] = None
+    unit_id: Optional[UUID] = None
+    proration: Optional[Decimal] = None
+    expense_amount: Optional[Decimal] = None
+    reserve_fund_amount: Optional[Decimal] = None
+    total_amount: Optional[Decimal] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CommonExpenseChargeOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    run_id: UUID
+    period_id: UUID
+    unit_id: UUID
+    proration: Decimal
+    expense_amount: Decimal
+    reserve_fund_amount: Decimal
+    total_amount: Decimal
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonExpenseChargePage(BaseModel):
+    items: list[CommonExpenseChargeOut]
+    meta: PageMeta
+
+
+class CommonExpenseChargeItemCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    charge_id: UUID
+    expense_id: UUID
+    description: str
+    expense_amount: Decimal
+    prorated_amount: Decimal
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonExpenseChargeItemUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    charge_id: Optional[UUID] = None
+    expense_id: Optional[UUID] = None
+    description: Optional[str] = None
+    expense_amount: Optional[Decimal] = None
+    prorated_amount: Optional[Decimal] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class CommonExpenseChargeItemOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    charge_id: UUID
+    expense_id: UUID
+    description: str
+    expense_amount: Decimal
+    prorated_amount: Decimal
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CommonExpenseChargeItemPage(BaseModel):
+    items: list[CommonExpenseChargeItemOut]
+    meta: PageMeta
+
+
 class AttachmentCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None

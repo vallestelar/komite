@@ -385,7 +385,7 @@ const title = computed(() => {
   if (mode.value === "unitForm") return unitForm.id ? "Editar unidad" : "Nueva unidad";
   if (mode.value === "annexForm") return unitAnnexForm.id ? "Editar anexo" : "Nuevo anexo";
   if (mode.value === "petForm") return unitPetForm.id ? "Editar mascota" : "Nueva mascota";
-  return "Comunidad";
+  return "Condominio";
 });
 
 const deleteTypeLabel = computed(() => {
@@ -1197,7 +1197,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
   <section class="panel entity-panel">
     <div class="entity-header">
       <div>
-        <p class="eyebrow">Comunidad</p>
+        <p class="eyebrow">Condominio</p>
         <h2>{{ title }}</h2>
         <p class="placeholder-copy">{{ activeCondominium?.name || "Sin condominio seleccionado" }}</p>
       </div>
@@ -1208,7 +1208,7 @@ watch(() => props.focusNeighborId, async (neighborId) => {
     </div>
 
     <div v-if="mode === 'list'" class="entity-list">
-      <div class="entity-tabs" role="tablist" aria-label="Comunidad">
+      <div class="entity-tabs" role="tablist" aria-label="Condominio">
         <button class="button compact" :class="activeTab === 'neighbors' ? 'navy' : 'ghost'" type="button" @click="selectTab('neighbors')">
           <svg class="icon" aria-hidden="true"><use href="#icon-users" /></svg>
           <span>Vecinos</span>

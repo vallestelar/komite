@@ -60,6 +60,14 @@ const menuGroups: MenuGroup[] = [
     ],
   },
   {
+    id: "contabilidad",
+    label: "Contabilidad",
+    items: [
+      { id: "accounting-periods", label: "Periodos contables", icon: "calendar", view: "accounting-periods" },
+      { id: "accounting", label: "Módulo contable", icon: "calculator", view: "accounting" },
+    ],
+  },
+  {
     id: "herramientas",
     label: "Herramientas",
     items: [
@@ -230,6 +238,8 @@ onMounted(() => {
       <IncidentsView v-else-if="currentView === 'incidents'" :key="`incidents-${activeCondominiumId}-${viewRefreshKey}`" />
       <TasksView v-else-if="currentView === 'tasks'" :key="`tasks-${activeCondominiumId}-${viewRefreshKey}`" />
       <AssembliesView v-else-if="currentView === 'assemblies'" :key="`assemblies-${activeCondominiumId}-${viewRefreshKey}`" />
+      <AccountingPeriodsView v-else-if="currentView === 'accounting-periods'" :key="`accounting-periods-${activeCondominiumId}-${viewRefreshKey}`" />
+      <AccountingView v-else-if="currentView === 'accounting'" :key="`accounting-${activeCondominiumId}-${viewRefreshKey}`" />
       <MaintenancePlanView v-else-if="currentView === 'maintenance'" :key="`maintenance-${activeCondominiumId}-${viewRefreshKey}`" />
       <OperationalPlanView v-else-if="currentView === 'operational-plan'" :key="`operational-plan-${activeCondominiumId}-${viewRefreshKey}`" />
       <InspectionsView v-else-if="currentView === 'inspections'" :key="`inspections-${activeCondominiumId}-${viewRefreshKey}`" />

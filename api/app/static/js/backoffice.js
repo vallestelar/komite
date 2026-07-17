@@ -1,4 +1,4 @@
-const API_BASE = localStorage.getItem("komite_api_base") || window.location.origin;
+﻿const API_BASE = localStorage.getItem("komite_api_base") || window.location.origin;
 const BACKOFFICE_PATH = "/backoffice";
 const TOKEN_KEY = "komite_token";
 const REFRESH_TOKEN_KEY = "komite_refresh_token";
@@ -116,8 +116,8 @@ const resources = {
     singular: "banco",
     fields: [
       { name: "name", label: "Nombre", required: true, maxLength: 120 },
-      { name: "code", label: "Código", maxLength: 40 },
-      { name: "country", label: "País", defaultValue: "Chile", maxLength: 80 },
+      { name: "code", label: "CÃ³digo", maxLength: 40 },
+      { name: "country", label: "PaÃ­s", defaultValue: "Chile", maxLength: 80 },
       { name: "website", label: "Web", maxLength: 255 },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
       { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
@@ -129,7 +129,7 @@ const resources = {
     columns: ["company_id", "name", "address", "status", "units_count"],
   },
   committeeMembers: {
-    title: "Comité",
+    title: "ComitÃ©",
     endpoint: "/api/v1/committee-members/",
     columns: ["company_id", "condominium_id", "position", "full_name", "email", "phone", "status"],
     createLabel: "Nuevo miembro",
@@ -143,7 +143,7 @@ const resources = {
       { name: "position", label: "Cargo", type: "select", options: [["presidente", "Presidente"], ["tesorero", "Tesorero"], ["secretario", "Secretario"], ["vocal", "Vocal"], ["administrador", "Administrador"], ["otro", "Otro"]], defaultValue: "vocal", required: true },
       { name: "full_name", label: "Nombre completo", required: true, maxLength: 150 },
       { name: "email", label: "Email", type: "email", maxLength: 255 },
-      { name: "phone", label: "Teléfono", maxLength: 40 },
+      { name: "phone", label: "TelÃ©fono", maxLength: 40 },
       { name: "start_date", label: "Inicio periodo", type: "date" },
       { name: "end_date", label: "Fin periodo", type: "date" },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"]], defaultValue: "active" },
@@ -168,10 +168,10 @@ const resources = {
       { name: "company_id", label: "Empresa", type: "company", required: true },
       { name: "condominium_id", label: "Condominio", type: "condominium" },
       { name: "subject", label: "Asunto", required: true, maxLength: 180 },
-      { name: "description", label: "Descripción", type: "textarea" },
+      { name: "description", label: "DescripciÃ³n", type: "textarea" },
       { name: "requester_name", label: "Solicitante", maxLength: 150 },
       { name: "requester_email", label: "Email solicitante", type: "email", maxLength: 255 },
-      { name: "category", label: "Categoría", defaultValue: "general", maxLength: 80 },
+      { name: "category", label: "CategorÃ­a", defaultValue: "general", maxLength: 80 },
       { name: "priority", label: "Prioridad", type: "select", options: [["low", "Baja"], ["medium", "Media"], ["high", "Alta"], ["urgent", "Urgente"]], defaultValue: "medium" },
       { name: "status", label: "Estado", type: "select", options: [["open", "Abierto"], ["pending", "Pendiente"], ["in_progress", "En curso"], ["resolved", "Resuelto"], ["closed", "Cerrado"]], defaultValue: "open" },
       { name: "assigned_to_id", label: "Asignado a", type: "user" },
@@ -277,7 +277,7 @@ const resources = {
     columns: ["file_name", "file_type", "mime_type", "created_at"],
   },
   audit: {
-    title: "Auditoría",
+    title: "AuditorÃ­a",
     endpoint: "/api/v1/audit-logs/",
     columns: ["action", "entity_type", "entity_id", "created_at"],
   },
@@ -294,23 +294,23 @@ const columnLabels = {
   rut: "RUT",
   email: "Email",
   status: "Estado",
-  address: "Dirección",
+  address: "DirecciÃ³n",
   company_id: "Empresa",
   condominium_id: "Condominio",
-  code: "Código",
-  country: "País",
+  code: "CÃ³digo",
+  country: "PaÃ­s",
   website: "Web",
   units_count: "Unidades",
-  category: "Categoría",
+  category: "CategorÃ­a",
   priority: "Prioridad",
   created_at: "Creado",
   title: "Titulo",
   due_date: "Vencimiento",
   report_type: "Tipo de informe",
   published_at: "Publicado",
-  communication_type: "Tipo de comunicación",
+  communication_type: "Tipo de comunicaciÃ³n",
   audience: "Audiencia",
-  inspection_type: "Tipo de inspección",
+  inspection_type: "Tipo de inspecciÃ³n",
   template_type: "Tipo plantilla",
   template_id: "Plantilla",
   section_id: "Secci\u00f3n",
@@ -332,25 +332,25 @@ const columnLabels = {
   company_profile: "Perfil Portal Administrador",
   organization_position: "Puesto en la organizacion",
   role_code: "Rol",
-  scope: "Ámbito",
+  scope: "Ãmbito",
   is_system: "Sistema",
   file_name: "Archivo",
   file_type: "Tipo",
   mime_type: "MIME",
-  action: "Acción",
+  action: "AcciÃ³n",
   entity_type: "Entidad",
   entity_id: "ID entidad",
   provider: "Proveedor",
   model: "Modelo",
   purpose: "Uso",
   subject: "Asunto",
-  description: "Descripción",
+  description: "DescripciÃ³n",
   requester_name: "Solicitante",
   requester_email: "Email solicitante",
   assigned_to_id: "Asignado a",
   resolved_at: "Resuelto el",
   position: "Cargo",
-  phone: "Teléfono",
+  phone: "TelÃ©fono",
   unit_id: "Unidad",
   unit_contact_id: "Contacto vecino",
   user_id: "Usuario",
@@ -402,7 +402,7 @@ const roleLabels = {
   supervisor: "Supervisor",
   conserje: "Conserje",
   vecino: "Vecino",
-  comite: "Comité",
+  comite: "ComitÃ©",
 };
 
 const positionLabels = {
@@ -456,20 +456,20 @@ const periodicityLabels = {
 
 const placeholders = {
   committee: {
-    title: "Comité",
-    text: "Aquí quedará la gestión de miembros del comité, cargos, vigencias y relaciones con condominios.",
+    title: "ComitÃ©",
+    text: "AquÃ­ quedarÃ¡ la gestiÃ³n de miembros del comitÃ©, cargos, vigencias y relaciones con condominios.",
   },
   neighbors: {
     title: "Vecinos",
-    text: "Aquí se preparará la administración de vecinos, unidades, datos de contacto y preferencias de comunicación.",
+    text: "AquÃ­ se prepararÃ¡ la administraciÃ³n de vecinos, unidades, datos de contacto y preferencias de comunicaciÃ³n.",
   },
   settings: {
-    title: "Configuración",
-    text: "Aquí se centralizarán parámetros del sistema, integraciones, proveedores de IA y reglas operativas.",
+    title: "ConfiguraciÃ³n",
+    text: "AquÃ­ se centralizarÃ¡n parÃ¡metros del sistema, integraciones, proveedores de IA y reglas operativas.",
   },
   integrations: {
     title: "Integraciones",
-    text: "Aquí se gestionarán conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajería.",
+    text: "AquÃ­ se gestionarÃ¡n conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajerÃ­a.",
   },
 };
 
@@ -1122,7 +1122,7 @@ async function openView(view) {
   if (!resources[view]) {
     $("#viewTitle").textContent = "Modulo";
     $("#placeholderTitle").textContent = "Modulo no disponible";
-    $("#placeholderText").textContent = "Esta opción aún no tiene una ruta asociada en el backoffice.";
+    $("#placeholderText").textContent = "Esta opciÃ³n aÃºn no tiene una ruta asociada en el backoffice.";
     showPanel("placeholder");
     return;
   }
@@ -1258,7 +1258,7 @@ function renderPagination() {
   const start = meta.total ? (meta.page - 1) * meta.page_size + 1 : 0;
   const end = Math.min(meta.page * meta.page_size, meta.total);
   $("#paginationSummary").textContent = meta.total ? `${start}-${end} de ${meta.total} registros` : "Sin registros";
-  $("#pageIndicator").textContent = `Página ${meta.page} de ${meta.pages}`;
+  $("#pageIndicator").textContent = `PÃ¡gina ${meta.page} de ${meta.pages}`;
   $("#pageSizeSelect").value = String(state.tablePageSize);
 
   const isFirst = meta.page <= 1;
@@ -1762,8 +1762,8 @@ async function saveGenericEntity(event) {
     const payload = buildGenericPayload(resource);
     if (state.currentView === "committeeMembers" && payload.status !== "inactive") {
       const confirmed = await confirmAction({
-        title: "Asignar rol Comité",
-        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirirá automáticamente el rol Comité para el condominio seleccionado.",
+        title: "Asignar rol ComitÃ©",
+        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirirÃ¡ automÃ¡ticamente el rol ComitÃ© para el condominio seleccionado.",
         acceptLabel: "Guardar y asignar rol",
       });
       if (!confirmed) return;
@@ -1789,7 +1789,7 @@ async function deleteGenericEntity(id = $("#genericId").value) {
   if (!resource?.fields || !id) return;
   const confirmed = await confirmAction({
     title: `Borrar ${resource.singular}`,
-    message: `Esta acción eliminará el ${resource.singular} seleccionado.`,
+    message: `Esta acciÃ³n eliminarÃ¡ el ${resource.singular} seleccionado.`,
     acceptLabel: `Borrar ${resource.singular}`,
   });
   if (!confirmed) return;
@@ -2019,7 +2019,7 @@ async function deleteCurrentCompany() {
 async function deleteCompany(id) {
   const confirmed = await confirmAction({
     title: "Borrar empresa",
-    message: "Esta acción eliminará la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
+    message: "Esta acciÃ³n eliminarÃ¡ la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
     acceptLabel: "Borrar empresa",
   });
   if (!confirmed) return;
@@ -2257,7 +2257,7 @@ async function deleteCurrentUser() {
 async function deleteUser(id) {
   const confirmed = await confirmAction({
     title: "Borrar usuario",
-    message: "Esta acción eliminará el usuario seleccionado. No se puede deshacer desde el backoffice.",
+    message: "Esta acciÃ³n eliminarÃ¡ el usuario seleccionado. No se puede deshacer desde el backoffice.",
     acceptLabel: "Borrar usuario",
   });
   if (!confirmed) return;
@@ -2599,7 +2599,7 @@ async function deleteCurrentCondominium() {
 async function deleteCondominium(id) {
   const confirmed = await confirmAction({
     title: "Borrar condominio",
-    message: "Esta acción eliminará el condominio seleccionado. No se puede deshacer desde el backoffice.",
+    message: "Esta acciÃ³n eliminarÃ¡ el condominio seleccionado. No se puede deshacer desde el backoffice.",
     acceptLabel: "Borrar condominio",
   });
   if (!confirmed) return;
@@ -2807,7 +2807,7 @@ function comunidadFelizImportFormData() {
   const file = $("#cfToolChargesFile").files[0];
   const condominiumId = $("#cfToolCondominiumSelect").value;
   if (!condominiumId) throw new Error("Selecciona un condominio.");
-  if (!file) throw new Error("Selecciona el informe XLSX de gastos comunes.");
+  if (!file) throw new Error("Selecciona el informe XLSX de Comunidad Feliz.");
 
   const form = new FormData();
   form.append("condominium_id", condominiumId);
@@ -2892,7 +2892,7 @@ function renderEdifitoNeighborsResult(data, preview) {
     : `Carga aplicada en ${data.condominium_name || "condominio"}`;
   $("#applyEdifitoNeighborsImport").hidden = !preview;
   $("#edifitoNeighborsSummary").innerHTML = [
-    ["Unidades leídas", summary.rows],
+    ["Unidades leÃ­das", summary.rows],
     ["Unidades nuevas", summary.units_created],
     ["Unidades existentes", summary.units_updated],
     ["Contactos nuevos", summary.contacts_created],
@@ -2924,14 +2924,18 @@ function renderComunidadFelizNeighborsResult(data, preview) {
     : `Carga aplicada en ${data.condominium_name || "condominio"}`;
   $("#applyComunidadFelizNeighborsImport").hidden = !preview;
   $("#comunidadFelizNeighborsSummary").innerHTML = [
-    ["Unidades leídas", summary.rows],
+    [summary.format_residents ? "Personas leidas" : "Unidades leidas", summary.rows],
     ["Unidades nuevas", summary.units_created],
     ["Unidades existentes", summary.units_updated],
     ["Contactos nuevos", summary.contacts_created],
     ["Contactos actualizados", summary.contacts_updated],
+    ["Usuarios nuevos", summary.users_created],
+    ["Usuarios actualizados", summary.users_updated],
     ["Sin usuario", summary.users_skipped],
   ].map(([label, value]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value ?? 0)}</strong></article>`).join("");
-  $("#comunidadFelizNeighborsSummaryNote").textContent = "Comunidad Feliz no incluye email, RUT ni teléfono en este formato. Se cargan unidades y residentes; no se crean usuarios de acceso.";
+  $("#comunidadFelizNeighborsSummaryNote").textContent = summary.format_residents
+    ? "Formato residentes detectado. Se crean o actualizan unidades, contactos y usuarios cuando el registro incluye correo."
+    : "Formato gastos comunes detectado. Se cargan unidades y residentes; solo se crean usuarios si el informe incluye correo.";
 
   const items = data.items || [];
   $("#comunidadFelizNeighborsItems").innerHTML = items.length
@@ -3248,3 +3252,4 @@ function bindGenericFieldDependencies() {
 }
 
 bootstrap();
+

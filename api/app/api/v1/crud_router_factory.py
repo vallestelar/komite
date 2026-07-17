@@ -199,6 +199,8 @@ def create_crud_router(
             )
             obj = await svc.create(**data)
             return response_schema(**serialize_model(obj))
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
         except IntegrityError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -295,6 +297,8 @@ def create_crud_router(
                 default_to_request_company=False,
             )
             obj = await svc.update(obj_id, **data)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
         except IntegrityError as exc:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -319,7 +323,10 @@ def create_crud_router(
                     detail=f"{tag} no encontrado",
                 )
 
-        deleted = await svc.delete(obj_id)
+        try:
+            deleted = await svc.delete(obj_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
         if deleted == 0:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

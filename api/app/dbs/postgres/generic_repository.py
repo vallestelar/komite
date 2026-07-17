@@ -54,7 +54,11 @@ class GenericRepository(Generic[T]):
         return obj
 
     async def delete(self, pk: Any) -> int:
-        return await self.model.filter(**{self.pk_name: pk}, **self.default_filters).delete()
+        obj = await self.get(pk)
+        if not obj:
+            return 0
+        await obj.delete()
+        return 1
 
     async def list(
         self,
@@ -94,4 +98,3 @@ class GenericRepository(Generic[T]):
 
     async def add_m2m(self, instance: T, relation: str, targets: Iterable[Model]) -> None:
         await getattr(instance, relation).add(*targets)
-

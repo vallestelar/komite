@@ -41,6 +41,14 @@ from app.models.entities.audit_log import AuditLog
 from app.models.entities.ai_request import AIRequest
 from app.models.entities.notification_log import NotificationLog
 from app.models.entities.support_ticket import SupportTicket
+from app.models.entities.accounting_period import AccountingPeriod
+from app.models.entities.accounting_supplier import AccountingSupplier
+from app.models.entities.accounting_income_type import AccountingIncomeType
+from app.models.entities.accounting_income import AccountingIncome
+from app.models.entities.accounting_expense import AccountingExpense
+from app.models.entities.common_expense_run import CommonExpenseRun
+from app.models.entities.common_expense_charge import CommonExpenseCharge
+from app.models.entities.common_expense_charge_item import CommonExpenseChargeItem
 
 __all__ = [
     "Company",
@@ -86,4 +94,12 @@ __all__ = [
     "AIRequest",
     "NotificationLog",
     "SupportTicket",
+    "AccountingPeriod",
+    "AccountingSupplier",
+    "AccountingIncomeType",
+    "AccountingIncome",
+    "AccountingExpense",
+    "CommonExpenseRun",
+    "CommonExpenseCharge",
+    "CommonExpenseChargeItem",
 ]

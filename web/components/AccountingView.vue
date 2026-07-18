@@ -49,6 +49,24 @@ type SimpleRecord = {
   code?: string | null;
 };
 
+type SupplierRecord = SimpleRecord & {
+  condominium_id?: string | null;
+  rut?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  category?: string | null;
+  status: string;
+  notes?: string | null;
+};
+
+type SupplierCondominiumLink = {
+  id: string;
+  supplier_id: string;
+  condominium_id: string;
+  status: string;
+  notes?: string | null;
+};
+
 type AccountingSummary = {
   totals: {
     income: number;
@@ -77,7 +95,7 @@ type ChargeRow = {
 };
 
 const { request } = useApi();
-const { activeCondominium } = useAuth();
+const { activeCondominium, company, condominiums } = useAuth();
 
 const tabs = [
   ["incomes", "Ingresos"],
@@ -105,7 +123,8 @@ const selectedPeriodId = ref("");
 const periods = ref<PeriodRecord[]>([]);
 const incomes = ref<IncomeRecord[]>([]);
 const expenses = ref<ExpenseRecord[]>([]);
-const suppliers = ref<SimpleRecord[]>([]);
+const suppliers = ref<SupplierRecord[]>([]);
+const supplierLinks = ref<SupplierCondominiumLink[]>([]);
 const incomeTypes = ref<SimpleRecord[]>([]);
 const banks = ref<SimpleRecord[]>([]);
 const units = ref<SimpleRecord[]>([]);
@@ -115,9 +134,12 @@ const editingPeriodId = ref("");
 const periodDeleteCandidate = ref<PeriodRecord | null>(null);
 const incomeModalOpen = ref(false);
 const expenseModalOpen = ref(false);
+const supplierModalOpen = ref(false);
 const editingIncomeId = ref("");
 const editingExpenseId = ref("");
+const editingSupplierId = ref("");
 const deleteCandidate = ref<{ type: "income" | "expense"; id: string; label: string } | null>(null);
+const supplierDeleteCandidate = ref<SupplierRecord | null>(null);
 const unitSearch = ref("");
 const unitSearchLoading = ref(false);
 let unitSearchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -148,10 +170,25 @@ const expenseForm = reactive({
   is_common_expense: true,
 });
 
+const supplierForm = reactive({
+  name: "",
+  rut: "",
+  email: "",
+  phone: "",
+  category: "",
+  status: "active",
+  notes: "",
+  duplicate_all_condominiums: false,
+});
+
 const selectedPeriod = computed(() => periods.value.find((period) => period.id === selectedPeriodId.value) || null);
 const periodOptions = computed(() => periods.value.map((period) => [period.id, period.name]));
 const filteredIncomes = computed(() => incomes.value.filter((income) => income.period_id === selectedPeriodId.value));
 const filteredExpenses = computed(() => expenses.value.filter((expense) => expense.period_id === selectedPeriodId.value));
+const activeSupplierIds = computed(() => new Set(supplierLinks.value
+  .filter((link) => link.condominium_id === activeCondominium.value?.id && link.status !== "inactive")
+  .map((link) => link.supplier_id)));
+const filteredSuppliers = computed(() => suppliers.value.filter((supplier) => activeSupplierIds.value.has(supplier.id)));
 const unitLabel = (unit: SimpleRecord) => unit.identifier || unit.name || "Sin identificador";
 const selectedIncomeUnit = computed(() => units.value.find((unit) => unit.id === incomeForm.unit_id) || null);
 const filteredUnitOptions = computed(() => {
@@ -183,6 +220,11 @@ const emptyToNull = (value: string) => {
   return trimmed ? trimmed : null;
 };
 
+const normalizedSupplierKey = (value: string | null | undefined) => String(value || "")
+  .trim()
+  .toLowerCase()
+  .replace(/[.\-\s]/g, "");
+
 const numericValue = (value: string) => Number(value.replace(",", ".") || 0);
 
 const periodStatusLabel = (period: PeriodRecord) => {
@@ -198,6 +240,18 @@ const periodStatusClass = (period: PeriodRecord) => {
   if (period.status === "closed") return "closed";
   if (period.status === "blocked") return "blocked";
   if (period.status === "open") return "open";
+  return "draft";
+};
+
+const supplierStatusLabel = (status: string | null | undefined) => {
+  if (status === "active") return "Activo";
+  if (status === "inactive") return "Inactivo";
+  return "Borrador";
+};
+
+const supplierStatusClass = (status: string | null | undefined) => {
+  if (status === "active") return "active";
+  if (status === "inactive") return "blocked";
   return "draft";
 };
 
@@ -285,6 +339,11 @@ const resetExpenseForm = () => {
   Object.assign(expenseForm, { expense_date: "", description: "", amount: "", supplier_id: "", category: "", is_common_expense: true });
 };
 
+const resetSupplierForm = () => {
+  editingSupplierId.value = "";
+  Object.assign(supplierForm, { name: "", rut: "", email: "", phone: "", category: "", status: "active", notes: "", duplicate_all_condominiums: false });
+};
+
 const openCreateIncome = () => {
   resetIncomeForm();
   incomeModalOpen.value = true;
@@ -332,16 +391,75 @@ const closeExpenseModal = () => {
   resetExpenseForm();
 };
 
+const openCreateSupplier = () => {
+  resetSupplierForm();
+  supplierModalOpen.value = true;
+};
+
+const openEditSupplier = (supplier: SupplierRecord) => {
+  editingSupplierId.value = supplier.id;
+  Object.assign(supplierForm, {
+    name: supplier.name || "",
+    rut: supplier.rut || "",
+    email: supplier.email || "",
+    phone: supplier.phone || "",
+    category: supplier.category || "",
+    status: supplier.status || "active",
+    notes: supplier.notes || "",
+    duplicate_all_condominiums: false,
+  });
+  supplierModalOpen.value = true;
+};
+
+const closeSupplierModal = () => {
+  supplierModalOpen.value = false;
+  resetSupplierForm();
+};
+
+const findExistingSupplier = () => {
+  const rutKey = normalizedSupplierKey(supplierForm.rut);
+  if (rutKey) {
+    const byRut = suppliers.value.find((supplier) => normalizedSupplierKey(supplier.rut) === rutKey);
+    if (byRut) return byRut;
+  }
+
+  const nameKey = normalizedSupplierKey(supplierForm.name);
+  return suppliers.value.find((supplier) => normalizedSupplierKey(supplier.name) === nameKey) || null;
+};
+
+const createSupplierLink = async (supplierId: string, condominiumId: string) => {
+  try {
+    await request<SupplierCondominiumLink>("/api/v1/accounting-supplier-condominiums/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        company_id: company.value?.id || null,
+        supplier_id: supplierId,
+        condominium_id: condominiumId,
+        status: "active",
+        notes: null,
+        metadata: {},
+      }),
+    });
+  } catch (error) {
+    const message = readableError(error).toLowerCase();
+    if (!message.includes("conflicto") && !message.includes("unique") && !message.includes("duplicate")) {
+      throw error;
+    }
+  }
+};
+
 const loadPage = async () => {
   if (!activeCondominium.value?.id) return;
   loading.value = true;
   errorMessage.value = "";
   try {
-    const [periodPage, incomePage, expensePage, supplierPage, typePage, bankPage, unitPage] = await Promise.all([
+    const [periodPage, incomePage, expensePage, supplierPage, supplierLinkPage, typePage, bankPage, unitPage] = await Promise.all([
       request<{ items?: PeriodRecord[]; meta?: PageMeta }>("/api/v1/accounting-periods/?page_size=100&order_by=-start_date"),
       request<{ items?: IncomeRecord[]; meta?: PageMeta }>("/api/v1/accounting-incomes/?page_size=200&order_by=-income_date"),
       request<{ items?: ExpenseRecord[]; meta?: PageMeta }>("/api/v1/accounting-expenses/?page_size=200&order_by=-expense_date"),
-      request<{ items?: SimpleRecord[]; meta?: PageMeta }>("/api/v1/accounting-suppliers/?page_size=100&order_by=name"),
+      request<{ items?: SupplierRecord[]; meta?: PageMeta }>("/api/v1/accounting-suppliers/?page_size=200&order_by=name"),
+      request<{ items?: SupplierCondominiumLink[]; meta?: PageMeta }>("/api/v1/accounting-supplier-condominiums/?page_size=200"),
       request<{ items?: SimpleRecord[]; meta?: PageMeta }>("/api/v1/accounting-income-types/?page_size=100&order_by=name"),
       request<{ items?: SimpleRecord[]; meta?: PageMeta }>("/api/v1/banks/?page_size=200&order_by=name"),
       request<{ items?: SimpleRecord[]; meta?: PageMeta }>("/api/v1/units/?page_size=200&order_by=identifier"),
@@ -351,6 +469,7 @@ const loadPage = async () => {
     incomes.value = incomePage.items || [];
     expenses.value = expensePage.items || [];
     suppliers.value = supplierPage.items || [];
+    supplierLinks.value = supplierLinkPage.items || [];
     incomeTypes.value = typePage.items || [];
     banks.value = bankPage.items || [];
     units.value = unitPage.items || [];
@@ -510,6 +629,64 @@ const saveExpense = async () => {
   }
 };
 
+const saveSupplier = async () => {
+  const currentCondominium = activeCondominium.value;
+  if (!currentCondominium?.id) return;
+  errorMessage.value = "";
+  try {
+    const wasEditing = Boolean(editingSupplierId.value);
+    const supplierPayload = {
+      company_id: company.value?.id || null,
+      name: supplierForm.name.trim(),
+      rut: emptyToNull(supplierForm.rut),
+      email: emptyToNull(supplierForm.email),
+      phone: emptyToNull(supplierForm.phone),
+      category: emptyToNull(supplierForm.category),
+      status: supplierForm.status,
+      notes: emptyToNull(supplierForm.notes),
+      metadata: {},
+    };
+
+    if (editingSupplierId.value) {
+      await request<SupplierRecord>(`/api/v1/accounting-suppliers/${editingSupplierId.value}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...supplierPayload,
+          condominium_id: null,
+        }),
+      });
+    } else {
+      const existingSupplier = findExistingSupplier();
+      const supplier = existingSupplier || await request<SupplierRecord>("/api/v1/accounting-suppliers/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...supplierPayload,
+          condominium_id: null,
+        }),
+      });
+      const targetCondominiums = supplierForm.duplicate_all_condominiums
+        ? condominiums.value
+        : [currentCondominium];
+
+      await Promise.all(targetCondominiums.map((condominium) => createSupplierLink(supplier.id, condominium.id)));
+    }
+
+    const duplicatedInAll = !wasEditing && supplierForm.duplicate_all_condominiums;
+    const createdCount = duplicatedInAll ? condominiums.value.length : 1;
+    closeSupplierModal();
+    showToast(wasEditing
+      ? "Proveedor actualizado."
+      : duplicatedInAll
+        ? `Proveedor creado en ${createdCount} condominios.`
+        : "Proveedor registrado.");
+    await loadPage();
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  }
+};
+
 const askDeleteIncome = (income: IncomeRecord) => {
   deleteCandidate.value = { type: "income", id: income.id, label: income.description };
 };
@@ -520,6 +697,34 @@ const askDeleteExpense = (expense: ExpenseRecord) => {
 
 const cancelDeleteRecord = () => {
   deleteCandidate.value = null;
+};
+
+const askDeleteSupplier = (supplier: SupplierRecord) => {
+  supplierDeleteCandidate.value = supplier;
+};
+
+const cancelDeleteSupplier = () => {
+  supplierDeleteCandidate.value = null;
+};
+
+const confirmDeleteSupplier = async () => {
+  if (!supplierDeleteCandidate.value) return;
+  errorMessage.value = "";
+  try {
+    const link = supplierLinks.value.find((item) =>
+      item.supplier_id === supplierDeleteCandidate.value?.id
+      && item.condominium_id === activeCondominium.value?.id,
+    );
+    if (link) {
+      await request(`/api/v1/accounting-supplier-condominiums/${link.id}`, { method: "DELETE" });
+    }
+    supplierDeleteCandidate.value = null;
+    showToast("Proveedor quitado de este condominio.");
+    await loadPage();
+  } catch (error) {
+    errorMessage.value = readableError(error);
+    supplierDeleteCandidate.value = null;
+  }
 };
 
 const confirmDeleteRecord = async () => {
@@ -833,7 +1038,7 @@ onMounted(loadPage);
             Proveedor
             <select v-model="expenseForm.supplier_id">
               <option value="">Sin proveedor</option>
-              <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option>
+              <option v-for="supplier in filteredSuppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option>
             </select>
           </label>
           <label>
@@ -894,7 +1099,66 @@ onMounted(loadPage);
       </div>
     </div>
 
-    <div v-else class="common-expense-pane">
+    <div v-else-if="activeTab === 'suppliers'" class="accounting-list-section">
+      <div class="accounting-section-header">
+        <div>
+          <h2>Proveedores</h2>
+          <p class="placeholder-copy">Alta y mantenimiento de proveedores usados en egresos.</p>
+        </div>
+        <button class="button orange" type="button" @click="openCreateSupplier">
+          <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+          <span>Nuevo proveedor</span>
+        </button>
+      </div>
+
+      <div class="edifito-table-wrap entity-table-wrap">
+        <table class="edifito-table entity-table">
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>RUT</th>
+              <th>Contacto</th>
+              <th>Categoría</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="supplier in filteredSuppliers" :key="supplier.id">
+              <td>
+                <strong>{{ supplier.name }}</strong>
+                <small v-if="supplier.notes" class="muted-table-note">{{ supplier.notes }}</small>
+              </td>
+              <td>{{ supplier.rut || "Sin RUT" }}</td>
+              <td>
+                <span>{{ supplier.email || "Sin email" }}</span>
+                <small v-if="supplier.phone" class="muted-table-note">{{ supplier.phone }}</small>
+              </td>
+              <td>{{ supplier.category || "Sin categoría" }}</td>
+              <td>
+                <span class="period-status-chip" :class="supplierStatusClass(supplier.status)">
+                  <span aria-hidden="true"></span>
+                  {{ supplierStatusLabel(supplier.status) }}
+                </span>
+              </td>
+              <td class="actions-cell">
+                <button class="button compact icon-action navy" type="button" aria-label="Editar proveedor" title="Editar proveedor" @click="openEditSupplier(supplier)">
+                  <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>
+                </button>
+                <button class="button compact icon-action danger" type="button" aria-label="Quitar proveedor" title="Quitar proveedor de este condominio" @click="askDeleteSupplier(supplier)">
+                  <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!filteredSuppliers.length">
+              <td class="empty-row" colspan="6">Sin proveedores registrados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div v-else-if="activeTab === 'common'" class="common-expense-pane">
       <div class="common-actions">
         <div>
           <h2>Gasto común del periodo</h2>
@@ -1051,7 +1315,7 @@ onMounted(loadPage);
           Proveedor
           <select v-model="expenseForm.supplier_id">
             <option value="">Sin proveedor</option>
-            <option v-for="supplier in suppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option>
+            <option v-for="supplier in filteredSuppliers" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option>
           </select>
         </label>
         <label>
@@ -1078,6 +1342,66 @@ onMounted(loadPage);
     </form>
   </div>
 
+  <div v-if="supplierModalOpen" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="supplier-modal-title">
+    <form class="confirm-modal accounting-modal" @submit.prevent="saveSupplier">
+      <div class="accounting-modal-header">
+        <div>
+          <p class="eyebrow">Proveedores</p>
+          <h2 id="supplier-modal-title">{{ editingSupplierId ? "Editar proveedor" : "Nuevo proveedor" }}</h2>
+        </div>
+        <button class="button ghost compact icon-action" type="button" aria-label="Cerrar" title="Cerrar" @click="closeSupplierModal">
+          <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+        </button>
+      </div>
+      <div class="entity-form-grid">
+        <label>
+          Nombre
+          <input v-model="supplierForm.name" required maxlength="180" placeholder="Ej. Ascensores del Pacífico" />
+        </label>
+        <label>
+          RUT
+          <input v-model="supplierForm.rut" maxlength="30" placeholder="76.123.456-7" />
+        </label>
+        <label>
+          Email
+          <input v-model="supplierForm.email" type="email" maxlength="255" placeholder="contacto@proveedor.cl" />
+        </label>
+        <label>
+          Teléfono
+          <input v-model="supplierForm.phone" maxlength="40" placeholder="+56 9..." />
+        </label>
+        <label>
+          Categoría
+          <input v-model="supplierForm.category" maxlength="80" placeholder="Mantención, aseo, seguridad..." />
+        </label>
+        <label>
+          Estado
+          <select v-model="supplierForm.status">
+            <option value="active">Activo</option>
+            <option value="inactive">Inactivo</option>
+            <option value="draft">Borrador</option>
+          </select>
+        </label>
+        <label v-if="!editingSupplierId && condominiums.length > 1" class="switch-field span-all">
+          <input v-model="supplierForm.duplicate_all_condominiums" type="checkbox" />
+          <span class="switch-slider" aria-hidden="true"></span>
+          <span>Crear también en todos los condominios de la empresa</span>
+        </label>
+        <label class="span-all">
+          Notas
+          <textarea v-model="supplierForm.notes" rows="3" placeholder="Condiciones, contacto comercial, cobertura o cualquier referencia útil." />
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="button ghost" type="button" @click="closeSupplierModal">Cancelar</button>
+        <button class="button navy" type="submit">
+          <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
+          <span>{{ editingSupplierId ? "Actualizar proveedor" : "Guardar proveedor" }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+
   <div v-if="deleteCandidate" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-record-title">
     <div class="confirm-modal">
       <p class="eyebrow">{{ deleteCandidate.type === "income" ? "Eliminar ingreso" : "Eliminar egreso" }}</p>
@@ -1088,6 +1412,21 @@ onMounted(loadPage);
         <button class="button danger" type="button" @click="confirmDeleteRecord">
           <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
           <span>Eliminar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="supplierDeleteCandidate" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-supplier-title">
+    <div class="confirm-modal">
+      <p class="eyebrow">Quitar proveedor</p>
+      <h2 id="delete-supplier-title">{{ supplierDeleteCandidate.name }}</h2>
+      <p>Esta acción quitará el proveedor del condominio activo, sin eliminar su ficha maestra de la empresa.</p>
+      <div class="form-actions">
+        <button class="button ghost" type="button" @click="cancelDeleteSupplier">Cancelar</button>
+        <button class="button danger" type="button" @click="confirmDeleteSupplier">
+          <svg class="icon" aria-hidden="true"><use href="#icon-trash" /></svg>
+          <span>Quitar proveedor</span>
         </button>
       </div>
     </div>
@@ -1274,6 +1613,14 @@ onMounted(loadPage);
   padding: 9px 10px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.muted-table-note {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .entity-form {

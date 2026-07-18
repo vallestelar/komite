@@ -13,6 +13,7 @@ class AccountingSupplier(TimestampAuditMixin):
     rut = fields.CharField(max_length=30, null=True)
     email = fields.CharField(max_length=255, null=True)
     phone = fields.CharField(max_length=40, null=True)
+    supplier_category = fields.ForeignKeyField("models.AccountingSupplierCategory", related_name="suppliers", null=True, on_delete=fields.SET_NULL)
     category = fields.CharField(max_length=80, null=True)
     status = fields.CharField(max_length=30, default="active")
     notes = fields.TextField(null=True)
@@ -20,4 +21,4 @@ class AccountingSupplier(TimestampAuditMixin):
 
     class Meta:
         table = "accounting_suppliers"
-        indexes = (("company_id",), ("condominium_id",), ("name",), ("status",))
+        indexes = (("company_id",), ("condominium_id",), ("supplier_category_id",), ("name",), ("status",))

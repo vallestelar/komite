@@ -82,11 +82,45 @@ type InspectionDetail = OperationalEvent & {
   } | null;
 };
 
+type ExternalServiceOrder = {
+  id: string;
+  event_id: string;
+  title: string;
+  provider_name: string;
+  provider_email?: string | null;
+  provider_phone?: string | null;
+  status: string;
+  expires_at?: string | null;
+  submitted_at?: string | null;
+  prompt_key: string;
+  public_url?: string | null;
+};
+
+type SupplierRecord = {
+  id: string;
+  condominium_id?: string | null;
+  name: string;
+  rut?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  category?: string | null;
+  status?: string | null;
+};
+
+type SupplierCondominiumLink = {
+  id: string;
+  supplier_id: string;
+  condominium_id: string;
+  status?: string | null;
+};
+
 const { request } = useApi();
 const { activeCondominium, token } = useAuth();
 
 const events = ref<OperationalEvent[]>([]);
 const staff = ref<OperationalStaff[]>([]);
+const suppliers = ref<SupplierRecord[]>([]);
+const supplierLinks = ref<SupplierCondominiumLink[]>([]);
 const summary = reactive({
   total: 0,
   pending: 0,
@@ -101,6 +135,8 @@ const selectedMonth = ref(String(new Date().getMonth() + 1));
 const selectedStatus = ref("");
 const search = ref("");
 const savingAssignment = ref("");
+const creatingExternalOrderId = ref("");
+const externalOrderMessage = ref("");
 const agendaView = ref<"list" | "week">("list");
 const selectedWeekStart = ref<Date | null>(null);
 const showIncidentForm = ref(false);
@@ -108,11 +144,15 @@ const showTaskForm = ref(false);
 const showInspectionForm = ref(false);
 const showAssemblyForm = ref(false);
 const showEditForm = ref(false);
+const showExternalOrderForm = ref(false);
 const savingIncident = ref(false);
 const savingTask = ref(false);
 const savingInspection = ref(false);
 const savingAssembly = ref(false);
 const savingEdit = ref(false);
+const savingExternalOrder = ref(false);
+const loadingExternalSuppliers = ref(false);
+const externalOrderEvent = ref<OperationalEvent | null>(null);
 const editingIncidentEventId = ref("");
 const editingAssemblyId = ref("");
 const editingInspectionEventId = ref("");
@@ -181,6 +221,18 @@ const editForm = reactive({
   status: "pending",
   event_type: "task",
 });
+const externalOrderForm = reactive({
+  provider_mode: "registered" as "registered" | "manual",
+  provider_supplier_id: "",
+  provider_name: "",
+  provider_email: "",
+  provider_phone: "",
+  title: "",
+  instructions: "",
+  prompt_key: "vendor_service_report",
+  expires_in_days: "7",
+  public_url: "",
+});
 
 const monthOptions = [
   [1, "Enero"],
@@ -242,6 +294,27 @@ const searchedEvents = computed(() => events.value.filter((event) => {
   const text = normalize(`${event.title} ${event.description || ""} ${event.section_name || ""} ${event.asset_name || ""} ${event.assigned_profile || ""} ${event.assigned_user_name || ""}`);
   return text.includes(normalizedSearch.value);
 }));
+
+const externalOrderSuppliers = computed(() => {
+  const condominiumId = activeCondominium.value?.id;
+  if (!condominiumId) return [];
+  const linkedIds = new Set(supplierLinks.value
+    .filter((link) => link.condominium_id === condominiumId && link.status !== "inactive")
+    .map((link) => link.supplier_id));
+  return suppliers.value
+    .filter((supplier) => supplier.status !== "inactive")
+    .filter((supplier) => linkedIds.has(supplier.id) || supplier.condominium_id === condominiumId)
+    .sort((left, right) => left.name.localeCompare(right.name));
+});
+
+const selectedExternalSupplier = computed(() => externalOrderSuppliers.value
+  .find((supplier) => supplier.id === externalOrderForm.provider_supplier_id) || null);
+
+const externalOrderQrUrl = computed(() => {
+  if (!externalOrderForm.public_url) return "";
+  const data = encodeURIComponent(externalOrderForm.public_url);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${data}`;
+});
 
 const groupedEvents = computed(() => {
   const groups = new Map<string, OperationalEvent[]>();
@@ -344,6 +417,48 @@ const loadPlan = async () => {
   }
 };
 
+const loadExternalOrderSuppliers = async () => {
+  if (!token.value || !activeCondominium.value?.id) return;
+  loadingExternalSuppliers.value = true;
+  try {
+    const [supplierPage, supplierLinkPage] = await Promise.all([
+      request<{ items?: SupplierRecord[] }>("/api/v1/accounting-suppliers/?page_size=200&order_by=name"),
+      request<{ items?: SupplierCondominiumLink[] }>("/api/v1/accounting-supplier-condominiums/?page_size=200"),
+    ]);
+    suppliers.value = supplierPage.items || [];
+    supplierLinks.value = supplierLinkPage.items || [];
+  } catch (error) {
+    externalOrderMessage.value = `No se pudieron cargar proveedores guardados: ${readableError(error)}`;
+  } finally {
+    loadingExternalSuppliers.value = false;
+  }
+};
+
+const applyExternalSupplier = () => {
+  const supplier = selectedExternalSupplier.value;
+  if (!supplier) return;
+  externalOrderForm.provider_name = supplier.name || "";
+  externalOrderForm.provider_email = supplier.email || "";
+  externalOrderForm.provider_phone = supplier.phone || "";
+};
+
+const setExternalProviderMode = (mode: "registered" | "manual") => {
+  externalOrderForm.provider_mode = mode;
+  externalOrderForm.provider_supplier_id = "";
+  externalOrderForm.provider_name = "";
+  externalOrderForm.provider_email = "";
+  externalOrderForm.provider_phone = "";
+  externalOrderForm.public_url = "";
+  if (mode === "registered" && !suppliers.value.length) {
+    loadExternalOrderSuppliers();
+  }
+};
+
+watch(() => externalOrderForm.provider_supplier_id, () => {
+  applyExternalSupplier();
+  externalOrderForm.public_url = "";
+});
+
 const assignEvent = async (event: OperationalEvent, assignedUserId: string) => {
   savingAssignment.value = event.id;
   errorMessage.value = "";
@@ -359,6 +474,85 @@ const assignEvent = async (event: OperationalEvent, assignedUserId: string) => {
   } finally {
     savingAssignment.value = "";
   }
+};
+
+const openExternalOrderForm = (event: OperationalEvent) => {
+  externalOrderEvent.value = event;
+  externalOrderForm.provider_mode = "registered";
+  externalOrderForm.provider_supplier_id = "";
+  externalOrderForm.provider_name = "";
+  externalOrderForm.provider_email = "";
+  externalOrderForm.provider_phone = "";
+  externalOrderForm.title = event.title;
+  externalOrderForm.instructions = event.description || "";
+  externalOrderForm.prompt_key = suggestedPromptKey(event);
+  externalOrderForm.expires_in_days = "7";
+  externalOrderForm.public_url = "";
+  externalOrderMessage.value = "";
+  errorMessage.value = "";
+  showExternalOrderForm.value = true;
+  loadExternalOrderSuppliers();
+};
+
+const closeExternalOrderForm = () => {
+  if (savingExternalOrder.value) return;
+  showExternalOrderForm.value = false;
+  externalOrderEvent.value = null;
+};
+
+const suggestedPromptKey = (event: OperationalEvent) => {
+  const text = normalize(`${event.title} ${event.asset_name || ""} ${event.description || ""}`);
+  return text.includes("ascensor") || text.includes("elevador")
+    ? "elevator_inspection_report"
+    : "vendor_service_report";
+};
+
+const createExternalServiceOrder = async () => {
+  if (!externalOrderEvent.value) return;
+  if (externalOrderForm.provider_mode === "registered" && selectedExternalSupplier.value) {
+    applyExternalSupplier();
+  }
+  if (!externalOrderForm.provider_name.trim()) {
+    errorMessage.value = "Indica un proveedor guardado o escribe un proveedor puntual.";
+    return;
+  }
+  savingExternalOrder.value = true;
+  creatingExternalOrderId.value = externalOrderEvent.value.id;
+  externalOrderMessage.value = "";
+  errorMessage.value = "";
+  try {
+    const order = await request<ExternalServiceOrder>(`/api/v1/portal/operational-plan/events/${externalOrderEvent.value.id}/external-service-orders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider_name: externalOrderForm.provider_name,
+        provider_email: externalOrderForm.provider_email || null,
+        provider_phone: externalOrderForm.provider_phone || null,
+        title: externalOrderForm.title || externalOrderEvent.value.title,
+        instructions: externalOrderForm.instructions || null,
+        prompt_key: externalOrderForm.prompt_key || "vendor_service_report",
+        expires_in_days: Number(externalOrderForm.expires_in_days) || 7,
+        public_base_url: import.meta.client ? window.location.origin : null,
+      }),
+    });
+    externalOrderForm.public_url = order.public_url || "";
+    externalOrderMessage.value = `Link creado para ${order.provider_name}.`;
+    if (order.public_url && import.meta.client && navigator.clipboard) {
+      await navigator.clipboard.writeText(order.public_url);
+      externalOrderMessage.value = `Link creado y copiado para ${order.provider_name}.`;
+    }
+  } catch (error) {
+    errorMessage.value = readableError(error);
+  } finally {
+    creatingExternalOrderId.value = "";
+    savingExternalOrder.value = false;
+  }
+};
+
+const copyExternalOrderLink = async () => {
+  if (!externalOrderForm.public_url || !import.meta.client || !navigator.clipboard) return;
+  await navigator.clipboard.writeText(externalOrderForm.public_url);
+  externalOrderMessage.value = "Link copiado al portapapeles.";
 };
 
 const replaceEvent = (updated: OperationalEvent) => {
@@ -1231,6 +1425,7 @@ onMounted(loadPlan);
     </div>
 
     <p v-if="errorMessage" class="form-error result-message">{{ errorMessage }}</p>
+    <p v-if="externalOrderMessage" class="form-success result-message">{{ externalOrderMessage }}</p>
 
     <div class="operational-toolbar">
       <label>
@@ -1352,6 +1547,16 @@ onMounted(loadPlan);
             >
               <div class="week-card-actions">
                 <button
+                  class="week-card-action is-provider"
+                  type="button"
+                  :disabled="creatingExternalOrderId === event.id"
+                  aria-label="Crear link proveedor"
+                  title="Crear link proveedor"
+                  @click.stop="openExternalOrderForm(event)"
+                >
+                  <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+                </button>
+                <button
                   class="week-card-action is-remove"
                   type="button"
                   :disabled="deletingEventId === event.id"
@@ -1436,6 +1641,16 @@ onMounted(loadPlan);
                     {{ statusLabel(event.status) }}
                   </span>
                   <div class="event-row-actions">
+                    <button
+                      class="week-card-action is-provider"
+                      type="button"
+                      :disabled="creatingExternalOrderId === event.id"
+                      aria-label="Crear link proveedor"
+                      title="Crear link proveedor"
+                      @click.stop="openExternalOrderForm(event)"
+                    >
+                      <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+                    </button>
                     <button
                       v-if="canSendToPreviousWeek"
                       class="week-card-action is-previous-week"
@@ -1991,6 +2206,119 @@ onMounted(loadPlan);
           <button class="button navy" type="submit" :disabled="savingAssembly">
             <svg class="icon" aria-hidden="true"><use href="#icon-save" /></svg>
             <span>{{ savingAssembly ? "Guardando..." : "Crear asamblea" }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+    <div v-if="showExternalOrderForm" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="external-order-title">
+      <form class="confirm-modal operational-incident-modal" @submit.prevent="createExternalServiceOrder">
+        <div class="modal-title-row">
+          <div>
+            <p class="eyebrow">Proveedor externo</p>
+            <h2 id="external-order-title">Crear link de servicio</h2>
+            <p class="placeholder-copy">El proveedor abrira un formulario publico para informar el trabajo realizado sin entrar al portal.</p>
+          </div>
+          <button class="button ghost icon-only" type="button" :disabled="savingExternalOrder" title="Cerrar" @click="closeExternalOrderForm">
+            <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
+          </button>
+        </div>
+
+        <div class="entity-form-grid">
+          <div class="wide-field external-provider-mode">
+            <button
+              class="button"
+              :class="externalOrderForm.provider_mode === 'registered' ? 'navy' : 'ghost'"
+              type="button"
+              @click="setExternalProviderMode('registered')"
+            >
+              Proveedor guardado
+            </button>
+            <button
+              class="button"
+              :class="externalOrderForm.provider_mode === 'manual' ? 'navy' : 'ghost'"
+              type="button"
+              @click="setExternalProviderMode('manual')"
+            >
+              Proveedor puntual
+            </button>
+          </div>
+          <label v-if="externalOrderForm.provider_mode === 'registered'" class="wide-field">
+            Seleccionar proveedor
+            <select v-model="externalOrderForm.provider_supplier_id" :disabled="loadingExternalSuppliers">
+              <option value="">{{ loadingExternalSuppliers ? "Cargando proveedores..." : "Selecciona un proveedor guardado" }}</option>
+              <option v-for="supplier in externalOrderSuppliers" :key="supplier.id" :value="supplier.id">
+                {{ supplier.name }}
+              </option>
+            </select>
+            <small v-if="!loadingExternalSuppliers && !externalOrderSuppliers.length" class="form-hint">
+              No hay proveedores guardados para este condominio. Puedes usar proveedor puntual.
+            </small>
+          </label>
+          <label>
+            Proveedor
+            <input v-model="externalOrderForm.provider_name" type="text" maxlength="160" placeholder="Ej. Ascensores Andinos" required />
+          </label>
+          <label>
+            Email proveedor
+            <input v-model="externalOrderForm.provider_email" type="email" maxlength="255" placeholder="contacto@proveedor.cl" />
+          </label>
+          <label>
+            Telefono
+            <input v-model="externalOrderForm.provider_phone" type="text" maxlength="40" />
+          </label>
+          <label>
+            Vigencia del link
+            <select v-model="externalOrderForm.expires_in_days">
+              <option value="3">3 dias</option>
+              <option value="7">7 dias</option>
+              <option value="15">15 dias</option>
+              <option value="30">30 dias</option>
+            </select>
+          </label>
+          <label>
+            Template IA
+            <select v-model="externalOrderForm.prompt_key">
+              <option value="vendor_service_report">Informe proveedor externo</option>
+              <option value="elevator_inspection_report">Informe revision ascensor</option>
+              <option value="operational_report_draft">Informe operativo general</option>
+            </select>
+          </label>
+          <label>
+            Titulo
+            <input v-model="externalOrderForm.title" type="text" maxlength="180" required />
+          </label>
+          <label class="wide-field">
+            Instrucciones para el proveedor
+            <textarea v-model="externalOrderForm.instructions" rows="4"></textarea>
+          </label>
+          <label v-if="externalOrderForm.public_url" class="wide-field">
+            Link generado
+            <input v-model="externalOrderForm.public_url" type="text" readonly />
+          </label>
+          <div v-if="externalOrderForm.public_url" class="wide-field external-order-share">
+            <div class="external-order-qr-card">
+              <span>QR del link</span>
+              <img :src="externalOrderQrUrl" alt="QR del link de servicio" />
+            </div>
+            <div class="external-order-share-actions">
+              <p>El proveedor puede abrir el formulario con el link o escaneando este QR.</p>
+              <button class="button ghost" type="button" @click="copyExternalOrderLink">
+                Copiar link
+              </button>
+              <a class="button ghost" :href="externalOrderQrUrl" target="_blank" rel="noopener">
+                Abrir QR
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="button ghost" type="button" :disabled="savingExternalOrder" @click="closeExternalOrderForm">
+            Cerrar
+          </button>
+          <button class="button navy" type="submit" :disabled="savingExternalOrder">
+            <svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg>
+            <span>{{ savingExternalOrder ? "Creando..." : externalOrderForm.public_url ? "Crear nuevo link" : "Crear link" }}</span>
           </button>
         </div>
       </form>

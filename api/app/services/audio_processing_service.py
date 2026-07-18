@@ -8,6 +8,7 @@ from app.core.settings import settings
 from app.models.entities import AIRequest, Attachment, Condominium, Incident, Inspection, Task
 from app.schemas.audio_schema import AudioProcessingResponse
 from app.services.file_storage_service import FileStorageService
+from app.services.llm_service import LLMService
 from app.services.local_whisper_service import LocalWhisperService
 from app.services.openai_service import OpenAIService
 
@@ -29,6 +30,7 @@ DEFAULT_DRAFT_PROMPT = (
 class AudioProcessingService:
     def __init__(self):
         self.storage = FileStorageService()
+        self.llm = LLMService()
         self.openai = OpenAIService()
         self.local_whisper = LocalWhisperService()
 
@@ -163,38 +165,28 @@ class AudioProcessingService:
             )
 
         draft_text = None
-        draft_request = None
+        draft_ai_request_id = None
+        draft_error_message = None
 
         if generate_draft:
             prompt = draft_prompt or DEFAULT_DRAFT_PROMPT
-            draft_request = await AIRequest.create(
-                company_id=company_id,
-                condominium_id=condominium_id,
-                requested_by_id=user_id,
-                provider="openai",
-                model=settings.openai_draft_model or settings.ai_model or "",
-                purpose="audio_to_operational_draft",
-                status="pending",
-                input_payload={
-                    "attachment_id": str(attachment.id),
-                    "transcription_ai_request_id": str(transcription_request.id),
-                    "prompt": prompt,
-                    "transcript": transcript,
-                },
-            )
-
             try:
-                draft_text = self.openai.generate_draft_from_transcript(
-                    transcript=transcript,
-                    prompt=prompt,
+                completion = await self.llm.complete_prompt(
+                    prompt_key="generic_assistant",
+                    variables={"prompt": f"{prompt}\n\nTranscripcion:\n{transcript}"},
+                    company_id=company_id,
+                    condominium_id=condominium_id,
+                    requested_by_id=user_id,
+                    metadata={
+                        "source": "audio_processing_service",
+                        "attachment_id": str(attachment.id),
+                        "transcription_ai_request_id": str(transcription_request.id),
+                    },
                 )
-                draft_request.status = "completed"
-                draft_request.output_payload = {"text": draft_text}
-                await draft_request.save()
+                draft_text = completion.text
+                draft_ai_request_id = completion.ai_request_id
             except Exception as exc:
-                draft_request.status = "failed"
-                draft_request.error_message = str(exc)
-                await draft_request.save()
+                draft_error_message = str(exc)
 
         return AudioProcessingResponse(
             attachment_id=attachment.id,
@@ -205,10 +197,10 @@ class AudioProcessingService:
             transcription_text=transcript,
             draft_text=draft_text,
             transcription_ai_request_id=transcription_request.id,
-            draft_ai_request_id=draft_request.id if draft_request else None,
+            draft_ai_request_id=draft_ai_request_id,
             provider=self._transcription_provider(),
             transcription_model=self._transcription_model(),
-            draft_model=settings.openai_draft_model if generate_draft else None,
-            status="completed" if draft_request is None or draft_request.status == "completed" else "partial",
-            error_message=draft_request.error_message if draft_request and draft_request.status == "failed" else None,
+            draft_model=self.llm.default_model() if generate_draft else None,
+            status="completed" if not generate_draft or draft_error_message is None else "partial",
+            error_message=draft_error_message,
         )

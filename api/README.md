@@ -361,19 +361,101 @@ Invoke-RestMethod `
   -Headers @{ Authorization = "Bearer $token" }
 ```
 
-## Audio e IA
+## IA con DeepSeek y prompts estructurados
 
-Configura OpenAI en `.env`:
+Komite puede usar una capa LLM configurable para redactar textos, informes,
+resumenes y recomendaciones desde prompts registrados. La configuracion
+recomendada actual usa DeepSeek mediante API compatible con OpenAI:
 
 ```env
-AI_PROVIDER=openai
-AI_API_KEY=tu_api_key
+AI_PROVIDER=deepseek
+AI_MODEL=deepseek-v4-flash
+AI_BASE_URL=https://api.deepseek.com
+AI_TEMPERATURE=0.2
+AI_MAX_TOKENS=2000
+DEEPSEEK_API_KEY=tu_api_key_deepseek
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_REASONING_MODEL=deepseek-v4-pro
+```
+
+DeepSeek mantiene compatibilidad con el SDK de OpenAI cambiando `base_url`.
+Los modelos historicos `deepseek-chat` y `deepseek-reasoner` estan programados
+para deprecacion el 24 de julio de 2026; por eso Komite usa por defecto
+`deepseek-v4-flash` y `deepseek-v4-pro`.
+
+Listar prompts disponibles:
+
+```powershell
+Invoke-RestMethod `
+  -Method Get `
+  -Uri http://localhost:8000/api/v1/ai/prompts `
+  -Headers @{ Authorization = "Bearer TU_TOKEN" }
+```
+
+Ejecutar un prompt estructurado:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8000/api/v1/ai/prompts/run `
+  -Headers @{ Authorization = "Bearer TU_TOKEN"; "X-Condominium" = "ID_CONDOMINIO" } `
+  -ContentType "application/json" `
+  -Body '{
+    "prompt_key": "operational_report_draft",
+    "variables": {
+      "condominium_name": "Edificio Los Olivos",
+      "event_title": "Mantencion preventiva de bomba de agua",
+      "asset_name": "Bomba de agua N. 2",
+      "execution_comments": "Se ajusto presion y se revisaron valvulas."
+    }
+  }'
+```
+
+Ejecutar una conversacion libre, manteniendo igualmente trazabilidad en
+`ai_requests`:
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:8000/api/v1/ai/chat `
+  -Headers @{ Authorization = "Bearer TU_TOKEN" } `
+  -ContentType "application/json" `
+  -Body '{
+    "purpose": "custom_chat",
+    "messages": [
+      { "role": "system", "content": "Eres Komite." },
+      { "role": "user", "content": "Resume los proximos pasos de una mantencion." }
+    ]
+  }'
+```
+
+Prompts iniciales registrados:
+
+```text
+generic_assistant
+operational_report_draft
+incident_summary
+committee_message
+maintenance_recommendations
+accounting_expense_summary
+```
+
+Cada llamada queda registrada en `ai_requests` con proveedor, modelo, proposito,
+entrada, salida, tokens y estado.
+
+## Audio e IA
+
+Configura IA en `.env`. La transcripcion puede seguir local con Whisper y los
+borradores se generaran con el proveedor LLM configurado:
+
+```env
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=tu_api_key
 TRANSCRIPTION_PROVIDER=local_whisper
 LOCAL_WHISPER_MODEL=small
 LOCAL_WHISPER_DEVICE=cpu
 LOCAL_WHISPER_COMPUTE_TYPE=int8
 OPENAI_TRANSCRIPTION_MODEL=gpt-4o-transcribe
-OPENAI_DRAFT_MODEL=gpt-5.5
 UPLOAD_DIR=storage/uploads
 MAX_AUDIO_UPLOAD_MB=25
 ```

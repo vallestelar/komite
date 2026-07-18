@@ -27,6 +27,7 @@ const state = {
   inspectionTemplates: [],
   inspectionTemplateSections: [],
   duplicateTemplateId: null,
+  duplicateTemplateKind: "inspection",
   edifitoNeighborsPreview: null,
   comunidadFelizNeighborsPreview: null,
   companyReturnContext: null,
@@ -116,8 +117,8 @@ const resources = {
     singular: "banco",
     fields: [
       { name: "name", label: "Nombre", required: true, maxLength: 120 },
-      { name: "code", label: "CÃ³digo", maxLength: 40 },
-      { name: "country", label: "PaÃ­s", defaultValue: "Chile", maxLength: 80 },
+      { name: "code", label: "Código", maxLength: 40 },
+      { name: "country", label: "País", defaultValue: "Chile", maxLength: 80 },
       { name: "website", label: "Web", maxLength: 255 },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
       { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
@@ -129,7 +130,7 @@ const resources = {
     columns: ["company_id", "name", "address", "status", "units_count"],
   },
   committeeMembers: {
-    title: "ComitÃ©",
+    title: "Comité",
     endpoint: "/api/v1/committee-members/",
     columns: ["company_id", "condominium_id", "position", "full_name", "email", "phone", "status"],
     createLabel: "Nuevo miembro",
@@ -143,7 +144,7 @@ const resources = {
       { name: "position", label: "Cargo", type: "select", options: [["presidente", "Presidente"], ["tesorero", "Tesorero"], ["secretario", "Secretario"], ["vocal", "Vocal"], ["administrador", "Administrador"], ["otro", "Otro"]], defaultValue: "vocal", required: true },
       { name: "full_name", label: "Nombre completo", required: true, maxLength: 150 },
       { name: "email", label: "Email", type: "email", maxLength: 255 },
-      { name: "phone", label: "TelÃ©fono", maxLength: 40 },
+      { name: "phone", label: "Teléfono", maxLength: 40 },
       { name: "start_date", label: "Inicio periodo", type: "date" },
       { name: "end_date", label: "Fin periodo", type: "date" },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"]], defaultValue: "active" },
@@ -168,10 +169,10 @@ const resources = {
       { name: "company_id", label: "Empresa", type: "company", required: true },
       { name: "condominium_id", label: "Condominio", type: "condominium" },
       { name: "subject", label: "Asunto", required: true, maxLength: 180 },
-      { name: "description", label: "DescripciÃ³n", type: "textarea" },
+      { name: "description", label: "Descripción", type: "textarea" },
       { name: "requester_name", label: "Solicitante", maxLength: 150 },
       { name: "requester_email", label: "Email solicitante", type: "email", maxLength: 255 },
-      { name: "category", label: "CategorÃ­a", defaultValue: "general", maxLength: 80 },
+      { name: "category", label: "Categoría", defaultValue: "general", maxLength: 80 },
       { name: "priority", label: "Prioridad", type: "select", options: [["low", "Baja"], ["medium", "Media"], ["high", "Alta"], ["urgent", "Urgente"]], defaultValue: "medium" },
       { name: "status", label: "Estado", type: "select", options: [["open", "Abierto"], ["pending", "Pendiente"], ["in_progress", "En curso"], ["resolved", "Resuelto"], ["closed", "Cerrado"]], defaultValue: "open" },
       { name: "assigned_to_id", label: "Asignado a", type: "user" },
@@ -277,7 +278,7 @@ const resources = {
     columns: ["file_name", "file_type", "mime_type", "created_at"],
   },
   audit: {
-    title: "AuditorÃ­a",
+    title: "Auditoría",
     endpoint: "/api/v1/audit-logs/",
     columns: ["action", "entity_type", "entity_id", "created_at"],
   },
@@ -286,6 +287,36 @@ const resources = {
     endpoint: "/api/v1/ai-requests/",
     columns: ["provider", "model", "purpose", "status"],
   },
+  aiPromptTemplates: {
+    title: "Prompts IA",
+    endpoint: "/api/v1/ai-prompt-templates/",
+    columns: ["key", "name", "module", "asset_type", "default_model", "default_max_tokens", "status", "is_active"],
+    createLabel: "Nuevo prompt IA",
+    singular: "prompt IA",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company" },
+      { name: "condominium_id", label: "Condominio", type: "condominium", emptyLabel: "Global / disponible para todos" },
+      { name: "key", label: "Clave", required: true, maxLength: 120 },
+      { name: "name", label: "Nombre", required: true, maxLength: 180 },
+      { name: "description", label: "Descripción", type: "textarea" },
+      { name: "purpose", label: "Propósito", required: true, maxLength: 100 },
+      { name: "module", label: "Módulo", type: "select", options: [["general", "General"], ["operations", "Operación"], ["maintenance", "Mantención"], ["accounting", "Contabilidad"], ["communications", "Comunicaciones"], ["incidents", "Incidencias"]], defaultValue: "operations" },
+      { name: "asset_type", label: "Tipo de activo", type: "select", options: [["", "Sin tipo específico"], ["elevator", "Ascensor"], ["pump", "Bomba"], ["gate", "Portón"], ["boiler", "Caldera"], ["pool", "Piscina"], ["camera", "Cámara"], ["generator", "Generador"], ["other", "Otro"]], defaultValue: "" },
+      { name: "system_template", label: "System prompt", type: "textarea", required: true },
+      { name: "user_template", label: "User prompt template", type: "textarea", required: true },
+      { name: "required_variables", label: "Variables requeridas", type: "json", defaultValue: [] },
+      { name: "optional_variables", label: "Variables opcionales", type: "json", defaultValue: [] },
+      { name: "default_model", label: "Modelo", type: "select", options: [["", "Modelo por defecto"], ["deepseek-v4-flash", "DeepSeek V4 Flash"], ["deepseek-v4-pro", "DeepSeek V4 Pro"]], defaultValue: "deepseek-v4-flash" },
+      { name: "default_temperature", label: "Temperatura", type: "number", defaultValue: 0.2, step: "0.1" },
+      { name: "default_max_tokens", label: "Max tokens", type: "number", defaultValue: 1200 },
+      { name: "reasoning_enabled", label: "Razonamiento", type: "checkbox", defaultValue: false },
+      { name: "expects_json", label: "Espera JSON", type: "checkbox", defaultValue: false },
+      { name: "version", label: "Versión", type: "number", defaultValue: 1 },
+      { name: "status", label: "Estado", type: "select", options: [["draft", "Borrador"], ["active", "Activo"], ["published", "Publicado"], ["inactive", "Inactivo"]], defaultValue: "draft" },
+      { name: "is_active", label: "Activa", type: "checkbox", defaultValue: true },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
 };
 
 const columnLabels = {
@@ -293,24 +324,33 @@ const columnLabels = {
   name: "Nombre",
   rut: "RUT",
   email: "Email",
+  key: "Clave",
+  purpose: "Propósito",
+  module: "Módulo",
+  asset_type: "Tipo activo",
+  default_model: "Modelo",
+  default_max_tokens: "Max tokens",
+  default_temperature: "Temperatura",
+  reasoning_enabled: "Razonamiento",
+  expects_json: "JSON",
   status: "Estado",
-  address: "DirecciÃ³n",
+  address: "Dirección",
   company_id: "Empresa",
   condominium_id: "Condominio",
-  code: "CÃ³digo",
-  country: "PaÃ­s",
+  code: "Código",
+  country: "País",
   website: "Web",
   units_count: "Unidades",
-  category: "CategorÃ­a",
+  category: "Categoría",
   priority: "Prioridad",
   created_at: "Creado",
   title: "Titulo",
   due_date: "Vencimiento",
   report_type: "Tipo de informe",
   published_at: "Publicado",
-  communication_type: "Tipo de comunicaciÃ³n",
+  communication_type: "Tipo de comunicación",
   audience: "Audiencia",
-  inspection_type: "Tipo de inspecciÃ³n",
+  inspection_type: "Tipo de inspección",
   template_type: "Tipo plantilla",
   template_id: "Plantilla",
   section_id: "Secci\u00f3n",
@@ -332,25 +372,25 @@ const columnLabels = {
   company_profile: "Perfil Portal Administrador",
   organization_position: "Puesto en la organizacion",
   role_code: "Rol",
-  scope: "Ãmbito",
+  scope: "Ámbito",
   is_system: "Sistema",
   file_name: "Archivo",
   file_type: "Tipo",
   mime_type: "MIME",
-  action: "AcciÃ³n",
+  action: "Acción",
   entity_type: "Entidad",
   entity_id: "ID entidad",
   provider: "Proveedor",
   model: "Modelo",
   purpose: "Uso",
   subject: "Asunto",
-  description: "DescripciÃ³n",
+  description: "Descripción",
   requester_name: "Solicitante",
   requester_email: "Email solicitante",
   assigned_to_id: "Asignado a",
   resolved_at: "Resuelto el",
   position: "Cargo",
-  phone: "TelÃ©fono",
+  phone: "Teléfono",
   unit_id: "Unidad",
   unit_contact_id: "Contacto vecino",
   user_id: "Usuario",
@@ -402,7 +442,7 @@ const roleLabels = {
   supervisor: "Supervisor",
   conserje: "Conserje",
   vecino: "Vecino",
-  comite: "ComitÃ©",
+  comite: "Comité",
 };
 
 const positionLabels = {
@@ -456,20 +496,20 @@ const periodicityLabels = {
 
 const placeholders = {
   committee: {
-    title: "ComitÃ©",
-    text: "AquÃ­ quedarÃ¡ la gestiÃ³n de miembros del comitÃ©, cargos, vigencias y relaciones con condominios.",
+    title: "Comité",
+    text: "Aquí quedará la gestión de miembros del comité, cargos, vigencias y relaciones con condominios.",
   },
   neighbors: {
     title: "Vecinos",
-    text: "AquÃ­ se prepararÃ¡ la administraciÃ³n de vecinos, unidades, datos de contacto y preferencias de comunicaciÃ³n.",
+    text: "Aquí se preparará la administración de vecinos, unidades, datos de contacto y preferencias de comunicación.",
   },
   settings: {
-    title: "ConfiguraciÃ³n",
-    text: "AquÃ­ se centralizarÃ¡n parÃ¡metros del sistema, integraciones, proveedores de IA y reglas operativas.",
+    title: "Configuración",
+    text: "Aquí se centralizarán parámetros del sistema, integraciones, proveedores de IA y reglas operativas.",
   },
   integrations: {
     title: "Integraciones",
-    text: "AquÃ­ se gestionarÃ¡n conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajerÃ­a.",
+    text: "Aquí se gestionarán conectores externos, credenciales por proveedor, sincronizaciones y estado de integraciones como Edifito, Comunidad Feliz, IA y servicios de mensajería.",
   },
 };
 
@@ -1122,7 +1162,7 @@ async function openView(view) {
   if (!resources[view]) {
     $("#viewTitle").textContent = "Modulo";
     $("#placeholderTitle").textContent = "Modulo no disponible";
-    $("#placeholderText").textContent = "Esta opciÃ³n aÃºn no tiene una ruta asociada en el backoffice.";
+    $("#placeholderText").textContent = "Esta opción aún no tiene una ruta asociada en el backoffice.";
     showPanel("placeholder");
     return;
   }
@@ -1134,7 +1174,7 @@ async function openView(view) {
   $("#ticketCondominiumFilter").value = "";
   $("#ticketStatusFilter").value = "";
   state.tablePage = 1;
-  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(view);
+  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(view);
   $("#ticketCompanyFilter").hidden = view !== "supportTickets";
   $("#ticketCondominiumFilter").hidden = view !== "supportTickets";
   $("#ticketStatusFilter").hidden = view !== "supportTickets";
@@ -1153,7 +1193,7 @@ async function openView(view) {
     await ensureUserLookupsLoaded();
     populateCompanyFilter();
   }
-  if (["inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(view)) {
+  if (["inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(view)) {
     await ensureUserLookupsLoaded();
     populateCompanyFilter();
   }
@@ -1204,7 +1244,7 @@ function buildTableQueryParams() {
     if (status) params.set("filter_status", status);
   }
 
-  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) params.set("filter_company_id", companyId);
   }
@@ -1214,7 +1254,7 @@ function buildTableQueryParams() {
 
 function filteredTableItems() {
   let items = state.currentItems || [];
-  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) {
       items = items.filter((item) => sameId(item.company_id, companyId));
@@ -1258,7 +1298,7 @@ function renderPagination() {
   const start = meta.total ? (meta.page - 1) * meta.page_size + 1 : 0;
   const end = Math.min(meta.page * meta.page_size, meta.total);
   $("#paginationSummary").textContent = meta.total ? `${start}-${end} de ${meta.total} registros` : "Sin registros";
-  $("#pageIndicator").textContent = `PÃ¡gina ${meta.page} de ${meta.pages}`;
+  $("#pageIndicator").textContent = `Página ${meta.page} de ${meta.pages}`;
   $("#pageSizeSelect").value = String(state.tablePageSize);
 
   const isFirst = meta.page <= 1;
@@ -1388,11 +1428,13 @@ function renderRowActions(view, id) {
 
 function renderGenericActions(id) {
   const safeId = escapeHtml(id);
-  const duplicateButton = state.currentView === "inspectionTemplates"
-    ? `<button class="duplicate-row icon-button" type="button" data-duplicate-template="${safeId}" aria-label="Duplicar para condominio" title="Duplicar para condominio">
+  const canDuplicateAndExport = ["inspectionTemplates", "aiPromptTemplates"].includes(state.currentView);
+  const duplicateKind = state.currentView === "aiPromptTemplates" ? "aiPrompt" : "inspection";
+  const duplicateButton = canDuplicateAndExport
+    ? `<button class="duplicate-row icon-button" type="button" data-duplicate-template="${safeId}" data-duplicate-kind="${duplicateKind}" aria-label="Duplicar para condominio" title="Duplicar para condominio">
         <svg aria-hidden="true"><use href="#icon-copy"></use></svg>
       </button>
-      <button class="export-row icon-button" type="button" data-export-template="${safeId}" aria-label="Exportar plantilla" title="Exportar plantilla">
+      <button class="export-row icon-button" type="button" data-export-template="${safeId}" data-export-kind="${duplicateKind}" aria-label="Descargar" title="Descargar">
         <svg aria-hidden="true"><use href="#icon-download"></use></svg>
       </button>`
     : "";
@@ -1411,10 +1453,10 @@ function renderGenericActions(id) {
 
 function bindGenericRowActions() {
   $$("[data-duplicate-template]").forEach((button) => {
-    button.addEventListener("click", () => openDuplicateTemplateModal(button.dataset.duplicateTemplate));
+    button.addEventListener("click", () => openDuplicateTemplateModal(button.dataset.duplicateTemplate, button.dataset.duplicateKind || "inspection"));
   });
   $$("[data-export-template]").forEach((button) => {
-    button.addEventListener("click", () => exportInspectionTemplate(button.dataset.exportTemplate));
+    button.addEventListener("click", () => exportTemplateResource(button.dataset.exportTemplate, button.dataset.exportKind || "inspection"));
   });
   $$("[data-edit-generic]").forEach((button) => {
     button.addEventListener("click", () => openGenericForm(button.dataset.editGeneric));
@@ -1557,15 +1599,20 @@ async function ensureUserLookupsLoaded() {
   state.inspectionTemplateSections = Array.isArray(inspectionTemplateSections) ? inspectionTemplateSections : inspectionTemplateSections.items || [];
 }
 
-async function exportInspectionTemplate(templateId) {
+async function exportTemplateResource(templateId, kind = "inspection") {
   try {
     const template = state.currentItems.find((entry) => sameId(entry.id, templateId))
-      || state.inspectionTemplates.find((entry) => sameId(entry.id, templateId));
-    const fallbackName = `plantilla_${normalizeSearch(template?.name || "komite").replaceAll(" ", "_")}.xlsx`;
-    await apiDownload(`/api/v1/inspection-templates/${templateId}/export`, fallbackName);
+      || (kind === "inspection" ? state.inspectionTemplates.find((entry) => sameId(entry.id, templateId)) : null);
+    const isAiPrompt = kind === "aiPrompt";
+    const baseName = normalizeSearch(template?.key || template?.name || "komite").replaceAll(" ", "_");
+    const fallbackName = isAiPrompt ? `prompt_ia_${baseName}.json` : `plantilla_${baseName}.xlsx`;
+    const endpoint = isAiPrompt
+      ? `/api/v1/ai-prompt-templates/${templateId}/export`
+      : `/api/v1/inspection-templates/${templateId}/export`;
+    await apiDownload(endpoint, fallbackName);
     showToast({
-      title: "Plantilla exportada",
-      message: "Se descargo el Excel de la plantilla.",
+      title: isAiPrompt ? "Prompt descargado" : "Plantilla exportada",
+      message: isAiPrompt ? "Se descargo el JSON del prompt IA." : "Se descargo el Excel de la plantilla.",
     });
   } catch (error) {
     window.alert(readableError(error));
@@ -1762,8 +1809,8 @@ async function saveGenericEntity(event) {
     const payload = buildGenericPayload(resource);
     if (state.currentView === "committeeMembers" && payload.status !== "inactive") {
       const confirmed = await confirmAction({
-        title: "Asignar rol ComitÃ©",
-        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirirÃ¡ automÃ¡ticamente el rol ComitÃ© para el condominio seleccionado.",
+        title: "Asignar rol Comité",
+        message: "Al guardar este miembro, si la persona tiene usuario asociado o coincide por email, adquirirá automáticamente el rol Comité para el condominio seleccionado.",
         acceptLabel: "Guardar y asignar rol",
       });
       if (!confirmed) return;
@@ -1789,7 +1836,7 @@ async function deleteGenericEntity(id = $("#genericId").value) {
   if (!resource?.fields || !id) return;
   const confirmed = await confirmAction({
     title: `Borrar ${resource.singular}`,
-    message: `Esta acciÃ³n eliminarÃ¡ el ${resource.singular} seleccionado.`,
+    message: `Esta acción eliminará el ${resource.singular} seleccionado.`,
     acceptLabel: `Borrar ${resource.singular}`,
   });
   if (!confirmed) return;
@@ -1806,13 +1853,15 @@ async function deleteGenericEntity(id = $("#genericId").value) {
   }
 }
 
-async function openDuplicateTemplateModal(templateId) {
+async function openDuplicateTemplateModal(templateId, kind = "inspection") {
   try {
     await ensureUserLookupsLoaded();
     state.duplicateTemplateId = templateId;
+    state.duplicateTemplateKind = kind;
+    const isAiPrompt = kind === "aiPrompt";
     const template = state.currentItems.find((entry) => sameId(entry.id, templateId))
-      || state.inspectionTemplates.find((entry) => sameId(entry.id, templateId))
-      || await apiFetch(`/api/v1/inspection-templates/${templateId}`);
+      || (!isAiPrompt ? state.inspectionTemplates.find((entry) => sameId(entry.id, templateId)) : null)
+      || await apiFetch(isAiPrompt ? `/api/v1/ai-prompt-templates/${templateId}` : `/api/v1/inspection-templates/${templateId}`);
     const selectedCompanyId = $("#companyFilter")?.value || template.company_id || "";
     $("#duplicateTemplateError").hidden = true;
     $("#duplicateTemplateMessage").textContent = `Se creara una version editable de "${template.name}" para el condominio seleccionado.`;
@@ -1829,6 +1878,7 @@ async function openDuplicateTemplateModal(templateId) {
 
 function closeDuplicateTemplateModal() {
   state.duplicateTemplateId = null;
+  state.duplicateTemplateKind = "inspection";
   $("#duplicateTemplateModal").hidden = true;
 }
 
@@ -1862,10 +1912,16 @@ function suggestDuplicateTemplateName(template) {
     : template.name;
 }
 
+function currentDuplicateTemplateCandidate() {
+  return state.currentItems.find((entry) => sameId(entry.id, state.duplicateTemplateId))
+    || state.inspectionTemplates.find((entry) => sameId(entry.id, state.duplicateTemplateId));
+}
+
 async function duplicateTemplateToCondominium(event) {
   event.preventDefault();
   const templateId = state.duplicateTemplateId;
   if (!templateId) return;
+  const isAiPrompt = state.duplicateTemplateKind === "aiPrompt";
   const condominiumId = $("#duplicateTemplateCondominium").value;
   if (!condominiumId) {
     $("#duplicateTemplateError").textContent = "Selecciona un condominio para crear la copia.";
@@ -1880,16 +1936,20 @@ async function duplicateTemplateToCondominium(event) {
       name: emptyToNull($("#duplicateTemplateName").value),
       status: "draft",
     };
-    const result = await apiFetch(`/api/v1/inspection-templates/${templateId}/duplicate-to-condominium`, {
+    const endpoint = isAiPrompt
+      ? `/api/v1/ai-prompt-templates/${templateId}/duplicate-to-condominium`
+      : `/api/v1/inspection-templates/${templateId}/duplicate-to-condominium`;
+    const result = await apiFetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     closeDuplicateTemplateModal();
     showToast({
-      title: "Plantilla duplicada",
-      message: `Se creo la version para el condominio con ${result.items_created} items.`,
+      title: isAiPrompt ? "Prompt duplicado" : "Plantilla duplicada",
+      message: isAiPrompt ? "Se creo una copia editable del prompt IA." : `Se creo la version para el condominio con ${result.items_created} items.`,
     });
+    await loadTable();
   } catch (error) {
     $("#duplicateTemplateError").textContent = readableError(error);
     $("#duplicateTemplateError").hidden = false;
@@ -2019,7 +2079,7 @@ async function deleteCurrentCompany() {
 async function deleteCompany(id) {
   const confirmed = await confirmAction({
     title: "Borrar empresa",
-    message: "Esta acciÃ³n eliminarÃ¡ la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
+    message: "Esta acción eliminará la empresa seleccionada. Si tiene datos relacionados, la API puede impedir el borrado.",
     acceptLabel: "Borrar empresa",
   });
   if (!confirmed) return;
@@ -2257,7 +2317,7 @@ async function deleteCurrentUser() {
 async function deleteUser(id) {
   const confirmed = await confirmAction({
     title: "Borrar usuario",
-    message: "Esta acciÃ³n eliminarÃ¡ el usuario seleccionado. No se puede deshacer desde el backoffice.",
+    message: "Esta acción eliminará el usuario seleccionado. No se puede deshacer desde el backoffice.",
     acceptLabel: "Borrar usuario",
   });
   if (!confirmed) return;
@@ -2599,7 +2659,7 @@ async function deleteCurrentCondominium() {
 async function deleteCondominium(id) {
   const confirmed = await confirmAction({
     title: "Borrar condominio",
-    message: "Esta acciÃ³n eliminarÃ¡ el condominio seleccionado. No se puede deshacer desde el backoffice.",
+    message: "Esta acción eliminará el condominio seleccionado. No se puede deshacer desde el backoffice.",
     acceptLabel: "Borrar condominio",
   });
   if (!confirmed) return;
@@ -2673,14 +2733,17 @@ function showToolsCatalog() {
   $("#toolsCatalog").hidden = false;
   $("#edifitoNeighborsTool").hidden = true;
   $("#comunidadFelizNeighborsTool").hidden = true;
+  $("#aiPromptTool").hidden = true;
   resetEdifitoNeighborsTool(false);
   resetComunidadFelizNeighborsTool(false);
+  resetAiPromptTool(false);
 }
 
 async function openEdifitoNeighborsTool() {
   $("#toolsCatalog").hidden = true;
   $("#edifitoNeighborsTool").hidden = false;
   $("#comunidadFelizNeighborsTool").hidden = true;
+  $("#aiPromptTool").hidden = true;
   $("#viewTitle").textContent = "Carga vecinos Edifito";
   $("#edifitoNeighborsError").hidden = true;
   $("#edifitoNeighborsPreview").hidden = true;
@@ -2700,6 +2763,7 @@ async function openComunidadFelizNeighborsTool() {
   $("#toolsCatalog").hidden = true;
   $("#edifitoNeighborsTool").hidden = true;
   $("#comunidadFelizNeighborsTool").hidden = false;
+  $("#aiPromptTool").hidden = true;
   $("#viewTitle").textContent = "Carga vecinos Comunidad Feliz";
   $("#comunidadFelizNeighborsError").hidden = true;
   $("#comunidadFelizNeighborsPreview").hidden = true;
@@ -2789,6 +2853,83 @@ function resetComunidadFelizNeighborsTool(clearFile = true) {
   $("#comunidadFelizNeighborsItems").innerHTML = "";
   state.comunidadFelizNeighborsPreview = null;
   if (clearFile) $("#cfToolChargesFile").value = "";
+}
+
+function resetAiPromptTool(clearInput = true) {
+  $("#aiPromptError").hidden = true;
+  $("#aiPromptOutput").value = "Sin respuesta.";
+  $("#aiPromptTextResult").textContent = "Sin texto generado.";
+  if (clearInput) $("#aiPromptInput").value = "";
+}
+
+function loadAiPromptSample() {
+  const mode = $("#aiPromptMode").value;
+  const sample = mode === "chat" ? {
+    purpose: "backoffice_prompt_test",
+    messages: [
+      {
+        role: "system",
+        content: "Eres Komite, un asistente operativo para administracion de condominios en Chile. Responde de forma profesional, concreta y verificable.",
+      },
+      {
+        role: "user",
+        content: "Redacta un resumen ejecutivo para una mantencion preventiva de sala de bombas. Datos: Edificio Los Olivos, bomba de agua N. 2, ajuste de presion, revision de valvulas, sin fugas visibles, 3 fotografias adjuntas.",
+      },
+    ],
+    temperature: 0.2,
+    max_tokens: 1200,
+  } : {
+    prompt_key: "operational_report_draft",
+    variables: {
+      condominium_name: "Edificio Los Olivos",
+      event_title: "Mantencion preventiva sala de bombas",
+      asset_name: "Bomba de agua N. 2",
+      event_description: "Revision programada del sistema de impulsion de agua potable, tablero electrico asociado y alternancia de bombas.",
+      execution_comments: "Se reviso funcionamiento general de la bomba N. 2. Se ajusto presion de trabajo, se verifico alternancia con bomba N. 1 y se inspeccionaron valvulas de corte. No se detectaron fugas visibles. Se recomienda limpiar el sector de tablero porque presenta acumulacion de polvo.",
+      evidence_summary: "3 fotografias: tablero electrico, manometro posterior al ajuste y vista general de sala de bombas.",
+      asset_history: "05/05/2026: mantencion preventiva sin observaciones. 12/06/2026: cambio de valvula de retencion. 18/07/2026: ajuste de presion y revision de alternancia.",
+    },
+    temperature: 0.2,
+    max_tokens: 1600,
+  };
+  $("#aiPromptInput").value = JSON.stringify(sample, null, 2);
+}
+
+async function submitAiPromptTool(event) {
+  event.preventDefault();
+  resetAiPromptTool(false);
+
+  let payload;
+  try {
+    payload = JSON.parse($("#aiPromptInput").value || "{}");
+  } catch (error) {
+    $("#aiPromptError").textContent = "El JSON de entrada no es valido.";
+    $("#aiPromptError").hidden = false;
+    return;
+  }
+
+  const endpoint = $("#aiPromptMode").value === "chat" ? "/api/v1/ai/chat" : "/api/v1/ai/prompts/run";
+
+  try {
+    $("#aiPromptOutput").value = "Esperando respuesta de IA...";
+    $("#aiPromptTextResult").textContent = "Generando...";
+    const data = await apiFetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    $("#aiPromptOutput").value = JSON.stringify(data, null, 2);
+    $("#aiPromptTextResult").textContent = data.text || "La respuesta no incluyo texto.";
+    showToast({
+      title: "Respuesta IA recibida",
+      message: data.ai_request_id ? `Registro AI ${data.ai_request_id}` : "Prompt procesado correctamente.",
+    });
+  } catch (error) {
+    $("#aiPromptOutput").value = "Sin respuesta.";
+    $("#aiPromptTextResult").textContent = "Sin texto generado.";
+    $("#aiPromptError").textContent = readableError(error);
+    $("#aiPromptError").hidden = false;
+  }
 }
 
 function edifitoImportFormData() {
@@ -2892,7 +3033,7 @@ function renderEdifitoNeighborsResult(data, preview) {
     : `Carga aplicada en ${data.condominium_name || "condominio"}`;
   $("#applyEdifitoNeighborsImport").hidden = !preview;
   $("#edifitoNeighborsSummary").innerHTML = [
-    ["Unidades leÃ­das", summary.rows],
+    ["Unidades leídas", summary.rows],
     ["Unidades nuevas", summary.units_created],
     ["Unidades existentes", summary.units_updated],
     ["Contactos nuevos", summary.contacts_created],
@@ -2949,6 +3090,16 @@ function renderComunidadFelizNeighborsResult(data, preview) {
     `).join("")
     : `<tr><td colspan="4" class="empty-table">Sin detalle para mostrar.</td></tr>`;
   $("#comunidadFelizNeighborsPreview").hidden = false;
+}
+
+function openAiPromptTool() {
+  $("#toolsCatalog").hidden = true;
+  $("#edifitoNeighborsTool").hidden = true;
+  $("#comunidadFelizNeighborsTool").hidden = true;
+  $("#aiPromptTool").hidden = false;
+  $("#viewTitle").textContent = "Consola IA";
+  resetAiPromptTool(false);
+  if (!$("#aiPromptInput").value.trim()) loadAiPromptSample();
 }
 
 async function uploadAudio(event) {
@@ -3049,13 +3200,11 @@ $("#duplicateTemplateModal").addEventListener("click", (event) => {
 });
 $("#duplicateTemplateCompany").addEventListener("change", () => {
   populateDuplicateTemplateCondominiums();
-  const template = state.inspectionTemplates.find((entry) => sameId(entry.id, state.duplicateTemplateId))
-    || state.currentItems.find((entry) => sameId(entry.id, state.duplicateTemplateId));
+  const template = currentDuplicateTemplateCandidate();
   if (template) suggestDuplicateTemplateName(template);
 });
 $("#duplicateTemplateCondominium").addEventListener("change", () => {
-  const template = state.inspectionTemplates.find((entry) => sameId(entry.id, state.duplicateTemplateId))
-    || state.currentItems.find((entry) => sameId(entry.id, state.duplicateTemplateId));
+  const template = currentDuplicateTemplateCandidate();
   if (template) suggestDuplicateTemplateName(template);
 });
 document.addEventListener("keydown", (event) => {
@@ -3079,7 +3228,7 @@ $("#searchInput").addEventListener("input", () => {
 $("#companyFilter").addEventListener("change", () => {
   const resource = resources[state.currentView];
   if (resource) {
-    if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems"].includes(state.currentView)) {
+    if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
       state.tablePage = 1;
       loadTable();
       return;
@@ -3105,6 +3254,7 @@ $("#ticketStatusFilter").addEventListener("change", async () => {
 $("#audioForm").addEventListener("submit", uploadAudio);
 $("#openEdifitoNeighborsTool").addEventListener("click", openEdifitoNeighborsTool);
 $("#openComunidadFelizNeighborsTool").addEventListener("click", openComunidadFelizNeighborsTool);
+$("#openAiPromptTool").addEventListener("click", openAiPromptTool);
 $("#backToToolsCatalog").addEventListener("click", () => {
   $("#viewTitle").textContent = "Herramientas";
   showToolsCatalog();
@@ -3113,6 +3263,13 @@ $("#backToToolsCatalogFromComunidadFeliz").addEventListener("click", () => {
   $("#viewTitle").textContent = "Herramientas";
   showToolsCatalog();
 });
+$("#backToToolsCatalogFromAi").addEventListener("click", () => {
+  $("#viewTitle").textContent = "Herramientas";
+  showToolsCatalog();
+});
+$("#aiPromptMode").addEventListener("change", loadAiPromptSample);
+$("#aiPromptSampleButton").addEventListener("click", loadAiPromptSample);
+$("#aiPromptForm").addEventListener("submit", submitAiPromptTool);
 $("#toolCompanySelect").addEventListener("change", () => {
   populateToolCondominiumSelect();
   resetEdifitoNeighborsTool(false);

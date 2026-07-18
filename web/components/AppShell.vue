@@ -16,13 +16,15 @@ const SIDEBAR_KEY = "komite_sidebar_collapsed";
 const NAV_GROUPS_KEY = "komite_nav_groups_collapsed";
 
 const config = useRuntimeConfig();
-const { activeCondominium, company, condominiums, user, clearSession, refreshToken, setActiveCondominium } = useAuth();
+const { request } = useApi();
+const { activeCondominium, company, condominiums, user, clearSession, refreshToken, setActiveCondominium, token } = useAuth();
 const currentView = ref("dashboard");
 const viewRefreshKey = ref(0);
 const selectedNeighborId = ref("");
 const sidebarCollapsed = ref(false);
 const collapsedGroups = ref<string[]>([]);
 const workspaceRef = ref<HTMLElement | null>(null);
+const notificationSummary = ref({ pending_count: 0, in_review_count: 0, ready_to_send_count: 0 });
 
 const menuGroups: MenuGroup[] = [
   {
@@ -44,6 +46,7 @@ const menuGroups: MenuGroup[] = [
     label: "Operación diaria",
     items: [
       { id: "operational-plan", label: "Agenda operativa", icon: "calendar", view: "operational-plan" },
+      { id: "notifications", label: "Notificaciones", icon: "message", view: "notifications" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },
@@ -64,6 +67,7 @@ const menuGroups: MenuGroup[] = [
     label: "Contabilidad",
     items: [
       { id: "accounting-periods", label: "Periodos contables", icon: "calendar", view: "accounting-periods" },
+      { id: "accounting-suppliers", label: "Proveedores", icon: "briefcase", view: "accounting-suppliers" },
       { id: "accounting", label: "Módulo contable", icon: "calculator", view: "accounting" },
     ],
   },
@@ -95,6 +99,7 @@ const currentTitle = computed(() => {
 const userName = computed(() => user.value?.full_name || user.value?.email || "Usuario");
 const contextLabel = computed(() => activeCondominium.value?.name || "Sin condominio");
 const tenantLabel = computed(() => company.value?.name || "Empresa administradora");
+const notificationBadgeCount = computed(() => notificationSummary.value.pending_count + notificationSummary.value.in_review_count + notificationSummary.value.ready_to_send_count);
 const activeCondominiumId = computed({
   get: () => activeCondominium.value?.id || "",
   set: (id: string) => {
@@ -107,6 +112,18 @@ const activeCondominiumId = computed({
     });
   },
 });
+
+const loadNotificationSummary = async () => {
+  if (!token.value || !activeCondominium.value?.id) {
+    notificationSummary.value = { pending_count: 0, in_review_count: 0, ready_to_send_count: 0 };
+    return;
+  }
+  try {
+    notificationSummary.value = await request<{ pending_count: number; in_review_count: number; ready_to_send_count: number }>("/api/v1/portal/notifications/summary");
+  } catch {
+    notificationSummary.value = { pending_count: 0, in_review_count: 0, ready_to_send_count: 0 };
+  }
+};
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
@@ -166,7 +183,10 @@ onMounted(() => {
   } catch {
     collapsedGroups.value = [];
   }
+  loadNotificationSummary();
 });
+
+watch([() => activeCondominium.value?.id, token], loadNotificationSummary);
 </script>
 
 <template>
@@ -200,6 +220,7 @@ onMounted(() => {
             >
               <svg class="icon" aria-hidden="true"><use :href="`#icon-${item.icon}`" /></svg>
               <span class="nav-label">{{ item.label }}</span>
+              <span v-if="item.view === 'notifications' && notificationBadgeCount" class="nav-badge">{{ notificationBadgeCount }}</span>
             </button>
           </div>
         </section>
@@ -240,8 +261,10 @@ onMounted(() => {
       <AssembliesView v-else-if="currentView === 'assemblies'" :key="`assemblies-${activeCondominiumId}-${viewRefreshKey}`" />
       <AccountingPeriodsView v-else-if="currentView === 'accounting-periods'" :key="`accounting-periods-${activeCondominiumId}-${viewRefreshKey}`" />
       <AccountingView v-else-if="currentView === 'accounting'" :key="`accounting-${activeCondominiumId}-${viewRefreshKey}`" />
+      <AccountingSuppliersView v-else-if="currentView === 'accounting-suppliers'" :key="`accounting-suppliers-${activeCondominiumId}-${viewRefreshKey}`" />
       <MaintenancePlanView v-else-if="currentView === 'maintenance'" :key="`maintenance-${activeCondominiumId}-${viewRefreshKey}`" />
       <OperationalPlanView v-else-if="currentView === 'operational-plan'" :key="`operational-plan-${activeCondominiumId}-${viewRefreshKey}`" />
+      <OperationalNotificationsView v-else-if="currentView === 'notifications'" :key="`notifications-${activeCondominiumId}-${viewRefreshKey}`" @changed="loadNotificationSummary" />
       <InspectionsView v-else-if="currentView === 'inspections'" :key="`inspections-${activeCondominiumId}-${viewRefreshKey}`" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
       <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />

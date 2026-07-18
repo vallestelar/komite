@@ -1575,6 +1575,9 @@ class ReportCreate(BaseModel):
     incident_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
     inspection_id: Optional[UUID] = None
+    operational_event_id: Optional[UUID] = None
+    operational_execution_id: Optional[UUID] = None
+    asset_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
     approved_by_id: Optional[UUID] = None
     report_type: str = Field(..., max_length=60)
@@ -1592,6 +1595,9 @@ class ReportUpdate(BaseModel):
     incident_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
     inspection_id: Optional[UUID] = None
+    operational_event_id: Optional[UUID] = None
+    operational_execution_id: Optional[UUID] = None
+    asset_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
     approved_by_id: Optional[UUID] = None
     report_type: Optional[str] = Field(default=None, max_length=60)
@@ -1610,6 +1616,9 @@ class ReportOut(AuditOut):
     incident_id: Optional[UUID] = None
     task_id: Optional[UUID] = None
     inspection_id: Optional[UUID] = None
+    operational_event_id: Optional[UUID] = None
+    operational_execution_id: Optional[UUID] = None
+    asset_id: Optional[UUID] = None
     created_by_user_id: Optional[UUID] = None
     approved_by_id: Optional[UUID] = None
     report_type: str
@@ -1815,6 +1824,7 @@ class AccountingPeriodPage(BaseModel):
 class AccountingSupplierCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
+    supplier_category_id: Optional[UUID] = None
     name: str = Field(..., max_length=180)
     rut: Optional[str] = Field(default=None, max_length=30)
     email: Optional[str] = Field(default=None, max_length=255)
@@ -1828,6 +1838,7 @@ class AccountingSupplierCreate(BaseModel):
 class AccountingSupplierUpdate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
+    supplier_category_id: Optional[UUID] = None
     name: Optional[str] = Field(default=None, max_length=180)
     rut: Optional[str] = Field(default=None, max_length=30)
     email: Optional[str] = Field(default=None, max_length=255)
@@ -1842,6 +1853,7 @@ class AccountingSupplierOut(AuditOut):
     id: UUID
     company_id: Optional[UUID] = None
     condominium_id: Optional[UUID] = None
+    supplier_category_id: Optional[UUID] = None
     name: str
     rut: Optional[str] = None
     email: Optional[str] = None
@@ -1854,6 +1866,72 @@ class AccountingSupplierOut(AuditOut):
 
 class AccountingSupplierPage(BaseModel):
     items: list[AccountingSupplierOut]
+    meta: PageMeta
+
+
+class AccountingSupplierCategoryCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    name: str = Field(..., max_length=120)
+    code: Optional[str] = Field(default=None, max_length=80)
+    status: str = Field(default="active", max_length=30)
+    display_order: int = 0
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingSupplierCategoryUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=120)
+    code: Optional[str] = Field(default=None, max_length=80)
+    status: Optional[str] = Field(default=None, max_length=30)
+    display_order: Optional[int] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingSupplierCategoryOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    name: str
+    code: Optional[str] = None
+    status: str
+    display_order: int
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingSupplierCategoryPage(BaseModel):
+    items: list[AccountingSupplierCategoryOut]
+    meta: PageMeta
+
+
+class AccountingSupplierCondominiumCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    supplier_id: UUID
+    condominium_id: UUID
+    status: str = Field(default="active", max_length=30)
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingSupplierCondominiumUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    supplier_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    notes: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AccountingSupplierCondominiumOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    supplier_id: UUID
+    condominium_id: UUID
+    status: str
+    notes: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AccountingSupplierCondominiumPage(BaseModel):
+    items: list[AccountingSupplierCondominiumOut]
     meta: PageMeta
 
 
@@ -2298,6 +2376,175 @@ class AIRequestOut(AuditOut):
 
 class AIRequestPage(BaseModel):
     items: list[AIRequestOut]
+    meta: PageMeta
+
+
+class AIPromptTemplateCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    key: str = Field(..., max_length=120)
+    name: str = Field(..., max_length=180)
+    description: Optional[str] = None
+    purpose: str = Field(..., max_length=100)
+    module: str = Field(default="general", max_length=80)
+    asset_type: Optional[str] = Field(default=None, max_length=80)
+    system_template: str
+    user_template: str
+    required_variables: list[str] = Field(default_factory=list)
+    optional_variables: list[str] = Field(default_factory=list)
+    default_model: Optional[str] = Field(default=None, max_length=120)
+    default_temperature: float = Field(default=0.2, ge=0, le=2)
+    default_max_tokens: Optional[int] = Field(default=None, ge=1, le=16000)
+    reasoning_enabled: bool = False
+    expects_json: bool = False
+    version: int = Field(default=1, ge=1)
+    status: str = Field(default="draft", max_length=30)
+    is_active: bool = True
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AIPromptTemplateUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    key: Optional[str] = Field(default=None, max_length=120)
+    name: Optional[str] = Field(default=None, max_length=180)
+    description: Optional[str] = None
+    purpose: Optional[str] = Field(default=None, max_length=100)
+    module: Optional[str] = Field(default=None, max_length=80)
+    asset_type: Optional[str] = Field(default=None, max_length=80)
+    system_template: Optional[str] = None
+    user_template: Optional[str] = None
+    required_variables: Optional[list[str]] = None
+    optional_variables: Optional[list[str]] = None
+    default_model: Optional[str] = Field(default=None, max_length=120)
+    default_temperature: Optional[float] = Field(default=None, ge=0, le=2)
+    default_max_tokens: Optional[int] = Field(default=None, ge=1, le=16000)
+    reasoning_enabled: Optional[bool] = None
+    expects_json: Optional[bool] = None
+    version: Optional[int] = Field(default=None, ge=1)
+    status: Optional[str] = Field(default=None, max_length=30)
+    is_active: Optional[bool] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class AIPromptTemplateOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    key: str
+    name: str
+    description: Optional[str] = None
+    purpose: str
+    module: str
+    asset_type: Optional[str] = None
+    system_template: str
+    user_template: str
+    required_variables: list[str] = Field(default_factory=list)
+    optional_variables: list[str] = Field(default_factory=list)
+    default_model: Optional[str] = None
+    default_temperature: float
+    default_max_tokens: Optional[int] = None
+    reasoning_enabled: bool
+    expects_json: bool
+    version: int
+    status: str
+    is_active: bool
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AIPromptTemplatePage(BaseModel):
+    items: list[AIPromptTemplateOut]
+    meta: PageMeta
+
+
+class AIPromptTemplateDuplicateToCondominiumRequest(BaseModel):
+    condominium_id: UUID
+    name: Optional[str] = Field(default=None, max_length=180)
+    status: str = Field(default="draft", max_length=30)
+
+
+class AIPromptTemplateDuplicateToCondominiumOut(BaseModel):
+    template: AIPromptTemplateOut
+
+
+class ExternalServiceOrderCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    event_id: UUID
+    asset_id: Optional[UUID] = None
+    execution_id: Optional[UUID] = None
+    ai_prompt_template_id: Optional[UUID] = None
+    ai_request_id: Optional[UUID] = None
+    report_id: Optional[UUID] = None
+    token_hash: str = Field(..., max_length=128)
+    title: str = Field(..., max_length=180)
+    instructions: Optional[str] = None
+    provider_name: str = Field(..., max_length=160)
+    provider_email: Optional[str] = Field(default=None, max_length=255)
+    provider_phone: Optional[str] = Field(default=None, max_length=40)
+    prompt_key: str = Field(default="vendor_service_report", max_length=120)
+    status: str = Field(default="pending", max_length=40)
+    expires_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
+    submission_payload: dict[str, Any] = Field(default_factory=dict)
+    ai_generated_text: Optional[str] = None
+    public_url: Optional[str] = Field(default=None, max_length=500)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExternalServiceOrderUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    event_id: Optional[UUID] = None
+    asset_id: Optional[UUID] = None
+    execution_id: Optional[UUID] = None
+    ai_prompt_template_id: Optional[UUID] = None
+    ai_request_id: Optional[UUID] = None
+    report_id: Optional[UUID] = None
+    token_hash: Optional[str] = Field(default=None, max_length=128)
+    title: Optional[str] = Field(default=None, max_length=180)
+    instructions: Optional[str] = None
+    provider_name: Optional[str] = Field(default=None, max_length=160)
+    provider_email: Optional[str] = Field(default=None, max_length=255)
+    provider_phone: Optional[str] = Field(default=None, max_length=40)
+    prompt_key: Optional[str] = Field(default=None, max_length=120)
+    status: Optional[str] = Field(default=None, max_length=40)
+    expires_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
+    submission_payload: Optional[dict[str, Any]] = None
+    ai_generated_text: Optional[str] = None
+    public_url: Optional[str] = Field(default=None, max_length=500)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class ExternalServiceOrderOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: UUID
+    event_id: UUID
+    asset_id: Optional[UUID] = None
+    execution_id: Optional[UUID] = None
+    ai_prompt_template_id: Optional[UUID] = None
+    ai_request_id: Optional[UUID] = None
+    report_id: Optional[UUID] = None
+    token_hash: str
+    title: str
+    instructions: Optional[str] = None
+    provider_name: str
+    provider_email: Optional[str] = None
+    provider_phone: Optional[str] = None
+    prompt_key: str
+    status: str
+    expires_at: Optional[datetime] = None
+    submitted_at: Optional[datetime] = None
+    submission_payload: dict[str, Any] = Field(default_factory=dict)
+    ai_generated_text: Optional[str] = None
+    public_url: Optional[str] = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExternalServiceOrderPage(BaseModel):
+    items: list[ExternalServiceOrderOut]
     meta: PageMeta
 
 

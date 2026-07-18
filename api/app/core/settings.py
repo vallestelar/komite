@@ -1,10 +1,15 @@
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+API_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", API_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -28,6 +33,13 @@ class Settings(BaseSettings):
     ai_provider: str | None = Field(default=None, alias="AI_PROVIDER")
     ai_api_key: str | None = Field(default=None, alias="AI_API_KEY")
     ai_model: str | None = Field(default=None, alias="AI_MODEL")
+    ai_base_url: str | None = Field(default=None, alias="AI_BASE_URL")
+    ai_temperature: float = Field(default=0.2, alias="AI_TEMPERATURE")
+    ai_max_tokens: int = Field(default=2000, alias="AI_MAX_TOKENS")
+    deepseek_api_key: str | None = Field(default=None, alias="DEEPSEEK_API_KEY")
+    deepseek_base_url: str = Field(default="https://api.deepseek.com", alias="DEEPSEEK_BASE_URL")
+    deepseek_model: str = Field(default="deepseek-v4-flash", alias="DEEPSEEK_MODEL")
+    deepseek_reasoning_model: str = Field(default="deepseek-v4-pro", alias="DEEPSEEK_REASONING_MODEL")
     transcription_provider: str = Field(default="local_whisper", alias="TRANSCRIPTION_PROVIDER")
     local_whisper_model: str = Field(default="small", alias="LOCAL_WHISPER_MODEL")
     local_whisper_device: str = Field(default="cpu", alias="LOCAL_WHISPER_DEVICE")

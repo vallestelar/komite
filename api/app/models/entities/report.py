@@ -12,6 +12,9 @@ class Report(TimestampAuditMixin):
     incident = fields.ForeignKeyField("models.Incident", related_name="reports", null=True, on_delete=fields.SET_NULL)
     task = fields.ForeignKeyField("models.Task", related_name="reports", null=True, on_delete=fields.SET_NULL)
     inspection = fields.ForeignKeyField("models.Inspection", related_name="reports", null=True, on_delete=fields.SET_NULL)
+    operational_event = fields.ForeignKeyField("models.PlannedOperationalEvent", related_name="reports", null=True, on_delete=fields.SET_NULL)
+    operational_execution = fields.ForeignKeyField("models.OperationalEventExecution", related_name="reports", null=True, on_delete=fields.SET_NULL)
+    asset = fields.ForeignKeyField("models.CondominiumAsset", related_name="reports", null=True, on_delete=fields.SET_NULL)
     created_by_user = fields.ForeignKeyField("models.User", related_name="created_reports", null=True, on_delete=fields.SET_NULL)
     approved_by = fields.ForeignKeyField("models.User", related_name="approved_reports", null=True, on_delete=fields.SET_NULL)
     report_type = fields.CharField(max_length=60)
@@ -24,4 +27,12 @@ class Report(TimestampAuditMixin):
 
     class Meta:
         table = "reports"
-        indexes = (("company_id",), ("condominium_id", "status"), ("report_type",), ("published_at",))
+        indexes = (
+            ("company_id",),
+            ("condominium_id", "status"),
+            ("operational_event_id",),
+            ("operational_execution_id",),
+            ("asset_id",),
+            ("report_type",),
+            ("published_at",),
+        )

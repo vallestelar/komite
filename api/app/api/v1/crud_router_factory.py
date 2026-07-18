@@ -13,10 +13,12 @@ from pydantic import BaseModel
 
 from app.core.auth.dependencies import require_access_token, require_komite_employee, user_is_komite_employee
 from app.models.entities import (
+    AIPromptTemplate,
     Communication,
     Condominium,
     CondominiumInspectionItem,
     CondominiumInspectionTemplate,
+    ExternalServiceOrder,
     Incident,
     Inspection,
     InspectionTemplate,
@@ -86,6 +88,12 @@ async def _read_filters(model: Type[Model], request: Request) -> dict[str, Any]:
     if model.__name__ == "Condominium":
         return {"id__in": allowed_condominium_ids}
 
+    if model.__name__ == "AccountingSupplier":
+        return {"company_id": company_id} if company_id else {"company_id__isnull": True}
+
+    if model.__name__ == "AccountingSupplierCondominium":
+        return {"condominium_id__in": allowed_condominium_ids}
+
     if "condominium_id" in db_fields:
         if active_condominium_id:
             return {"condominium_id": active_condominium_id}
@@ -117,9 +125,11 @@ async def _derive_company_id(data: dict[str, Any]) -> Any:
         ("base_item_id", InspectionTemplateItem),
         ("condominium_template_id", CondominiumInspectionTemplate),
         ("condominium_template_item_id", CondominiumInspectionItem),
+        ("ai_prompt_template_id", AIPromptTemplate),
         ("calendar_id", OperationalWorkCalendar),
         ("event_id", PlannedOperationalEvent),
         ("execution_id", OperationalEventExecution),
+        ("external_service_order_id", ExternalServiceOrder),
     )
     for field_name, parent_model in parent_lookups:
         if data.get(field_name):

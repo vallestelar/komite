@@ -8,7 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 
 from app.core.auth.dependencies import require_access_token
-from app.models.entities import Condominium, CondominiumOperationalStaff, PlannedOperationalEvent
+from app.models.entities import (
+    Condominium,
+    CondominiumAsset,
+    CondominiumOperationalStaff,
+    OperationalEventEvidence,
+    OperationalEventExecution,
+    PlannedOperationalEvent,
+    Report,
+    ReportVersion,
+)
 
 
 router = APIRouter(
@@ -142,6 +151,26 @@ class PortalManualTaskUpdateRequest(BaseModel):
     event_type: str | None = None
 
 
+class PortalServiceReportRequest(BaseModel):
+    execution_id: UUID | None = None
+    asset_id: UUID | None = None
+    status: str = "draft"
+    reuse_existing: bool = True
+    public_base_url: str | None = None
+
+
+class PortalServiceReportOut(BaseModel):
+    id: UUID
+    report_type: str
+    title: str
+    status: str
+    operational_event_id: UUID
+    operational_execution_id: UUID | None = None
+    asset_id: UUID | None = None
+    content: dict
+    metadata: dict
+
+
 def _time_to_text(value) -> str | None:
     return value.strftime("%H:%M") if value else None
 
@@ -224,6 +253,20 @@ def _event_out(event: PlannedOperationalEvent) -> PortalOperationalEventOut:
     )
 
 
+def _service_report_out(report: Report) -> PortalServiceReportOut:
+    return PortalServiceReportOut(
+        id=report.id,
+        report_type=report.report_type,
+        title=report.title,
+        status=report.status,
+        operational_event_id=report.operational_event_id,
+        operational_execution_id=report.operational_execution_id,
+        asset_id=report.asset_id,
+        content=report.content or {},
+        metadata=report.metadata or {},
+    )
+
+
 def _period_bounds(year: int, month: int | None) -> tuple[date, date]:
     if month:
         start = date(year, month, 1)
@@ -291,6 +334,232 @@ async def _current_condominium(request: Request) -> Condominium:
             detail="Condominio no encontrado para la empresa del usuario",
         )
     return condominium
+
+
+def _asset_id_from_event_metadata(event: PlannedOperationalEvent) -> UUID | None:
+    value = (event.metadata or {}).get("asset_id")
+    if not value:
+        return None
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+async def _resolve_report_asset(
+    *,
+    event: PlannedOperationalEvent,
+    company_id,
+    condominium_id,
+    requested_asset_id: UUID | None,
+) -> CondominiumAsset | None:
+    asset_id = requested_asset_id or _asset_id_from_event_metadata(event)
+    if asset_id:
+        return await CondominiumAsset.get_or_none(
+            id=asset_id,
+            company_id=company_id,
+            condominium_id=condominium_id,
+        )
+
+    asset_name = _metadata_value(event, "asset_name")
+    if not asset_name:
+        return None
+
+    return await CondominiumAsset.get_or_none(
+        company_id=company_id,
+        condominium_id=condominium_id,
+        name=asset_name,
+    )
+
+
+async def _latest_execution(
+    *,
+    event_id: UUID,
+    company_id,
+    requested_execution_id: UUID | None,
+) -> OperationalEventExecution | None:
+    if requested_execution_id:
+        return await OperationalEventExecution.get_or_none(
+            id=requested_execution_id,
+            company_id=company_id,
+            event_id=event_id,
+        ).select_related("executed_by_user")
+
+    return await (
+        OperationalEventExecution.filter(event_id=event_id, company_id=company_id)
+        .select_related("executed_by_user")
+        .order_by("-executed_at", "-created_at")
+        .first()
+    )
+
+
+async def _event_evidence_summary(event_id: UUID, execution_id: UUID | None, company_id) -> list[dict]:
+    filters = {"event_id": event_id, "company_id": company_id}
+    if execution_id:
+        filters["execution_id"] = execution_id
+    evidence_rows = await (
+        OperationalEventEvidence.filter(**filters)
+        .select_related("attachment")
+        .order_by("created_at")
+    )
+    return [
+        {
+            "id": str(row.id),
+            "evidence_type": row.evidence_type,
+            "description": row.description,
+            "attachment_id": str(row.attachment_id) if row.attachment_id else None,
+            "file_name": row.attachment.file_name if row.attachment else None,
+            "mime_type": row.attachment.mime_type if row.attachment else None,
+        }
+        for row in evidence_rows
+    ]
+
+
+async def _asset_history(event: PlannedOperationalEvent, asset: CondominiumAsset | None) -> list[dict]:
+    metadata = event.metadata or {}
+    asset_name = asset.name if asset else metadata.get("asset_name")
+    if not asset_name:
+        return []
+
+    history = await (
+        PlannedOperationalEvent.filter(
+            company_id=event.company_id,
+            condominium_id=event.condominium_id,
+            planned_date__lte=event.planned_date,
+        )
+        .exclude(id=event.id)
+        .order_by("-planned_date")
+        .limit(30)
+    )
+    rows = []
+    for item in history:
+        if len(rows) >= 5:
+            break
+        item_metadata = item.metadata or {}
+        same_asset_id = asset and str(item_metadata.get("asset_id") or "") == str(asset.id)
+        same_asset_name = str(item_metadata.get("asset_name") or "").strip().lower() == str(asset_name).strip().lower()
+        if same_asset_id or same_asset_name:
+            rows.append(
+                {
+                    "event_id": str(item.id),
+                    "date": item.planned_date.isoformat(),
+                    "title": item.title,
+                    "status": item.status,
+                    "result": item_metadata.get("result"),
+                }
+            )
+    return rows
+
+
+def _company_branding(company, public_base_url: str | None) -> dict:
+    metadata = company.metadata or {}
+    branding = metadata.get("branding") or {}
+    report_branding = metadata.get("service_report_branding") or {}
+    primary = {**branding, **report_branding}
+    return {
+        "mode": "dual_logo",
+        "service_provider": {
+            "name": primary.get("display_name") or company.legal_name or company.name,
+            "logo_url": primary.get("logo_url"),
+            "primary_color": primary.get("primary_color"),
+            "contact_email": primary.get("contact_email") or company.email,
+            "contact_phone": primary.get("contact_phone") or company.phone,
+        },
+        "komite": {
+            "name": "Komite",
+            "logo_key": "komite-logo",
+            "tagline": "Plataforma de trazabilidad operacional",
+        },
+        "footer": primary.get("report_footer") or "Informe generado automaticamente mediante la plataforma Komite.",
+        "public_base_url": public_base_url,
+    }
+
+
+def _build_service_report_content(
+    *,
+    report_id: UUID,
+    event: PlannedOperationalEvent,
+    condominium: Condominium,
+    company,
+    execution: OperationalEventExecution | None,
+    asset: CondominiumAsset | None,
+    evidence: list[dict],
+    history: list[dict],
+    public_base_url: str | None,
+) -> dict:
+    metadata = event.metadata or {}
+    execution_metadata = execution.metadata if execution else {}
+    report_url = f"{public_base_url.rstrip('/')}/service-reports/{report_id}" if public_base_url else f"/service-reports/{report_id}"
+    executed_by = getattr(getattr(execution, "executed_by_user", None), "full_name", None)
+    performed_text = execution.comments if execution and execution.comments else event.description
+    result = execution.result if execution else event.status
+    asset_payload = None
+    if asset:
+        asset_payload = {
+            "id": str(asset.id),
+            "name": asset.name,
+            "asset_type": asset.asset_type,
+            "location": asset.location,
+            "brand": asset.brand,
+            "model": asset.model,
+            "serial_number": asset.serial_number,
+            "provider": asset.provider,
+        }
+    elif metadata.get("asset_name"):
+        asset_payload = {
+            "id": None,
+            "name": metadata.get("asset_name"),
+            "asset_type": metadata.get("asset_type"),
+            "location": metadata.get("asset_location"),
+        }
+
+    return {
+        "template": "dual_logo_service_report_v1",
+        "branding": _company_branding(company, public_base_url),
+        "qr": {
+            "payload": report_url,
+            "label": "Consultar informe online",
+        },
+        "summary": {
+            "executive": (
+                f"Se registra {event.title} en {condominium.name}. "
+                f"Resultado: {result}. Evidencias asociadas: {len(evidence)}."
+            ),
+            "requires_follow_up": execution.requires_follow_up if execution else False,
+            "recommendations": execution_metadata.get("recommendations") or [],
+        },
+        "work_order": {
+            "number": f"OT-{event.planned_date.year}-{str(event.id)[:8].upper()}",
+            "title": event.title,
+            "event_type": event.event_type,
+            "planned_date": event.planned_date.isoformat(),
+            "planned_start_time": _time_to_text(event.planned_start_time),
+            "planned_end_time": _time_to_text(event.planned_end_time),
+            "priority": event.priority,
+            "status": event.status,
+            "section_name": metadata.get("section_name"),
+        },
+        "condominium": {
+            "id": str(condominium.id),
+            "name": condominium.name,
+            "address": condominium.address,
+            "commune": condominium.commune,
+            "city": condominium.city,
+            "region": condominium.region,
+        },
+        "asset": asset_payload,
+        "execution": {
+            "id": str(execution.id) if execution else None,
+            "executed_at": execution.executed_at.isoformat() if execution and execution.executed_at else None,
+            "executed_by_user_id": str(execution.executed_by_user_id) if execution and execution.executed_by_user_id else None,
+            "executed_by_name": executed_by,
+            "result": result,
+            "comments": performed_text,
+            "validation_status": execution.validation_status if execution else None,
+        },
+        "evidence": evidence,
+        "asset_history": history,
+    }
 
 
 async def _assign_event_user(
@@ -361,6 +630,112 @@ async def list_operational_plan(
         staff=[_staff_out(row) for row in staff],
         summary=summary,
     )
+
+
+@router.post("/events/{event_id}/service-report", response_model=PortalServiceReportOut, status_code=status.HTTP_201_CREATED)
+async def generate_service_report(
+    event_id: UUID,
+    payload: PortalServiceReportRequest,
+    request: Request,
+) -> PortalServiceReportOut:
+    condominium = await _current_condominium(request)
+
+    event = await (
+        PlannedOperationalEvent.get_or_none(
+            id=event_id,
+            company_id=request.state.company_id,
+            condominium_id=request.state.condominium_id,
+        )
+        .select_related("company")
+    )
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evento no encontrado")
+
+    existing = await (
+        Report.filter(
+            company_id=request.state.company_id,
+            condominium_id=request.state.condominium_id,
+            operational_event_id=event.id,
+            report_type="service_report",
+            status="draft",
+        )
+        .order_by("-created_at")
+        .first()
+    )
+    if existing and payload.reuse_existing:
+        return _service_report_out(existing)
+
+    execution = await _latest_execution(
+        event_id=event.id,
+        company_id=request.state.company_id,
+        requested_execution_id=payload.execution_id,
+    )
+    if payload.execution_id and not execution:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ejecucion no encontrada")
+
+    asset = await _resolve_report_asset(
+        event=event,
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        requested_asset_id=payload.asset_id,
+    )
+    if payload.asset_id and not asset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Activo no encontrado")
+
+    evidence = await _event_evidence_summary(
+        event.id,
+        execution.id if execution else None,
+        request.state.company_id,
+    )
+    history = await _asset_history(event, asset)
+    actor = getattr(request.state.user, "email", None) or str(request.state.user_id)
+    title = f"Informe de servicio - {event.title}"
+
+    report = await Report.create(
+        company_id=request.state.company_id,
+        condominium_id=request.state.condominium_id,
+        operational_event_id=event.id,
+        operational_execution_id=execution.id if execution else None,
+        asset_id=asset.id if asset else None,
+        created_by_user_id=request.state.user_id,
+        report_type="service_report",
+        title=title,
+        status=payload.status,
+        content={},
+        metadata={
+            "source": "operational_plan",
+            "template": "dual_logo_service_report_v1",
+            "branding_mode": "dual_logo",
+            "qr_enabled": True,
+        },
+        created_by=actor,
+        updated_by=actor,
+    )
+    report.content = _build_service_report_content(
+        report_id=report.id,
+        event=event,
+        condominium=condominium,
+        company=event.company,
+        execution=execution,
+        asset=asset,
+        evidence=evidence,
+        history=history,
+        public_base_url=payload.public_base_url,
+    )
+    await report.save()
+
+    await ReportVersion.create(
+        company_id=request.state.company_id,
+        report_id=report.id,
+        version_number=1,
+        source="system",
+        content=report.content,
+        notes="Borrador generado desde evento operacional",
+        created_by=actor,
+        updated_by=actor,
+    )
+
+    return _service_report_out(report)
 
 
 @router.patch("/events/{event_id}/assignment", response_model=PortalOperationalEventOut)

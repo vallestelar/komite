@@ -39,10 +39,15 @@ from app.models.entities.communication_recipient import CommunicationRecipient
 from app.models.entities.attachment import Attachment
 from app.models.entities.audit_log import AuditLog
 from app.models.entities.ai_request import AIRequest
+from app.models.entities.ai_prompt_template import AIPromptTemplate
+from app.models.entities.external_service_order import ExternalServiceOrder
+from app.models.entities.operational_notification import OperationalNotification
 from app.models.entities.notification_log import NotificationLog
 from app.models.entities.support_ticket import SupportTicket
 from app.models.entities.accounting_period import AccountingPeriod
 from app.models.entities.accounting_supplier import AccountingSupplier
+from app.models.entities.accounting_supplier_category import AccountingSupplierCategory
+from app.models.entities.accounting_supplier_condominium import AccountingSupplierCondominium
 from app.models.entities.accounting_income_type import AccountingIncomeType
 from app.models.entities.accounting_income import AccountingIncome
 from app.models.entities.accounting_expense import AccountingExpense
@@ -92,10 +97,15 @@ __all__ = [
     "Attachment",
     "AuditLog",
     "AIRequest",
+    "AIPromptTemplate",
+    "ExternalServiceOrder",
+    "OperationalNotification",
     "NotificationLog",
     "SupportTicket",
     "AccountingPeriod",
     "AccountingSupplier",
+    "AccountingSupplierCategory",
+    "AccountingSupplierCondominium",
     "AccountingIncomeType",
     "AccountingIncome",
     "AccountingExpense",

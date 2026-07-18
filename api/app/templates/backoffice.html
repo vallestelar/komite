@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Komite Backoffice</title>
-    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260707-06" />
+    <link rel="stylesheet" href="/static/css/backoffice.css?v=20260718-encoding-fix" />
   </head>
   <body>
     <main id="app">
@@ -145,6 +145,10 @@
                 <button class="nav-item" data-view="ai" title="IA">
                   <svg class="nav-icon" aria-hidden="true"><use href="#icon-spark"></use></svg>
                   <span class="nav-label">IA</span>
+                </button>
+                <button class="nav-item" data-view="aiPromptTemplates" title="Prompts IA">
+                  <svg class="nav-icon" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                  <span class="nav-label">Prompts IA</span>
                 </button>
                 <button class="nav-item" data-view="settings" title="Configuracion">
                   <svg class="nav-icon" aria-hidden="true"><use href="#icon-settings"></use></svg>
@@ -656,6 +660,16 @@
                   </span>
                   <span class="tool-status">Preparado</span>
                 </button>
+                <button id="openAiPromptTool" class="tool-card" type="button">
+                  <span class="tool-icon">
+                    <svg aria-hidden="true"><use href="#icon-spark"></use></svg>
+                  </span>
+                  <span>
+                    <strong>Consola IA</strong>
+                    <small>Prueba prompts JSON contra DeepSeek y revisa la respuesta completa registrada en Komite.</small>
+                  </span>
+                  <span class="tool-status">DeepSeek</span>
+                </button>
               </div>
             </div>
 
@@ -796,6 +810,55 @@
                 </div>
               </section>
             </div>
+
+            <div id="aiPromptTool" class="tool-workspace" hidden>
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Herramientas</p>
+                  <h2>Consola IA</h2>
+                  <p class="placeholder-copy">Pega el JSON del request, ejec&uacute;talo contra la API de IA y revisa la respuesta sin salir del backoffice.</p>
+                </div>
+                <button id="backToToolsCatalogFromAi" class="ghost-action icon-button" type="button">
+                  <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+                  <span>Volver al centro</span>
+                </button>
+              </div>
+
+              <form id="aiPromptForm" class="ai-console-form">
+                <div class="ai-console-toolbar">
+                  <label>
+                    Modo
+                    <select id="aiPromptMode">
+                      <option value="prompt">Prompt estructurado</option>
+                      <option value="chat">Chat raw</option>
+                    </select>
+                  </label>
+                  <button id="aiPromptSampleButton" class="ghost-action icon-button" type="button">
+                    <svg aria-hidden="true"><use href="#icon-copy"></use></svg>
+                    <span>Cargar ejemplo</span>
+                  </button>
+                  <button class="primary-action icon-button" type="submit">
+                    <svg aria-hidden="true"><use href="#icon-spark"></use></svg>
+                    <span>Enviar a IA</span>
+                  </button>
+                </div>
+                <div class="ai-console-grid">
+                  <label>
+                    JSON enviado
+                    <textarea id="aiPromptInput" spellcheck="false"></textarea>
+                  </label>
+                  <label>
+                    Respuesta
+                    <textarea id="aiPromptOutput" spellcheck="false" readonly>Sin respuesta.</textarea>
+                  </label>
+                </div>
+                <p id="aiPromptError" class="form-error" hidden></p>
+                <div class="result-box">
+                  <h2>Texto generado</h2>
+                  <pre id="aiPromptTextResult">Sin texto generado.</pre>
+                </div>
+              </form>
+            </div>
           </section>
 
           <section id="placeholderPanel" class="panel placeholder-panel" hidden>
@@ -905,6 +968,6 @@
       <symbol id="icon-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"></path></symbol>
     </svg>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-    <script src="/static/js/backoffice.js?v=20260707-06"></script>
+    <script src="/static/js/backoffice.js?v=20260718-encoding-fix"></script>
   </body>
 </html>

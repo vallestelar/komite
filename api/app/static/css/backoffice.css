@@ -97,6 +97,7 @@ textarea {
   border-radius: 6px;
   padding: 9px 11px;
   color: var(--text);
+  font-weight: 400;
   background: var(--white);
 }
 
@@ -1273,6 +1274,35 @@ tbody tr:hover {
   align-items: center;
 }
 
+.ai-console-form {
+  display: grid;
+  gap: 16px;
+}
+
+.ai-console-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ai-console-toolbar label {
+  width: min(260px, 100%);
+}
+
+.ai-console-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ai-console-grid textarea {
+  min-height: 360px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .tool-result {
   display: grid;
   gap: 14px;
@@ -1698,6 +1728,10 @@ pre {
   }
 
   .membership-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-console-grid {
     grid-template-columns: 1fr;
   }
 

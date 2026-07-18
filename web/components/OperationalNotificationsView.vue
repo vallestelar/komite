@@ -190,7 +190,7 @@ const moveNotificationStatus = async (notification: OperationalNotification, sta
     }
     successMessage.value = status === "ready_to_send"
       ? "Informe movido a Informes para enviar."
-      : "Notificacion movida a Pendientes.";
+      : "Autorizacion movida a Pendientes.";
     await loadNotificationSummary();
     emit("changed");
   } catch (error) {
@@ -219,7 +219,7 @@ const validateNotification = async () => {
     notifications.value = notifications.value.map((item) => item.id === saved.id ? saved : item);
     selectNotification(saved);
     showPreview.value = false;
-    successMessage.value = "Informe validado y preparado para notificacion movil.";
+    successMessage.value = "Informe validado y preparado para envio movil.";
     loadNotificationSummary();
     emit("changed");
   } catch (error) {
@@ -241,7 +241,7 @@ const openPreview = () => {
 };
 
 const prepareSend = () => {
-  sendMessage.value = "El envio quedo preparado. La notificacion movil se conectara en el siguiente paso.";
+  sendMessage.value = "El envio quedo preparado. El envio movil se conectara en el siguiente paso.";
   successMessage.value = sendMessage.value;
 };
 
@@ -322,7 +322,7 @@ const dismissNotification = async (notification = selectedNotification.value) =>
       notifications.value = notifications.value.filter((item) => item.id !== saved.id);
       selectedId.value = notifications.value[0]?.id || "";
     }
-    successMessage.value = "Notificacion descartada.";
+    successMessage.value = "Autorizacion descartada.";
     await loadNotificationSummary();
     emit("changed");
   } catch (error) {
@@ -334,7 +334,7 @@ const dismissNotification = async (notification = selectedNotification.value) =>
 };
 
 const readableError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : "No se pudieron cargar las notificaciones.";
+  const message = error instanceof Error ? error.message : "No se pudieron cargar las autorizaciones.";
   try {
     const parsed = JSON.parse(message);
     return parsed.detail || message;
@@ -476,7 +476,7 @@ onBeforeUnmount(clearPdfPreview);
     <div class="dashboard-hero notifications-hero">
       <div>
         <p class="eyebrow">Operacion diaria</p>
-        <h2>Notificaciones</h2>
+        <h2>Autorizaciones</h2>
         <p class="hero-copy">{{ activeCondominium?.name || "Sin condominio seleccionado" }}</p>
       </div>
       <div class="committee-summary operational-summary">
@@ -499,7 +499,7 @@ onBeforeUnmount(clearPdfPreview);
     <p v-if="successMessage" class="form-success result-message">{{ successMessage }}</p>
 
     <div class="notifications-toolbar">
-      <div class="segmented-control" role="tablist" aria-label="Filtro de notificaciones">
+      <div class="segmented-control" role="tablist" aria-label="Filtro de autorizaciones">
         <button
           v-for="item in statusFilters"
           :key="item.id"
@@ -710,8 +710,8 @@ onBeforeUnmount(clearPdfPreview);
       <span class="committee-avatar large" aria-hidden="true">
         <svg class="icon"><use href="#icon-message" /></svg>
       </span>
-      <h2>Sin notificaciones</h2>
-      <p class="placeholder-copy">Cuando un proveedor envie un formulario desde su link, aparecera aqui para revision del supervisor.</p>
+      <h2>Sin autorizaciones</h2>
+      <p class="placeholder-copy">Cuando un proveedor envie un formulario desde su link, aparecera aqui para autorizacion del supervisor.</p>
     </div>
 
     <div v-if="showPreview && selectedNotification" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="notification-preview-title">
@@ -720,7 +720,7 @@ onBeforeUnmount(clearPdfPreview);
           <div>
             <p class="eyebrow">Vista preliminar</p>
             <h2 id="notification-preview-title">{{ selectedNotification.title }}</h2>
-            <p class="placeholder-copy">Revisa el informe final antes de validarlo y dejarlo listo para notificacion movil.</p>
+            <p class="placeholder-copy">Revisa el informe final antes de validarlo y dejarlo listo para envio movil.</p>
           </div>
           <button class="button ghost icon-only" type="button" :disabled="validating" title="Cerrar" @click="showPreview = false">
             <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>

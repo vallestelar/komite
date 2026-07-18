@@ -46,7 +46,7 @@ const menuGroups: MenuGroup[] = [
     label: "Operación diaria",
     items: [
       { id: "operational-plan", label: "Agenda operativa", icon: "calendar", view: "operational-plan" },
-      { id: "notifications", label: "Notificaciones", icon: "message", view: "notifications" },
+      { id: "notifications", label: "Autorizaciones", icon: "shield", view: "notifications" },
       { id: "tasks", label: "Tareas", icon: "checks", view: "tasks" },
       { id: "inspections", label: "Inspecciones", icon: "clipboard", view: "inspections" },
       { id: "incidents", label: "Incidencias", icon: "alert", view: "incidents" },

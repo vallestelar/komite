@@ -261,6 +261,11 @@ async def submit_public_external_service_order(
     await event.save()
 
     ai_error = None
+    execution_date = payload.execution_date or now().date().isoformat()
+    try:
+        execution_date = datetime.fromisoformat(execution_date).strftime("%d/%m/%Y")
+    except ValueError:
+        pass
     try:
         completion = await LLMService().complete_prompt(
             prompt_key=order.prompt_key,
@@ -270,7 +275,7 @@ async def submit_public_external_service_order(
                 "asset_name": order.asset.name if order.asset else (order.metadata or {}).get("asset_name"),
                 "provider_name": order.provider_name,
                 "submitted_by_name": payload.submitted_by_name,
-                "execution_date": payload.execution_date or now().date().isoformat(),
+                "execution_date": execution_date,
                 "result": payload.result,
                 "instructions": order.instructions,
                 "work_performed": payload.work_performed,

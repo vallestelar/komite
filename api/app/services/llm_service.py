@@ -11,6 +11,16 @@ from app.models.entities import AIPromptTemplate, AIRequest
 from app.services.prompt_catalog import PromptTemplate, get_prompt_template, render_prompt
 
 
+VENDOR_SERVICE_REPORT_GUARDRAILS = (
+    "\n\nReglas obligatorias para informes de proveedor externo:\n"
+    "- Usa fechas en formato DD/MM/AAAA.\n"
+    "- No incluyas separadores Markdown como --- o --.\n"
+    "- No incluyas firma, 'Elaborado por', 'Eres Komite' ni 'Estado del informe'.\n"
+    "- Si no recibes numero de orden, omite esa linea; no escribas [Pendiente].\n"
+    "- Redacta solo el contenido del informe que vera el supervisor y el destinatario final."
+)
+
+
 @dataclass
 class LLMCompletion:
     ai_request_id: UUID
@@ -131,12 +141,17 @@ class LLMService:
             ).order_by("-version", "-updated_at").first()
 
         if saved_template:
+            system_template = saved_template.system_template
+            user_template = saved_template.user_template
+            if saved_template.key == "vendor_service_report":
+                system_template = system_template.replace("Eres Komite", "Actuas como asistente operativo de Komite")
+                user_template = f"{user_template.rstrip()}{VENDOR_SERVICE_REPORT_GUARDRAILS}"
             return PromptTemplate(
                 key=saved_template.key,
                 name=saved_template.name,
                 purpose=saved_template.purpose,
-                system_template=saved_template.system_template,
-                user_template=saved_template.user_template,
+                system_template=system_template,
+                user_template=user_template,
                 required_variables=tuple(saved_template.required_variables or []),
                 optional_variables=tuple(saved_template.optional_variables or []),
                 default_temperature=saved_template.default_temperature,

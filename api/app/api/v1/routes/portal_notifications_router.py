@@ -25,6 +25,16 @@ router = APIRouter(
 
 REVIEW_STATUSES = {"pending_review", "in_review"}
 VISIBLE_STATUSES = {"pending_review", "in_review", "validated", "ready_to_send", "sent", "dismissed"}
+ISO_DATE_RE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
+MARKDOWN_SEPARATOR_RE = re.compile(r"^\s*[-_*]{2,}\s*$")
+ORDER_PLACEHOLDER_RE = re.compile(
+    r"(\bN[º°]?\s*de\s*orden\s*/\s*servicio\s*:\**\s*)(?:\*\*)?(?:\[[^\]]+\]|pendiente)(?:\*\*)?(?=\s|$)",
+    re.IGNORECASE,
+)
+PDF_FOOTER_LINE_RE = re.compile(
+    r"\b(?:Elaborado por|Estado del informe|Fecha de emisi[oó]n)\s*:",
+    re.IGNORECASE,
+)
 
 
 class NotificationSummaryOut(BaseModel):
@@ -117,6 +127,46 @@ def _pdf_inline(value: str) -> str:
     return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", safe)
 
 
+def _human_date_text(value: str) -> str:
+    return ISO_DATE_RE.sub(lambda match: f"{match.group(3)}/{match.group(2)}/{match.group(1)}", value or "")
+
+
+def _service_order_number(notification: OperationalNotification) -> str:
+    order = getattr(notification, "external_service_order", None)
+    metadata = dict(notification.metadata or {})
+    order_metadata = dict(getattr(order, "metadata", None) or {})
+    for value in (
+        metadata.get("service_order_number"),
+        metadata.get("work_order_number"),
+        order_metadata.get("service_order_number"),
+        order_metadata.get("work_order_number"),
+        getattr(order, "order_number", None),
+        getattr(order, "service_order_number", None),
+    ):
+        if value:
+            return str(value)
+
+    source_id = getattr(order, "id", None) or notification.external_service_order_id or notification.id
+    source_date = getattr(order, "created_at", None) or notification.created_at
+    if source_date:
+        return f"OS-{source_date:%Y%m%d}-{str(source_id)[:8].upper()}"
+    return f"OS-{str(source_id)[:8].upper()}"
+
+
+def _clean_pdf_markdown(markdown_text: str, order_number: str) -> str:
+    text = _human_date_text(markdown_text or "")
+    text = ORDER_PLACEHOLDER_RE.sub(rf"\g<1>{order_number}", text)
+    lines: list[str] = []
+    for raw_line in text.replace("\r\n", "\n").split("\n"):
+        line = raw_line.strip()
+        if MARKDOWN_SEPARATOR_RE.match(line):
+            continue
+        if PDF_FOOTER_LINE_RE.search(line):
+            continue
+        lines.append(raw_line)
+    return "\n".join(lines).strip()
+
+
 def _pdf_blocks(markdown_text: str) -> list[dict]:
     blocks: list[dict] = []
     paragraph: list[str] = []
@@ -138,6 +188,10 @@ def _pdf_blocks(markdown_text: str) -> list[dict]:
     for raw_line in (markdown_text or "").replace("\r\n", "\n").split("\n"):
         line = raw_line.strip()
         if not line:
+            flush_paragraph()
+            flush_list()
+            continue
+        if MARKDOWN_SEPARATOR_RE.match(line):
             flush_paragraph()
             flush_list()
             continue
@@ -313,7 +367,7 @@ async def get_notification_summary(request: Request) -> NotificationSummaryOut:
     return NotificationSummaryOut(
         pending_count=await base.filter(status="pending_review").count(),
         in_review_count=await base.filter(status="in_review").count(),
-        ready_to_send_count=await base.filter(status="ready_to_send").count(),
+        ready_to_send_count=await base.filter(status__in=["ready_to_send", "validated"]).count(),
     )
 
 
@@ -495,7 +549,8 @@ async def download_notification_report_pdf(notification_id: UUID, request: Reque
     final_text = notification.final_body or notification.draft_body or notification.body or ""
     provider_name = order.provider_name if order else (notification.metadata or {}).get("provider_name") or "Sin proveedor"
     provider_contact = (order.provider_email or order.provider_phone) if order else (notification.metadata or {}).get("provider_email") or (notification.metadata or {}).get("provider_phone") or "Sin contacto"
-    status_text = "Listo para enviar" if notification.status == "ready_to_send" else notification.status
+    order_number = _service_order_number(notification)
+    final_text = _clean_pdf_markdown(final_text, order_number)
 
     safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "-", notification.title.lower()).strip("-")[:80] or "informe"
     filename = f"{safe_title}-{str(notification.id)[:8]}.pdf"
@@ -508,8 +563,8 @@ async def download_notification_report_pdf(notification_id: UUID, request: Reque
                 ("Evento", event.title if event else ""),
                 ("Proveedor", provider_name),
                 ("Contacto", provider_contact),
+                ("Orden", order_number),
                 ("Fecha de recepcion", notification.created_at.strftime("%d/%m/%Y %H:%M")),
-                ("Estado", status_text),
             ],
             final_text,
         )
@@ -558,17 +613,17 @@ async def download_notification_report_pdf(notification_id: UUID, request: Reque
         [
             Paragraph("Proveedor", styles["MetaLabel"]),
             Paragraph("Contacto", styles["MetaLabel"]),
+            Paragraph("Orden", styles["MetaLabel"]),
             Paragraph("Fecha de recepcion", styles["MetaLabel"]),
-            Paragraph("Estado", styles["MetaLabel"]),
         ],
         [
             Paragraph(_pdf_inline(provider_name), styles["MetaValue"]),
             Paragraph(_pdf_inline(provider_contact), styles["MetaValue"]),
+            Paragraph(_pdf_inline(order_number), styles["MetaValue"]),
             Paragraph(notification.created_at.strftime("%d/%m/%Y %H:%M"), styles["MetaValue"]),
-            Paragraph(status_text, styles["MetaValue"]),
         ],
     ]
-    meta_table = Table(meta_rows, colWidths=[4.2 * cm, 4.2 * cm, 4.2 * cm, 3.4 * cm])
+    meta_table = Table(meta_rows, colWidths=[4.1 * cm, 4.1 * cm, 3.9 * cm, 3.9 * cm])
     meta_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
         ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#dbe3eb")),

@@ -66,8 +66,8 @@ const notificationSummary = ref({ pending_count: 0, in_review_count: 0, ready_to
 
 const statusFilters = [
   { id: "review", label: "Pendientes", statuses: "pending_review,in_review" },
-  { id: "ready", label: "Informes para enviar", statuses: "ready_to_send" },
-  { id: "history", label: "Historial", statuses: "validated,sent,dismissed" },
+  { id: "ready", label: "Informes para enviar", statuses: "ready_to_send,validated" },
+  { id: "history", label: "Historial", statuses: "sent,dismissed" },
 ];
 
 const selectedNotification = computed(() => notifications.value.find((item) => item.id === selectedId.value) || notifications.value[0] || null);
@@ -115,6 +115,15 @@ const loadNotifications = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const loadFilterWithSelection = async (filterId: string, notificationId: string) => {
+  filter.value = filterId;
+  selectedId.value = notificationId;
+  await loadNotifications();
+  selectedId.value = notifications.value.some((item) => item.id === notificationId)
+    ? notificationId
+    : notifications.value[0]?.id || "";
 };
 
 const loadNotificationSummary = async () => {
@@ -216,11 +225,9 @@ const validateNotification = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ final_body: finalText.value, title: selectedNotification.value.title }),
     });
-    notifications.value = notifications.value.map((item) => item.id === saved.id ? saved : item);
-    selectNotification(saved);
     showPreview.value = false;
     successMessage.value = "Informe validado y preparado para envio movil.";
-    loadNotificationSummary();
+    await Promise.all([loadFilterWithSelection("ready", saved.id), loadNotificationSummary()]);
     emit("changed");
   } catch (error) {
     errorMessage.value = readableError(error);

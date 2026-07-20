@@ -371,7 +371,7 @@ textarea:focus {
   display: block;
   width: 160px;
   max-width: 100%;
-  height: 142px;
+  height: 160px;
   margin: 0 auto;
   overflow: hidden;
   transition: opacity 140ms ease, transform 140ms ease;
@@ -3620,6 +3620,79 @@ h3 {
 .public-switch input {
   width: 18px;
   min-height: 18px;
+}
+
+.public-evidence-field {
+  display: grid;
+  gap: 10px;
+  border: 1px dashed #b8c6d6;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.public-evidence-field > div {
+  display: grid;
+  gap: 3px;
+}
+
+.public-evidence-field span {
+  color: #0f2437;
+  font-weight: 700;
+}
+
+.public-evidence-field small {
+  color: #69788b;
+  font-weight: 400;
+}
+
+.public-evidence-field input[type="file"] {
+  min-height: auto;
+  background: #fff;
+}
+
+.public-evidence-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-evidence-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #d7e0ea;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.public-evidence-list li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.public-evidence-list button {
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  padding: 6px 9px;
+  color: #b42318;
+  background: #fff7f7;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.public-evidence-list button:hover {
+  color: #fff;
+  background: #b42318;
 }
 
 .public-order-generated {

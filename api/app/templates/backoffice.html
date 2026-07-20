@@ -10,7 +10,7 @@
     <main id="app">
       <section id="loginView" class="login-shell">
         <div class="login-panel">
-          <img class="login-logo" src="/static/img/komite-logo.png" alt="Komite" />
+          <img class="login-logo" src="/static/img/komite-logo-new.png" alt="Komite" />
           <span class="login-context">Backoffice</span>
           <form id="loginForm" class="login-form">
             <label>
@@ -31,7 +31,7 @@
         <aside id="sidebar" class="sidebar">
           <div class="sidebar-header">
             <span class="sidebar-logo-crop">
-              <img class="sidebar-logo" src="/static/img/logo3.png" alt="Komite" />
+              <img class="sidebar-logo" src="/static/img/komite-logo-new-inverted.png" alt="Komite" />
             </span>
             <span class="sidebar-context">Backoffice</span>
           </div>
@@ -490,6 +490,23 @@
                   Teléfono
                   <input id="companyPhone" name="phone" maxlength="40" />
                 </label>
+                <section class="span-2 logo-upload-section">
+                  <div>
+                    <p class="field-title">Logo de empresa</p>
+                    <p class="form-hint">Se usara en informes junto al logo de Komite. Formatos permitidos: PNG, JPG, WEBP o SVG.</p>
+                  </div>
+                  <div class="logo-upload-content">
+                    <div class="company-logo-preview">
+                      <img id="companyLogoPreview" alt="Logo empresa" hidden />
+                      <span id="companyLogoPreviewEmpty">Sin logo</span>
+                    </div>
+                    <label class="file-upload-field">
+                      Archivo
+                      <input id="companyLogoFile" name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+                    </label>
+                    <a id="companyLogoUrlLink" class="logo-link" href="#" target="_blank" rel="noopener" hidden>Ver logo actual</a>
+                  </div>
+                </section>
                 <label class="span-2">
                   Metadata
                   <textarea id="companyMetadata" name="metadata" rows="4" placeholder='{}'></textarea>

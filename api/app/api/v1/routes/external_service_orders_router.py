@@ -11,8 +11,16 @@ from tortoise.timezone import now
 
 from app.core.auth.dependencies import require_access_token
 from app.core.settings import settings
-from app.models.entities import CondominiumAsset, ExternalServiceOrder, OperationalEventExecution, PlannedOperationalEvent
+from app.models.entities import (
+    Attachment,
+    CondominiumAsset,
+    ExternalServiceOrder,
+    OperationalEventEvidence,
+    OperationalEventExecution,
+    PlannedOperationalEvent,
+)
 from app.services.llm_service import LLMService
+from app.services.object_storage_service import ObjectStorageService
 from app.services.operational_notification_service import create_notification_from_external_order
 
 
@@ -86,6 +94,7 @@ class ExternalServiceSubmissionOut(BaseModel):
     id: UUID
     status: str
     execution_id: UUID | None = None
+    evidence_count: int = 0
     ai_request_id: UUID | None = None
     ai_generated_text: str | None = None
     ai_error: str | None = None
@@ -99,6 +108,96 @@ def _hash_token(token: str) -> str:
 def _public_url(base_url: str | None, token: str) -> str:
     path = f"/service-order/{token}"
     return f"{base_url.rstrip('/')}{path}" if base_url else path
+
+
+def _form_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "on", "yes", "si", "sí"}
+
+
+async def _submission_from_request(request: Request) -> tuple[ExternalServiceSubmissionRequest, list]:
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" not in content_type:
+        return ExternalServiceSubmissionRequest.model_validate(await request.json()), []
+
+    form = await request.form()
+    payload = ExternalServiceSubmissionRequest(
+        submitted_by_name=str(form.get("submitted_by_name") or ""),
+        submitted_by_email=str(form.get("submitted_by_email") or "") or None,
+        execution_date=str(form.get("execution_date") or "") or None,
+        result=str(form.get("result") or "completed"),
+        work_performed=str(form.get("work_performed") or ""),
+        findings=str(form.get("findings") or "") or None,
+        materials_used=str(form.get("materials_used") or "") or None,
+        recommendations=str(form.get("recommendations") or "") or None,
+        next_visit_required=_form_bool(form.get("next_visit_required")),
+        additional_comments=str(form.get("additional_comments") or "") or None,
+    )
+    files = [item for item in form.getlist("evidence_files") if getattr(item, "filename", None)]
+    return payload, files
+
+
+async def _save_external_evidence_files(
+    *,
+    files: list,
+    order: ExternalServiceOrder,
+    execution: OperationalEventExecution,
+    actor: str,
+) -> list[dict]:
+    if len(files) > 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Puedes adjuntar como maximo 8 fotos.")
+
+    storage = ObjectStorageService()
+    saved: list[dict] = []
+    for upload in files:
+        content = await upload.read()
+        try:
+            stored = await storage.save_evidence_image(
+                prefix=f"external-service-orders/{order.id}/evidence",
+                file_name=upload.filename or "evidencia",
+                content_type=upload.content_type,
+                content=content,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+        attachment = await Attachment.create(
+            company_id=order.company_id,
+            condominium_id=order.condominium_id,
+            file_name=upload.filename or stored.key.rsplit("/", 1)[-1],
+            file_path=stored.url,
+            file_type="image",
+            mime_type=stored.content_type or upload.content_type,
+            size_bytes=stored.size_bytes or len(content),
+            metadata={
+                "source": "external_service_order",
+                "external_service_order_id": str(order.id),
+                "storage_key": stored.key,
+                "original_size_bytes": len(content),
+                "optimized": bool(stored.size_bytes and stored.size_bytes < len(content)),
+            },
+            created_by=actor,
+            updated_by=actor,
+        )
+        evidence = await OperationalEventEvidence.create(
+            company_id=order.company_id,
+            event_id=order.event_id,
+            execution_id=execution.id,
+            attachment_id=attachment.id,
+            evidence_type="photo",
+            description=f"Foto enviada por {order.provider_name}",
+            metadata={
+                "source": "external_service_order",
+                "external_service_order_id": str(order.id),
+                "file_url": stored.url,
+            },
+            created_by=actor,
+            updated_by=actor,
+        )
+        saved.append({"id": str(evidence.id), "file_name": attachment.file_name, "url": stored.url})
+
+    return saved
 
 
 def _order_out(order: ExternalServiceOrder) -> ExternalServiceOrderOut:
@@ -226,8 +325,9 @@ async def get_public_external_service_order(token: str) -> PublicExternalService
 @public_router.post("/{token}/submit", response_model=ExternalServiceSubmissionOut)
 async def submit_public_external_service_order(
     token: str,
-    payload: ExternalServiceSubmissionRequest,
+    request: Request,
 ) -> ExternalServiceSubmissionOut:
+    payload, evidence_files = await _submission_from_request(request)
     order = await _order_by_token(token)
     if order.status in {"submitted", "completed"}:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="La orden ya fue enviada")
@@ -249,11 +349,18 @@ async def submit_public_external_service_order(
         created_by=actor,
         updated_by=actor,
     )
+    evidence = await _save_external_evidence_files(
+        files=evidence_files,
+        order=order,
+        execution=execution,
+        actor=actor,
+    )
+    submission_with_evidence = {**submission, "evidence": evidence}
 
     order.execution_id = execution.id
     order.status = "submitted"
     order.submitted_at = now()
-    order.submission_payload = submission
+    order.submission_payload = submission_with_evidence
 
     event = await PlannedOperationalEvent.get(id=order.event_id).select_related("condominium")
     event.status = "completed" if payload.result in {"completed", "conforme", "resolved"} else "in_progress"
@@ -293,7 +400,7 @@ async def submit_public_external_service_order(
                 "pit_status": "",
                 "noise_or_vibration": "",
                 "actions_performed": payload.work_performed,
-                "evidence_summary": "Formulario publico enviado por proveedor externo.",
+                "evidence_summary": f"Formulario publico enviado por proveedor externo. Fotos adjuntas: {len(evidence)}.",
                 "asset_history": "",
             },
             company_id=order.company_id,
@@ -315,7 +422,7 @@ async def submit_public_external_service_order(
     await create_notification_from_external_order(
         order=order,
         event=event,
-        submission=submission,
+        submission=submission_with_evidence,
         ai_error=ai_error,
         actor=actor,
     )
@@ -323,6 +430,7 @@ async def submit_public_external_service_order(
         id=order.id,
         status=order.status,
         execution_id=execution.id,
+        evidence_count=len(evidence),
         ai_request_id=order.ai_request_id,
         ai_generated_text=order.ai_generated_text,
         ai_error=ai_error,

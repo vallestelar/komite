@@ -60,8 +60,11 @@ const finalText = ref("");
 const showPreview = ref(false);
 const sendMessage = ref("");
 const pdfPreviewUrl = ref("");
+const modalPdfPreviewUrl = ref("");
 const loadingPdfPreview = ref(false);
+const loadingModalPdfPreview = ref(false);
 const pdfPreviewError = ref("");
+const modalPdfPreviewError = ref("");
 const notificationSummary = ref({ pending_count: 0, in_review_count: 0, ready_to_send_count: 0 });
 
 const statusFilters = [
@@ -94,6 +97,14 @@ const clearPdfPreview = () => {
   }
   pdfPreviewUrl.value = "";
   pdfPreviewError.value = "";
+};
+
+const clearModalPdfPreview = () => {
+  if (modalPdfPreviewUrl.value && import.meta.client) {
+    URL.revokeObjectURL(modalPdfPreviewUrl.value);
+  }
+  modalPdfPreviewUrl.value = "";
+  modalPdfPreviewError.value = "";
 };
 
 const loadNotifications = async () => {
@@ -236,7 +247,7 @@ const validateNotification = async () => {
   }
 };
 
-const openPreview = () => {
+const openPreview = async () => {
   if (!selectedNotification.value) return;
   if (!finalText.value.trim()) {
     errorMessage.value = "El texto final no puede estar vacio.";
@@ -245,6 +256,30 @@ const openPreview = () => {
   errorMessage.value = "";
   successMessage.value = "";
   showPreview.value = true;
+  loadingModalPdfPreview.value = true;
+  clearModalPdfPreview();
+  try {
+    const saved = await request<OperationalNotification>(`/api/v1/portal/notifications/${selectedNotification.value.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ final_body: finalText.value, status: "in_review" }),
+    });
+    notifications.value = notifications.value.map((item) => item.id === saved.id ? saved : item);
+    selectedId.value = saved.id;
+    finalText.value = saved.final_body || saved.draft_body || "";
+    const response = await fetchNotificationPdf(saved.id, true);
+    if (!response) return;
+    modalPdfPreviewUrl.value = URL.createObjectURL(await response.blob());
+  } catch (error) {
+    modalPdfPreviewError.value = readableError(error);
+  } finally {
+    loadingModalPdfPreview.value = false;
+  }
+};
+
+const closePreview = () => {
+  showPreview.value = false;
+  clearModalPdfPreview();
 };
 
 const prepareSend = () => {
@@ -257,9 +292,10 @@ const apiBase = computed(() => {
   return config.public.apiBase;
 });
 
-const fetchNotificationPdf = async () => {
-  if (!selectedNotification.value || !token.value || !activeCondominium.value?.id || !import.meta.client) return;
-  const response = await fetch(`${apiBase.value}/api/v1/portal/notifications/${selectedNotification.value.id}/report.pdf`, {
+const fetchNotificationPdf = async (notificationId = selectedNotification.value?.id, preview = false) => {
+  if (!notificationId || !token.value || !activeCondominium.value?.id || !import.meta.client) return;
+  const suffix = preview ? "?preview=true" : "";
+  const response = await fetch(`${apiBase.value}/api/v1/portal/notifications/${notificationId}/report.pdf${suffix}`, {
     headers: {
       Authorization: `Bearer ${token.value}`,
       "X-Condominium": activeCondominium.value.id,
@@ -475,7 +511,10 @@ watch(selectedNotification, (notification) => {
 });
 
 onMounted(refreshNotifications);
-onBeforeUnmount(clearPdfPreview);
+onBeforeUnmount(() => {
+  clearPdfPreview();
+  clearModalPdfPreview();
+});
 </script>
 
 <template>
@@ -729,75 +768,29 @@ onBeforeUnmount(clearPdfPreview);
             <h2 id="notification-preview-title">{{ selectedNotification.title }}</h2>
             <p class="placeholder-copy">Revisa el informe final antes de validarlo y dejarlo listo para envio movil.</p>
           </div>
-          <button class="button ghost icon-only" type="button" :disabled="validating" title="Cerrar" @click="showPreview = false">
+          <button class="button ghost icon-only" type="button" :disabled="validating" title="Cerrar" @click="closePreview">
             <svg class="icon" aria-hidden="true"><use href="#icon-x" /></svg>
           </button>
         </header>
 
-        <article class="report-preview-sheet">
-          <div class="report-preview-brand">
-            <img src="/assets/komite-logo.png" alt="Komite" />
-            <div>
-              <span>Informe de servicio</span>
-              <strong>{{ activeCondominium?.name || "Condominio" }}</strong>
-            </div>
-          </div>
-
-          <div class="report-preview-title">
-            <h3>{{ selectedNotification.title }}</h3>
-            <span class="status-badge" :class="statusBadgeClass(selectedNotification.status)">
-              <span aria-hidden="true"></span>
-              {{ statusLabel(selectedNotification.status) }}
-            </span>
-          </div>
-
-          <dl class="report-preview-meta">
-            <div>
-              <dt>Proveedor</dt>
-              <dd>{{ selectedNotification.provider_name || "Sin proveedor" }}</dd>
-            </div>
-            <div>
-              <dt>Contacto</dt>
-              <dd>{{ selectedNotification.provider_email || selectedNotification.provider_phone || "Sin contacto" }}</dd>
-            </div>
-            <div>
-              <dt>Evento</dt>
-              <dd>{{ selectedNotification.event_title || "Entrega operativa" }}</dd>
-            </div>
-            <div>
-              <dt>Fecha de recepcion</dt>
-              <dd>{{ formatDateTime(selectedNotification.created_at) }}</dd>
-            </div>
-          </dl>
-
-          <section class="report-preview-content">
-            <template v-for="(block, blockIndex) in previewBlocks" :key="blockIndex">
-              <h3 v-if="block.type === 'heading' && block.level <= 2">
-                <span v-for="(part, partIndex) in block.content" :key="partIndex" :class="{ 'is-bold': part.bold }">{{ part.text }}</span>
-              </h3>
-              <h4 v-else-if="block.type === 'heading'">
-                <span v-for="(part, partIndex) in block.content" :key="partIndex" :class="{ 'is-bold': part.bold }">{{ part.text }}</span>
-              </h4>
-              <ol v-else-if="block.type === 'list' && block.ordered">
-                <li v-for="(item, itemIndex) in block.items" :key="itemIndex">
-                  <span v-for="(part, partIndex) in item" :key="partIndex" :class="{ 'is-bold': part.bold }">{{ part.text }}</span>
-                </li>
-              </ol>
-              <ul v-else-if="block.type === 'list'">
-                <li v-for="(item, itemIndex) in block.items" :key="itemIndex">
-                  <span v-for="(part, partIndex) in item" :key="partIndex" :class="{ 'is-bold': part.bold }">{{ part.text }}</span>
-                </li>
-              </ul>
-              <p v-else>
-                <span v-for="(part, partIndex) in block.content" :key="partIndex" :class="{ 'is-bold': part.bold }">{{ part.text }}</span>
-              </p>
-            </template>
-            <p v-if="!previewBlocks.length">Sin texto final.</p>
-          </section>
-        </article>
+        <div v-if="loadingModalPdfPreview" class="pdf-preview-state is-modal">
+          Generando vista preliminar PDF...
+        </div>
+        <div v-else-if="modalPdfPreviewError" class="pdf-preview-state is-error is-modal">
+          {{ modalPdfPreviewError }}
+        </div>
+        <iframe
+          v-else-if="modalPdfPreviewUrl"
+          class="pdf-preview-frame is-modal"
+          :src="modalPdfPreviewUrl"
+          title="Vista preliminar PDF"
+        ></iframe>
+        <div v-else class="pdf-preview-state is-modal">
+          PDF no disponible.
+        </div>
 
         <div class="modal-actions">
-          <button class="button ghost" type="button" :disabled="validating" @click="showPreview = false">
+          <button class="button ghost" type="button" :disabled="validating" @click="closePreview">
             <svg class="icon" aria-hidden="true"><use href="#icon-pencil" /></svg>
             <span>Volver a editar</span>
           </button>
@@ -1051,6 +1044,10 @@ onBeforeUnmount(clearPdfPreview);
   background: #fff;
 }
 
+.pdf-preview-frame.is-modal {
+  min-height: min(76vh, 860px);
+}
+
 .pdf-preview-state {
   display: grid;
   min-height: 240px;
@@ -1062,6 +1059,10 @@ onBeforeUnmount(clearPdfPreview);
   font-weight: 700;
 }
 
+.pdf-preview-state.is-modal {
+  min-height: min(76vh, 860px);
+}
+
 .pdf-preview-state.is-error {
   border-color: rgba(180, 35, 24, 0.3);
   background: #fff1f0;
@@ -1069,8 +1070,8 @@ onBeforeUnmount(clearPdfPreview);
 }
 
 .notification-preview-modal {
-  width: min(980px, calc(100vw - 32px));
-  max-height: calc(100vh - 36px);
+  width: min(1120px, calc(100vw - 32px));
+  max-height: calc(100vh - 28px);
   overflow: auto;
 }
 

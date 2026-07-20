@@ -4,6 +4,7 @@ from .ai_prompt_templates_router import router as ai_prompt_templates_router
 from .auth_router import router as auth_router
 from .backoffice_router import router as backoffice_router
 from .comunidad_feliz_router import router as comunidad_feliz_router
+from .company_logo_router import router as company_logo_router
 from .edifito_router import router as edifito_router
 from .entities_router import entity_routers
 from .external_service_orders_router import portal_router as external_service_orders_portal_router
@@ -26,6 +27,7 @@ all_routers = [
     auth_router,
     backoffice_router,
     comunidad_feliz_router,
+    company_logo_router,
     edifito_router,
     external_service_orders_portal_router,
     external_service_orders_public_router,

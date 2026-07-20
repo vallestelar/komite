@@ -88,7 +88,7 @@ const backToCredentials = () => {
 <template>
   <main class="login-shell">
     <section class="login-panel">
-      <img class="login-logo" src="/assets/komite-logo.png" alt="Komite" />
+      <img class="login-logo" src="/assets/komite-logo-new.png" alt="Komite" />
       <p class="login-context">Portal administrador</p>
       <form v-if="step === 'credentials'" class="login-form" @submit.prevent="submit">
         <label>

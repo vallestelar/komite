@@ -107,7 +107,7 @@ const resources = {
   companies: {
     title: "Empresas",
     endpoint: "/api/v1/companies/",
-    columns: ["name", "rut", "email", "status"],
+    columns: ["logo_url", "name", "rut", "email", "status"],
   },
   banks: {
     title: "Bancos",
@@ -324,6 +324,7 @@ const columnLabels = {
   name: "Nombre",
   rut: "RUT",
   email: "Email",
+  logo_url: "Logo",
   key: "Clave",
   purpose: "Propósito",
   module: "Módulo",
@@ -1320,6 +1321,7 @@ function labelForColumn(column) {
 }
 
 function formatTableCell(column, value) {
+  if (column === "logo_url") return renderLogoCell(value);
   if (column === "status") return renderStatusBadge(value);
   if (["is_system", "receives_notifications", "is_active", "requires_evidence"].includes(column)) return renderBooleanBadge(value);
   if (column === "company_id") return escapeHtml(companyName(value));
@@ -1336,6 +1338,12 @@ function formatTableCell(column, value) {
   if (column === "inspection_type") return escapeHtml(inspectionTypeLabels[value] || formatCell(value));
   if (column === "periodicity") return escapeHtml(periodicityLabels[value] || formatCell(value));
   return escapeHtml(formatCell(value));
+}
+
+function renderLogoCell(value) {
+  if (!value) return `<span class="logo-table-empty">Sin logo</span>`;
+  const safeUrl = escapeHtml(value);
+  return `<span class="logo-table-cell"><img src="${safeUrl}" alt="Logo empresa" loading="lazy" /></span>`;
 }
 
 function companyName(companyId) {
@@ -2012,7 +2020,39 @@ function fillCompanyForm(item) {
   $("#companyPhone").value = item?.phone || "";
   $("#companyStatus").value = item?.status || "active";
   $("#companyMetadata").value = JSON.stringify(item?.metadata || {}, null, 2);
+  $("#companyLogoFile").value = "";
+  renderCompanyLogoPreview(item?.logo_url || "");
   renderCompanyOperationalStaffRows(item);
+}
+
+function renderCompanyLogoPreview(logoUrl) {
+  const preview = $("#companyLogoPreview");
+  const empty = $("#companyLogoPreviewEmpty");
+  const link = $("#companyLogoUrlLink");
+  if (logoUrl) {
+    preview.src = logoUrl;
+    preview.hidden = false;
+    empty.hidden = true;
+    link.href = logoUrl;
+    link.hidden = false;
+    return;
+  }
+  preview.removeAttribute("src");
+  preview.hidden = true;
+  empty.hidden = false;
+  link.hidden = true;
+}
+
+async function uploadCompanyLogo(companyId) {
+  const file = $("#companyLogoFile").files?.[0];
+  if (!file) return null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiFetch(`/api/v1/companies/${companyId}/logo`, {
+    method: "POST",
+    body: formData,
+  });
 }
 
 function renderCompanyOperationalStaffRows(company) {
@@ -2045,9 +2085,10 @@ async function saveCompany(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    await syncCompanyOperationalStaff(saved.id || id);
+    const finalCompany = (await uploadCompanyLogo(saved.id || id)) || saved;
+    await syncCompanyOperationalStaff(finalCompany.id || saved.id || id);
     state.companies = [];
-    await returnFromCompanyForm(saved);
+    await returnFromCompanyForm(finalCompany);
     showToast({
       title: id ? "Empresa actualizada" : "Empresa creada",
       message: "Los cambios se guardaron correctamente.",
@@ -3176,6 +3217,11 @@ $("#deleteGenericButton").addEventListener("click", () => deleteGenericEntity())
 $("#quickCompanyButton").addEventListener("click", () => openCompanyForm(null, "condominiumForm"));
 $("#cancelCompanyButton").addEventListener("click", returnFromCompanyForm);
 $("#companyForm").addEventListener("submit", saveCompany);
+$("#companyLogoFile").addEventListener("change", () => {
+  const file = $("#companyLogoFile").files?.[0];
+  if (!file) return;
+  renderCompanyLogoPreview(URL.createObjectURL(file));
+});
 $("#deleteCompanyButton").addEventListener("click", deleteCurrentCompany);
 $("#addCompanyOperationalStaffButton").addEventListener("click", () => addOperationalStaffRow({}, "company"));
 $("#cancelCondominiumButton").addEventListener("click", returnToCondominiumList);

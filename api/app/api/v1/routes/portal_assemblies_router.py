@@ -433,7 +433,7 @@ async def download_assembly_summary(assembly_id: UUID, request: Request) -> Resp
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.6 * cm, leftMargin=1.6 * cm, topMargin=1.5 * cm, bottomMargin=1.5 * cm)
     styles = getSampleStyleSheet()
     story = []
-    logo_path = Path(__file__).resolve().parents[3] / "static" / "img" / "komite-logo.png"
+    logo_path = Path(__file__).resolve().parents[3] / "static" / "img" / "komite-logo-new.png"
     if logo_path.exists():
         story.append(Image(str(logo_path), width=4.6 * cm, height=2.5 * cm, hAlign="LEFT"))
         story.append(Spacer(1, 0.3 * cm))

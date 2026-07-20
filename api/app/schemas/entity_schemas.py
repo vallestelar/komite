@@ -28,6 +28,8 @@ class CompanyCreate(BaseModel):
     legal_name: Optional[str] = Field(default=None, max_length=180)
     email: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=40)
+    logo_url: Optional[str] = Field(default=None, max_length=500)
+    logo_storage_key: Optional[str] = Field(default=None, max_length=500)
     status: str = Field(default="active", max_length=30)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -38,6 +40,8 @@ class CompanyUpdate(BaseModel):
     legal_name: Optional[str] = Field(default=None, max_length=180)
     email: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=40)
+    logo_url: Optional[str] = Field(default=None, max_length=500)
+    logo_storage_key: Optional[str] = Field(default=None, max_length=500)
     status: Optional[str] = Field(default=None, max_length=30)
     metadata: Optional[dict[str, Any]] = None
 
@@ -49,6 +53,8 @@ class CompanyOut(AuditOut):
     legal_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    logo_url: Optional[str] = None
+    logo_storage_key: Optional[str] = None
     status: str
     metadata: dict[str, Any] = Field(default_factory=dict)
 

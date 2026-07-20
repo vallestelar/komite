@@ -458,6 +458,9 @@ LOCAL_WHISPER_COMPUTE_TYPE=int8
 OPENAI_TRANSCRIPTION_MODEL=gpt-4o-transcribe
 UPLOAD_DIR=storage/uploads
 MAX_AUDIO_UPLOAD_MB=25
+MAX_EVIDENCE_IMAGE_MB=2
+MAX_EVIDENCE_IMAGE_PX=1800
+EVIDENCE_IMAGE_QUALITY=82
 ```
 
 Instala dependencias nuevas:
@@ -495,6 +498,43 @@ La primera ejecucion puede tardar porque descarga/carga el modelo local.
 El flujo guarda el archivo en `UPLOAD_DIR`, crea un registro en `attachments`,
 registra trazas en `ai_requests`, transcribe el audio y opcionalmente genera un
 borrador operativo con prompt.
+
+## Fotos de evidencia
+
+Los links publicos de servicio permiten adjuntar fotos. Si una imagen supera
+`MAX_EVIDENCE_IMAGE_MB`, la API la reduce con Pillow antes de guardarla. Por
+defecto se limita a 2 MB, 1800 px por lado y calidad JPEG 82.
+
+## Logos de empresas
+
+El backoffice permite subir un logo al crear o editar una empresa. La tabla
+`companies` guarda `logo_url` y `logo_storage_key`; el archivo puede guardarse en
+local para desarrollo o en un bucket S3 compatible, como Lightsail Object Storage.
+
+Configuracion local:
+
+```env
+STORAGE_PROVIDER=local
+```
+
+Configuracion Lightsail/S3:
+
+```env
+STORAGE_PROVIDER=s3
+STORAGE_PUBLIC_BASE_URL=https://url-publica-del-bucket-o-cdn
+S3_ENDPOINT_URL=https://region.objectstorage.amazonaws.com
+S3_BUCKET=komite-assets
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=tu_access_key
+S3_SECRET_ACCESS_KEY=tu_secret_key
+S3_ACL=public-read
+```
+
+Al cambiar la estructura ejecuta:
+
+```powershell
+aerich upgrade
+```
 
 ## Docker
 

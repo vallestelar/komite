@@ -19,6 +19,7 @@ type SubmissionResponse = {
   id: string;
   status: string;
   execution_id?: string | null;
+  evidence_count?: number;
   ai_generated_text?: string | null;
   ai_error?: string | null;
 };
@@ -39,6 +40,7 @@ const errorMessage = ref("");
 const successMessage = ref("");
 const order = ref<PublicOrder | null>(null);
 const generatedText = ref("");
+const evidenceFiles = ref<File[]>([]);
 
 const form = reactive({
   submitted_by_name: "",
@@ -73,21 +75,27 @@ const submitOrder = async () => {
   successMessage.value = "";
   generatedText.value = "";
   try {
+    const body = new FormData();
+    body.append("submitted_by_name", form.submitted_by_name);
+    body.append("submitted_by_email", form.submitted_by_email || "");
+    body.append("execution_date", form.execution_date || "");
+    body.append("result", form.result);
+    body.append("work_performed", form.work_performed);
+    body.append("findings", form.findings || "");
+    body.append("materials_used", form.materials_used || "");
+    body.append("recommendations", form.recommendations || "");
+    body.append("next_visit_required", String(form.next_visit_required));
+    body.append("additional_comments", form.additional_comments || "");
+    evidenceFiles.value.forEach((file) => body.append("evidence_files", file));
+
     const response = await fetch(`${apiBase.value}/api/v1/public/external-service-orders/${token.value}/submit`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        submitted_by_email: form.submitted_by_email || null,
-        findings: form.findings || null,
-        materials_used: form.materials_used || null,
-        recommendations: form.recommendations || null,
-        additional_comments: form.additional_comments || null,
-      }),
+      body,
     });
     if (!response.ok) throw new Error(await response.text() || `HTTP ${response.status}`);
     const result = await response.json() as SubmissionResponse;
-    successMessage.value = "Informe enviado correctamente. Komite notificara al administrador para revision.";
+    const photoText = result.evidence_count ? ` Fotos adjuntas: ${result.evidence_count}.` : "";
+    successMessage.value = `Informe enviado correctamente. Komite notificara al administrador para revision.${photoText}`;
     generatedText.value = result.ai_generated_text || "";
     if (order.value) order.value.status = result.status;
   } catch (error) {
@@ -95,6 +103,15 @@ const submitOrder = async () => {
   } finally {
     submitting.value = false;
   }
+};
+
+const selectEvidenceFiles = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  evidenceFiles.value = Array.from(input.files || []).slice(0, 8);
+};
+
+const removeEvidenceFile = (index: number) => {
+  evidenceFiles.value = evidenceFiles.value.filter((_, fileIndex) => fileIndex !== index);
 };
 
 const readableError = (error: unknown) => {
@@ -115,7 +132,7 @@ onMounted(loadOrder);
   <main class="public-order-shell">
     <section class="public-order-panel">
       <div class="public-order-brand">
-        <img src="/assets/komite-logo.png" alt="Komite" />
+        <img src="/assets/komite-logo-new.png" alt="Komite" />
         <span>Orden de servicio</span>
       </div>
 
@@ -201,6 +218,19 @@ onMounted(loadOrder);
             Comentarios adicionales
             <textarea v-model="form.additional_comments" rows="3"></textarea>
           </label>
+          <section class="public-evidence-field wide-field">
+            <div>
+              <span>Fotos de evidencia</span>
+              <small>Opcional. Puedes adjuntar hasta 8 imagenes desde el movil.</small>
+            </div>
+            <input type="file" accept="image/*" multiple capture="environment" @change="selectEvidenceFiles" />
+            <ul v-if="evidenceFiles.length" class="public-evidence-list">
+              <li v-for="(file, index) in evidenceFiles" :key="`${file.name}-${index}`">
+                <span>{{ file.name }}</span>
+                <button type="button" @click="removeEvidenceFile(index)">Quitar</button>
+              </li>
+            </ul>
+          </section>
           <button class="button navy" type="submit" :disabled="submitting">
             {{ submitting ? "Enviando..." : "Enviar informe" }}
           </button>

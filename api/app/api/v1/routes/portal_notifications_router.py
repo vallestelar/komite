@@ -8,13 +8,14 @@ from pathlib import Path
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from tortoise.timezone import now
 
 from app.core.auth.dependencies import require_access_token
-from app.models.entities import OperationalNotification, Report, ReportVersion
+from app.core.settings import settings
+from app.models.entities import OperationalEventEvidence, OperationalNotification, Report, ReportVersion
 
 
 router = APIRouter(
@@ -151,6 +152,103 @@ def _service_order_number(notification: OperationalNotification) -> str:
     if source_date:
         return f"OS-{source_date:%Y%m%d}-{str(source_id)[:8].upper()}"
     return f"OS-{str(source_id)[:8].upper()}"
+
+
+def _is_supported_pdf_logo(value: str | None) -> bool:
+    clean_value = (value or "").split("?", 1)[0].lower()
+    return bool(clean_value) and not clean_value.endswith(".svg")
+
+
+def _company_logo_source(company) -> str | BytesIO | None:
+    if not company:
+        return None
+
+    logo_key = getattr(company, "logo_storage_key", None)
+    logo_url = getattr(company, "logo_url", None)
+
+    if logo_key and _is_supported_pdf_logo(logo_key):
+        local_path = Path(__file__).resolve().parents[3] / "static" / "uploads" / logo_key
+        if local_path.exists():
+            return str(local_path)
+
+        if settings.storage_provider.strip().lower() == "s3" and settings.s3_bucket:
+            try:
+                import boto3
+
+                client = boto3.client(
+                    "s3",
+                    endpoint_url=settings.s3_endpoint_url,
+                    region_name=settings.s3_region,
+                    aws_access_key_id=settings.s3_access_key_id,
+                    aws_secret_access_key=settings.s3_secret_access_key,
+                )
+                response = client.get_object(Bucket=settings.s3_bucket, Key=logo_key)
+                return BytesIO(response["Body"].read())
+            except Exception:
+                pass
+
+    if logo_url and _is_supported_pdf_logo(logo_url):
+        if logo_url.startswith("/static/uploads/"):
+            local_path = Path(__file__).resolve().parents[3] / "static" / logo_url.removeprefix("/static/")
+            if local_path.exists():
+                return str(local_path)
+        if logo_url.startswith("http://") or logo_url.startswith("https://"):
+            try:
+                import requests
+
+                response = requests.get(logo_url, timeout=8)
+                response.raise_for_status()
+                if "svg" not in response.headers.get("content-type", "").lower():
+                    return BytesIO(response.content)
+            except Exception:
+                return None
+
+    return None
+
+
+def _stored_image_source(file_path: str | None, storage_key: str | None = None) -> str | BytesIO | None:
+    candidate = storage_key or file_path
+    if not _is_supported_pdf_logo(candidate):
+        return None
+
+    if storage_key:
+        local_path = Path(__file__).resolve().parents[3] / "static" / "uploads" / storage_key
+        if local_path.exists():
+            return str(local_path)
+
+        if settings.storage_provider.strip().lower() == "s3" and settings.s3_bucket:
+            try:
+                import boto3
+
+                client = boto3.client(
+                    "s3",
+                    endpoint_url=settings.s3_endpoint_url,
+                    region_name=settings.s3_region,
+                    aws_access_key_id=settings.s3_access_key_id,
+                    aws_secret_access_key=settings.s3_secret_access_key,
+                )
+                response = client.get_object(Bucket=settings.s3_bucket, Key=storage_key)
+                return BytesIO(response["Body"].read())
+            except Exception:
+                pass
+
+    if file_path:
+        if file_path.startswith("/static/uploads/"):
+            local_path = Path(__file__).resolve().parents[3] / "static" / file_path.removeprefix("/static/")
+            if local_path.exists():
+                return str(local_path)
+        if file_path.startswith("http://") or file_path.startswith("https://"):
+            try:
+                import requests
+
+                response = requests.get(file_path, timeout=8)
+                response.raise_for_status()
+                if "svg" not in response.headers.get("content-type", "").lower():
+                    return BytesIO(response.content)
+            except Exception:
+                return None
+
+    return None
 
 
 def _clean_pdf_markdown(markdown_text: str, order_number: str) -> str:
@@ -340,7 +438,7 @@ def _basic_pdf_bytes(title: str, meta: list[tuple[str, str]], markdown_text: str
 
 
 async def _fetch_notification_relations(notification: OperationalNotification) -> OperationalNotification:
-    await notification.fetch_related("condominium", "event", "external_service_order", "report")
+    await notification.fetch_related("company", "condominium", "event", "external_service_order", "report")
     return notification
 
 
@@ -524,9 +622,13 @@ async def dismiss_notification(notification_id: UUID, request: Request) -> Opera
 
 
 @router.get("/{notification_id}/report.pdf")
-async def download_notification_report_pdf(notification_id: UUID, request: Request) -> Response:
+async def download_notification_report_pdf(
+    notification_id: UUID,
+    request: Request,
+    preview: bool = Query(default=False),
+) -> Response:
     notification = await _notification_or_404(notification_id, request)
-    if notification.status not in {"ready_to_send", "validated", "sent"}:
+    if not preview and notification.status not in {"ready_to_send", "validated", "sent"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El informe debe estar validado antes de descargarlo en PDF.",
@@ -545,6 +647,7 @@ async def download_notification_report_pdf(notification_id: UUID, request: Reque
 
     order = getattr(notification, "external_service_order", None)
     event = getattr(notification, "event", None)
+    company = getattr(notification, "company", None)
     condominium = getattr(notification, "condominium", None)
     final_text = notification.final_body or notification.draft_body or notification.body or ""
     provider_name = order.provider_name if order else (notification.metadata or {}).get("provider_name") or "Sin proveedor"
@@ -585,22 +688,35 @@ async def download_notification_report_pdf(notification_id: UUID, request: Reque
     styles["Heading3"].textColor = colors.HexColor("#102437")
     styles["Normal"].leading = 13.5
 
+    def scaled_logo(source: str | BytesIO, max_width, max_height, allow_upscale: bool = True):
+        logo_image = Image(source)
+        ratio = min(max_width / logo_image.imageWidth, max_height / logo_image.imageHeight)
+        if not allow_upscale:
+            ratio = min(ratio, 1)
+        logo_image.drawWidth = logo_image.imageWidth * ratio
+        logo_image.drawHeight = logo_image.imageHeight * ratio
+        return logo_image
+
     story = []
-    logo_path = Path(__file__).resolve().parents[3] / "static" / "img" / "komite-logo.png"
-    if logo_path.exists():
-        logo = Image(str(logo_path))
-        max_logo_width = 4.3 * cm
-        max_logo_height = 2.8 * cm
-        ratio = min(max_logo_width / logo.imageWidth, max_logo_height / logo.imageHeight)
-        logo.drawWidth = logo.imageWidth * ratio
-        logo.drawHeight = logo.imageHeight * ratio
-        header = Table(
-            [[logo, Paragraph("Informe de servicio<br/>Proveedor externo", styles["DocSmallRight"])]],
-            colWidths=[8 * cm, 8 * cm],
-        )
-        header.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
-        story.append(header)
-        story.append(Spacer(1, 0.3 * cm))
+    logo_path = Path(__file__).resolve().parents[3] / "static" / "img" / "komite-logo-new.png"
+    komite_logo = scaled_logo(str(logo_path), 3.44 * cm, 2.24 * cm) if logo_path.exists() else Paragraph("Komite", styles["Heading3"])
+    company_logo_source = _company_logo_source(company)
+    if company_logo_source:
+        company_brand = scaled_logo(company_logo_source, 4.0 * cm, 2.4 * cm)
+    else:
+        company_brand = Paragraph(_pdf_inline(company.name if company else "Empresa administradora"), styles["DocSmallRight"])
+
+    header = Table(
+        [[komite_logo, company_brand]],
+        colWidths=[8.45 * cm, 8.45 * cm],
+    )
+    header.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, 0), "LEFT"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+    ]))
+    story.append(header)
+    story.append(Spacer(1, 0.3 * cm))
 
     story.append(Paragraph(_pdf_inline(notification.title), styles["Title"]))
     if condominium:
@@ -651,6 +767,51 @@ async def download_notification_report_pdf(notification_id: UUID, request: Reque
 
     if not final_text.strip():
         story.append(Paragraph("Sin texto final.", styles["Normal"]))
+
+    photo_evidence = []
+    if order and order.execution_id:
+        photo_evidence = await (
+            OperationalEventEvidence.filter(
+                company_id=order.company_id,
+                event_id=order.event_id,
+                execution_id=order.execution_id,
+                evidence_type="photo",
+            )
+            .select_related("attachment")
+            .order_by("created_at")
+        )
+
+    photo_cells = []
+    for item in photo_evidence:
+        attachment = getattr(item, "attachment", None)
+        if not attachment or not (attachment.mime_type or "").startswith("image/"):
+            continue
+        source = _stored_image_source(attachment.file_path, (attachment.metadata or {}).get("storage_key"))
+        if not source:
+            continue
+        try:
+            image = scaled_logo(source, 16.2 * cm, 19.5 * cm, allow_upscale=False)
+            photo_cells.append([
+                image,
+                Paragraph(_pdf_inline(attachment.file_name), styles["DocSmallRight"]),
+            ])
+        except Exception:
+            continue
+
+    if photo_cells:
+        story.append(Spacer(1, 0.25 * cm))
+        story.append(Paragraph("Fotos adjuntas", styles["Heading2"]))
+        rows = [[[photo[0], photo[1]]] for photo in photo_cells]
+        photo_table = Table(rows, colWidths=[16.4 * cm])
+        photo_table.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ]))
+        story.append(photo_table)
 
     doc.build(story)
     buffer.seek(0)

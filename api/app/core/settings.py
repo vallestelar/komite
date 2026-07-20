@@ -48,6 +48,17 @@ class Settings(BaseSettings):
     openai_draft_model: str = Field(default="gpt-5.5", alias="OPENAI_DRAFT_MODEL")
     upload_dir: str = Field(default="storage/uploads", alias="UPLOAD_DIR")
     max_audio_upload_mb: int = Field(default=25, alias="MAX_AUDIO_UPLOAD_MB")
+    max_evidence_image_mb: int = Field(default=2, alias="MAX_EVIDENCE_IMAGE_MB")
+    max_evidence_image_px: int = Field(default=1800, alias="MAX_EVIDENCE_IMAGE_PX")
+    evidence_image_quality: int = Field(default=82, alias="EVIDENCE_IMAGE_QUALITY")
+    storage_provider: str = Field(default="local", alias="STORAGE_PROVIDER")
+    storage_public_base_url: str | None = Field(default=None, alias="STORAGE_PUBLIC_BASE_URL")
+    s3_endpoint_url: str | None = Field(default=None, alias="S3_ENDPOINT_URL")
+    s3_bucket: str | None = Field(default=None, alias="S3_BUCKET")
+    s3_region: str = Field(default="us-east-1", alias="S3_REGION")
+    s3_access_key_id: str | None = Field(default=None, alias="S3_ACCESS_KEY_ID")
+    s3_secret_access_key: str | None = Field(default=None, alias="S3_SECRET_ACCESS_KEY")
+    s3_acl: str | None = Field(default="public-read", alias="S3_ACL")
 
     telegram_bot_token: str | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
 

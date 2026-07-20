@@ -193,7 +193,7 @@ watch([() => activeCondominium.value?.id, token], loadNotificationSummary);
   <main class="office-shell" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
     <aside class="sidebar">
       <span class="sidebar-logo-crop">
-        <img class="sidebar-logo" src="/assets/komite-logo.png" alt="Komite" />
+        <img class="sidebar-logo" src="/assets/komite-logo-new.png" alt="Komite" />
       </span>
       <span class="sidebar-context">Portal administrador</span>
 

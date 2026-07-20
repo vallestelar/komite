@@ -74,18 +74,18 @@ const { activeCondominium } = useAuth();
 
 const tools = [
   {
-    title: "Informe conciliacion Edifito",
+    title: "Informe conciliación Edifito",
     icon: "table",
     targetView: "edifito",
     status: "Preparado",
     copy: "Cruzar cartolas Santander con asignaciones y cobros por UCO para preparar movimientos conciliables.",
   },
   {
-    title: "Informe conciliacion Comunidad Feliz",
+    title: "Informe conciliación Comunidad Feliz",
     icon: "home",
     targetView: "comunidad-feliz",
     status: "Preparado",
-    copy: "Cruzar cartolas Santander o Banco de Chile con gastos comunes Comunidad Feliz y generar archivos de carga automatica.",
+    copy: "Cruzar cartolas Santander, Banco de Chile o Scotiabank con gastos comunes Comunidad Feliz y generar archivos de carga automatica.",
   },
   {
     title: "Procesar audio",
@@ -144,7 +144,7 @@ const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) ===
 const selectedBankText = computed(() => `${selectedBank.value?.name || ""} ${selectedBank.value?.code || ""}`.toLowerCase());
 const isSantanderBank = computed(() => selectedBankText.value.includes("santander"));
 const bankStatementLabel = computed(() => {
-  if (isComunidadFeliz.value && !isSantanderBank.value) return "Cartola Banco de Chile XLS/XLSX";
+  if (isComunidadFeliz.value && !isSantanderBank.value) return "Cartola Banco XLS/XLSX";
   return "Cartola banco Santander PDF";
 });
 const bankStatementAccept = computed(() => {

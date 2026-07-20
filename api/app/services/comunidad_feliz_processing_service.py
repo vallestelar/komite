@@ -63,10 +63,12 @@ class ComunidadFelizProcessingService:
         normalized_bank = (bank_name or "").casefold()
         if "santander" in normalized_bank:
             movements = self._read_santander(bank_statement)
+        elif "scotia" in normalized_bank:
+            movements = self._read_scotiabank(bank_statement, bank_filename)
         elif "chile" in normalized_bank:
             movements = self._read_bank_chile(bank_statement, bank_filename)
         else:
-            raise ValueError("Comunidad Feliz procesa cartolas Santander o Banco de Chile.")
+            raise ValueError("Comunidad Feliz procesa cartolas Santander, Banco de Chile o Scotiabank.")
 
         charges = self._read_charges(charges_file)
         rows = self._build_rows(movements, charges)
@@ -187,6 +189,54 @@ class ComunidadFelizProcessingService:
 
         if not movements:
             raise ValueError("No se encontraron transferencias positivas en la cartola Banco de Chile.")
+        return movements
+
+    def _read_scotiabank(self, content: bytes, filename: str) -> list[ChileBankMovement]:
+        rows = self._read_workbook_rows(content, filename)
+        header_index = self._find_row_with(rows, ["fecha", "descripcion", "cargos", "abonos"])
+        headers = [self._normalize_header(value) for value in rows[header_index]]
+
+        def col(name: str) -> int | None:
+            clean = self._normalize_header(name)
+            return headers.index(clean) if clean in headers else None
+
+        date_col = col("Fecha")
+        desc_col = col("Descripcion")
+        debit_col = col("Cargos")
+        credit_col = col("Abonos")
+
+        if date_col is None or desc_col is None or credit_col is None:
+            raise ValueError("La cartola Scotiabank no tiene las columnas Fecha, Descripcion y Abonos esperadas.")
+
+        movements: list[ChileBankMovement] = []
+        for row in rows[header_index + 1 :]:
+            date = self._format_date(self._cell(row, date_col))
+            description = self._cell(row, desc_col)
+            credit = self._cell(row, credit_col)
+            debit = self._cell(row, debit_col) if debit_col is not None else ""
+            if not date and not description and not credit and not debit:
+                continue
+            if self._amount_int(credit) <= 0:
+                continue
+
+            rut, name = self._extract_scotiabank_transfer(description)
+            if not rut and not name:
+                continue
+
+            movements.append(
+                ChileBankMovement(
+                    monto=credit,
+                    rut=rut,
+                    nombre=name or description,
+                    fecha=date,
+                    documento=rut,
+                    sucursal="Scotiabank",
+                    saldo="",
+                )
+            )
+
+        if not movements:
+            raise ValueError("No se encontraron abonos positivos en la cartola Scotiabank.")
         return movements
 
     def _read_santander(self, content: bytes) -> list[ChileBankMovement]:
@@ -367,6 +417,22 @@ class ComunidadFelizProcessingService:
             return match.group(1).strip()
         match = re.search(r"Transf(?:\.|\s+de)?\s*(.*)$", text, flags=re.IGNORECASE)
         return match.group(1).strip() if match else ""
+
+    def _extract_scotiabank_transfer(self, description: str) -> tuple[str, str]:
+        text = re.sub(r"\s+", " ", description or "").strip()
+        if not text:
+            return "", ""
+
+        match = re.search(r"\b(\d{1,2}\.?\d{3}\.?\d{3}-?[0-9Kk])\b\s*(.*)$", text)
+        if not match:
+            return "", self._strip_bank_prefix(text)
+
+        rut = match.group(1)
+        name = self._strip_bank_prefix(match.group(2).strip())
+        return rut, name
+
+    def _strip_bank_prefix(self, value: str) -> str:
+        return re.sub(r"^(?:TEF|PROVEEDORE?S?|TRANSFERENCIA|TRASPASO)\s+", "", value or "", flags=re.IGNORECASE).strip()
 
     def _format_date(self, value: str) -> str:
         text = (value or "").strip()

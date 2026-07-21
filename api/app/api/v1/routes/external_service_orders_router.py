@@ -161,6 +161,13 @@ async def _save_external_evidence_files(
             )
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudieron guardar las fotos del informe. Revisa la configuracion de almacenamiento.",
+            ) from exc
 
         attachment = await Attachment.create(
             company_id=order.company_id,
@@ -349,12 +356,16 @@ async def submit_public_external_service_order(
         created_by=actor,
         updated_by=actor,
     )
-    evidence = await _save_external_evidence_files(
-        files=evidence_files,
-        order=order,
-        execution=execution,
-        actor=actor,
-    )
+    try:
+        evidence = await _save_external_evidence_files(
+            files=evidence_files,
+            order=order,
+            execution=execution,
+            actor=actor,
+        )
+    except Exception:
+        await execution.delete()
+        raise
     submission_with_evidence = {**submission, "evidence": evidence}
 
     order.execution_id = execution.id

@@ -3597,6 +3597,8 @@ h3 {
   padding: 10px 12px;
   color: #111827;
   font: inherit;
+  font-size: 16px;
+  line-height: 1.45;
   font-weight: 400;
 }
 
@@ -3719,5 +3721,17 @@ h3 {
   .public-order-form .public-switch,
   .public-order-form button {
     grid-column: auto;
+  }
+
+  .public-order-form input,
+  .public-order-form select,
+  .public-order-form textarea {
+    min-height: 48px;
+    padding: 13px 14px;
+    font-size: 17px;
+  }
+
+  .public-order-form textarea {
+    line-height: 1.55;
   }
 }

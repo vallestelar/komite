@@ -41,6 +41,7 @@ const successMessage = ref("");
 const order = ref<PublicOrder | null>(null);
 const generatedText = ref("");
 const evidenceFiles = ref<File[]>([]);
+const optimizingEvidence = ref(false);
 
 const form = reactive({
   submitted_by_name: "",
@@ -105,9 +106,58 @@ const submitOrder = async () => {
   }
 };
 
-const selectEvidenceFiles = (event: Event) => {
+const optimizeEvidenceFile = (file: File): Promise<File> => {
+  const maxBytes = 1.2 * 1024 * 1024;
+  const maxSide = 1600;
+  if (!file.type.startsWith("image/") || file.size <= maxBytes) return Promise.resolve(file);
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file);
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => resolve(file);
+      image.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          resolve(file);
+          return;
+        }
+        context.drawImage(image, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const cleanName = file.name.replace(/\.[^.]+$/, "") || "evidencia";
+            resolve(new File([blob], `${cleanName}.jpg`, { type: "image/jpeg", lastModified: Date.now() }));
+          },
+          "image/jpeg",
+          0.82,
+        );
+      };
+      image.src = String(reader.result || "");
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+const selectEvidenceFiles = async (event: Event) => {
   const input = event.target as HTMLInputElement;
-  evidenceFiles.value = Array.from(input.files || []).slice(0, 8);
+  optimizingEvidence.value = true;
+  try {
+    const selected = Array.from(input.files || []).slice(0, 8);
+    evidenceFiles.value = await Promise.all(selected.map((file) => optimizeEvidenceFile(file)));
+  } finally {
+    optimizingEvidence.value = false;
+  }
 };
 
 const removeEvidenceFile = (index: number) => {
@@ -224,6 +274,7 @@ onMounted(loadOrder);
               <small>Opcional. Puedes adjuntar hasta 8 imagenes desde el movil.</small>
             </div>
             <input type="file" accept="image/*" multiple capture="environment" @change="selectEvidenceFiles" />
+            <small v-if="optimizingEvidence">Optimizando fotos antes de enviarlas...</small>
             <ul v-if="evidenceFiles.length" class="public-evidence-list">
               <li v-for="(file, index) in evidenceFiles" :key="`${file.name}-${index}`">
                 <span>{{ file.name }}</span>

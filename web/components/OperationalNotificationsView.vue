@@ -90,6 +90,10 @@ const isLocked = computed(() => selectedNotification.value ? ["ready_to_send", "
 const canDismiss = computed(() => selectedNotification.value ? ["pending_review", "in_review"].includes(selectedNotification.value.status) : false);
 const previewBlocks = computed(() => renderPreviewBlocks(finalText.value));
 const shouldShowPdfPreview = computed(() => selectedNotification.value?.status === "ready_to_send");
+const selectedAiError = computed(() => {
+  const value = selectedNotification.value?.metadata?.ai_error;
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+});
 
 const clearPdfPreview = () => {
   if (pdfPreviewUrl.value && import.meta.client) {
@@ -667,6 +671,11 @@ onBeforeUnmount(() => {
           </article>
         </div>
 
+        <div v-if="selectedAiError" class="notification-ai-warning">
+          <strong>DeepSeek no genero el borrador.</strong>
+          <span>{{ selectedAiError }}</span>
+        </div>
+
         <section v-if="shouldShowPdfPreview" class="notification-pdf-preview">
           <header>
             <div>
@@ -978,6 +987,20 @@ onBeforeUnmount(() => {
 .notification-meta-grid strong,
 .notification-meta-grid small {
   overflow-wrap: anywhere;
+}
+
+.notification-ai-warning {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.notification-ai-warning strong {
+  color: #7c2d12;
 }
 
 .notification-editor-grid {

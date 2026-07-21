@@ -127,6 +127,58 @@ PROMPT_TEMPLATES: dict[str, PromptTemplate] = {
         ),
         default_max_tokens=1400,
     ),
+    "vendor_service_report": PromptTemplate(
+        key="vendor_service_report",
+        name="Informe proveedor externo",
+        purpose="vendor_service_report",
+        required_variables=("condominium_name", "event_title", "provider_name", "work_performed"),
+        optional_variables=(
+            "asset_name",
+            "submitted_by_name",
+            "execution_date",
+            "result",
+            "instructions",
+            "findings",
+            "materials_used",
+            "recommendations",
+            "next_visit_required",
+            "additional_comments",
+            "evidence_summary",
+            "asset_history",
+        ),
+        system_template=(
+            "Actuas como asistente operativo de Komite para administracion de condominios en Chile. "
+            "Redactas informes de servicio a partir de datos enviados por proveedores externos. "
+            "No inventes datos. Si falta informacion relevante, mencionas el dato faltante dentro de la seccion correspondiente. "
+            "El tono debe ser profesional, claro y verificable para administrador, comite y proveedor."
+        ),
+        user_template=(
+            "Genera un informe de servicio editable con los datos del proveedor.\n\n"
+            "Condominio: {condominium_name}\n"
+            "Trabajo solicitado: {event_title}\n"
+            "Activo/equipo: {asset_name}\n"
+            "Proveedor: {provider_name}\n"
+            "Responsable que informa: {submitted_by_name}\n"
+            "Fecha de ejecucion: {execution_date}\n"
+            "Resultado declarado: {result}\n"
+            "Instrucciones originales: {instructions}\n"
+            "Trabajo realizado: {work_performed}\n"
+            "Hallazgos: {findings}\n"
+            "Materiales o repuestos: {materials_used}\n"
+            "Recomendaciones: {recommendations}\n"
+            "Proxima visita requerida: {next_visit_required}\n"
+            "Comentarios adicionales: {additional_comments}\n"
+            "Evidencias: {evidence_summary}\n"
+            "Historial del activo: {asset_history}\n\n"
+            "Devuelve secciones: resumen ejecutivo, trabajo realizado, hallazgos, recomendaciones y observaciones para el administrador. "
+            "No agregues costos ni garantias si no fueron informados. "
+            "Usa fechas en formato DD/MM/AAAA. "
+            "No incluyas separadores Markdown como --- o --. "
+            "No incluyas firma, 'Elaborado por', 'Eres Komite' ni 'Estado del informe'. "
+            "Si no recibes numero de orden, omite esa linea; no escribas [Pendiente]."
+        ),
+        default_max_tokens=1400,
+    ),
     "generic_assistant": PromptTemplate(
         key="generic_assistant",
         name="Asistente general Komite",

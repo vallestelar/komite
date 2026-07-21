@@ -12,14 +12,21 @@ def _clean(value: Any) -> str:
 
 
 def build_provider_submission_text(order: ExternalServiceOrder, submission: dict[str, Any], ai_error: str | None = None) -> str:
-    lines = [
+    lines = []
+    if ai_error:
+        lines.extend([
+            "La IA no pudo generar el borrador transformado.",
+            "Se deja el texto original del proveedor para revision manual.",
+            "",
+        ])
+    lines.extend([
         f"Proveedor: {_clean(order.provider_name)}",
         f"Responsable que informa: {_clean(submission.get('submitted_by_name'))}",
         f"Resultado declarado: {_clean(submission.get('result')) or 'Sin resultado informado'}",
         "",
         "Trabajo realizado:",
         _clean(submission.get("work_performed")) or "Sin detalle informado.",
-    ]
+    ])
     optional_sections = [
         ("Hallazgos", submission.get("findings")),
         ("Materiales o repuestos", submission.get("materials_used")),
@@ -31,8 +38,6 @@ def build_provider_submission_text(order: ExternalServiceOrder, submission: dict
             lines.extend(["", f"{label}:", _clean(value)])
     if submission.get("next_visit_required"):
         lines.extend(["", "Proxima visita requerida: Si"])
-    if ai_error:
-        lines.extend(["", "Nota interna:", "La IA no pudo generar el borrador. Se deja el texto del proveedor para revision."])
     return "\n".join(lines)
 
 
@@ -44,7 +49,8 @@ async def create_notification_from_external_order(
     actor: str,
 ) -> OperationalNotification:
     existing = await OperationalNotification.get_or_none(external_service_order_id=order.id)
-    draft_body = order.ai_generated_text or build_provider_submission_text(order, submission, ai_error)
+    ai_generated = bool(_clean(order.ai_generated_text))
+    draft_body = order.ai_generated_text if ai_generated else build_provider_submission_text(order, submission, ai_error)
     summary = _clean(submission.get("work_performed"))
     if len(summary) > 240:
         summary = f"{summary[:237]}..."
@@ -56,6 +62,7 @@ async def create_notification_from_external_order(
         "submitted_by_email": submission.get("submitted_by_email"),
         "result": submission.get("result"),
         "next_visit_required": submission.get("next_visit_required"),
+        "ai_generated": ai_generated,
         "ai_error": ai_error,
         "submission": submission,
     }

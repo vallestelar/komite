@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     openai_transcription_model: str = Field(default="gpt-4o-transcribe", alias="OPENAI_TRANSCRIPTION_MODEL")
     openai_draft_model: str = Field(default="gpt-5.5", alias="OPENAI_DRAFT_MODEL")
     upload_dir: str = Field(default="storage/uploads", alias="UPLOAD_DIR")
+    private_upload_dir: str = Field(default="storage/private", alias="PRIVATE_UPLOAD_DIR")
     max_audio_upload_mb: int = Field(default=25, alias="MAX_AUDIO_UPLOAD_MB")
     max_evidence_image_mb: int = Field(default=2, alias="MAX_EVIDENCE_IMAGE_MB")
     max_evidence_image_px: int = Field(default=1800, alias="MAX_EVIDENCE_IMAGE_PX")

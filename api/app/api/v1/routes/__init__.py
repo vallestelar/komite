@@ -17,7 +17,10 @@ from .portal_maintenance_router import router as portal_maintenance_router
 from .portal_neighbors_router import router as portal_neighbors_router
 from .portal_notifications_router import router as portal_notifications_router
 from .portal_operational_plan_router import router as portal_operational_plan_router
+from .portal_reports_router import router as portal_reports_router
 from .portal_team_router import router as portal_team_router
+from .residence_certificate_router import router as residence_certificate_router
+from .signature_assets_router import router as signature_assets_router
 from .user_router import router as user_router
 
 all_routers = [
@@ -39,7 +42,10 @@ all_routers = [
     portal_neighbors_router,
     portal_notifications_router,
     portal_operational_plan_router,
+    portal_reports_router,
     portal_team_router,
+    residence_certificate_router,
+    signature_assets_router,
     user_router,
     *entity_routers,
 ]

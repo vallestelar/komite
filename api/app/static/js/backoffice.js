@@ -23,6 +23,7 @@ const state = {
   unitContacts: [],
   roles: [],
   usersLookup: [],
+  signatureAssets: [],
   operationalStaff: [],
   inspectionTemplates: [],
   inspectionTemplateSections: [],
@@ -121,6 +122,40 @@ const resources = {
       { name: "country", label: "País", defaultValue: "Chile", maxLength: 80 },
       { name: "website", label: "Web", maxLength: 255 },
       { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"], ["draft", "Borrador"]], defaultValue: "active" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
+  signatureAssets: {
+    title: "Firmas",
+    endpoint: "/api/v1/signature-assets/",
+    columns: ["company_id", "condominium_id", "name", "signer_name", "signer_position", "status", "size_bytes"],
+    createLabel: "Nueva firma",
+    singular: "firma",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company", required: true },
+      { name: "condominium_id", label: "Condominio", type: "condominium", emptyLabel: "Firma global de la empresa" },
+      { name: "name", label: "Nombre interno", required: true, maxLength: 150 },
+      { name: "signer_name", label: "Nombre firmante", required: true, maxLength: 150 },
+      { name: "signer_document", label: "RUT firmante", maxLength: 40 },
+      { name: "signer_position", label: "Cargo firmante", maxLength: 120 },
+      { name: "signature_file", label: "Imagen de firma PNG/JPG/WEBP", type: "file", accept: "image/png,image/jpeg,image/webp" },
+      { name: "status", label: "Estado", type: "select", options: [["active", "Activa"], ["inactive", "Inactiva"]], defaultValue: "active" },
+      { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
+    ],
+  },
+  signaturePermissions: {
+    title: "Permisos de firmas",
+    endpoint: "/api/v1/signature-permissions/",
+    columns: ["company_id", "condominium_id", "signature_id", "user_id", "can_use", "status"],
+    createLabel: "Nuevo permiso",
+    singular: "permiso",
+    fields: [
+      { name: "company_id", label: "Empresa", type: "company", required: true },
+      { name: "condominium_id", label: "Condominio", type: "condominium", emptyLabel: "Permiso global de la empresa" },
+      { name: "signature_id", label: "Firma", type: "signature_asset", required: true },
+      { name: "user_id", label: "Usuario autorizado", type: "user", required: true },
+      { name: "can_use", label: "Puede usarla", type: "checkbox", defaultValue: true },
+      { name: "status", label: "Estado", type: "select", options: [["active", "Activo"], ["inactive", "Inactivo"]], defaultValue: "active" },
       { name: "metadata", label: "Metadata", type: "json", defaultValue: {} },
     ],
   },
@@ -395,6 +430,13 @@ const columnLabels = {
   unit_id: "Unidad",
   unit_contact_id: "Contacto vecino",
   user_id: "Usuario",
+  signature_id: "Firma",
+  signer_name: "Firmante",
+  signer_document: "RUT firmante",
+  signer_position: "Cargo firmante",
+  size_bytes: "Imagen",
+  content_type: "Formato imagen",
+  can_use: "Puede usarla",
   start_date: "Inicio",
   end_date: "Fin",
   receives_notifications: "Notifica",
@@ -1175,7 +1217,7 @@ async function openView(view) {
   $("#ticketCondominiumFilter").value = "";
   $("#ticketStatusFilter").value = "";
   state.tablePage = 1;
-  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(view);
+  $("#companyFilter").hidden = !["condominiums", "committeeMembers", "users", "signatureAssets", "signaturePermissions", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(view);
   $("#ticketCompanyFilter").hidden = view !== "supportTickets";
   $("#ticketCondominiumFilter").hidden = view !== "supportTickets";
   $("#ticketStatusFilter").hidden = view !== "supportTickets";
@@ -1194,7 +1236,7 @@ async function openView(view) {
     await ensureUserLookupsLoaded();
     populateCompanyFilter();
   }
-  if (["inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(view)) {
+  if (["signatureAssets", "signaturePermissions", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(view)) {
     await ensureUserLookupsLoaded();
     populateCompanyFilter();
   }
@@ -1245,7 +1287,7 @@ function buildTableQueryParams() {
     if (status) params.set("filter_status", status);
   }
 
-  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users", "signatureAssets", "signaturePermissions", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) params.set("filter_company_id", companyId);
   }
@@ -1255,7 +1297,7 @@ function buildTableQueryParams() {
 
 function filteredTableItems() {
   let items = state.currentItems || [];
-  if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
+  if (["condominiums", "committeeMembers", "users", "signatureAssets", "signaturePermissions", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
     const companyId = $("#companyFilter").value;
     if (companyId) {
       items = items.filter((item) => sameId(item.company_id, companyId));
@@ -1323,12 +1365,14 @@ function labelForColumn(column) {
 function formatTableCell(column, value) {
   if (column === "logo_url") return renderLogoCell(value);
   if (column === "status") return renderStatusBadge(value);
-  if (["is_system", "receives_notifications", "is_active", "requires_evidence"].includes(column)) return renderBooleanBadge(value);
+  if (["is_system", "receives_notifications", "is_active", "requires_evidence", "can_use"].includes(column)) return renderBooleanBadge(value);
   if (column === "company_id") return escapeHtml(companyName(value));
   if (column === "condominium_id") return escapeHtml(condominiumName(value));
   if (column === "unit_id") return escapeHtml(unitName(value));
   if (column === "unit_contact_id") return escapeHtml(unitContactName(value));
   if (column === "user_id") return escapeHtml(userName(value));
+  if (column === "signature_id") return escapeHtml(signatureAssetName(value));
+  if (column === "size_bytes") return value ? `${Math.round(Number(value) / 1024)} KB` : "Sin imagen";
   if (column === "template_id") return escapeHtml(inspectionTemplateName(value));
   if (column === "section_id") return escapeHtml(inspectionTemplateSectionName(value));
   if (column === "position") return escapeHtml(positionLabels[value] || formatCell(value));
@@ -1373,6 +1417,12 @@ function userName(userId) {
   if (!userId) return "";
   const user = state.usersLookup.find((item) => sameId(item.id, userId));
   return user?.full_name || user?.email || formatCell(userId);
+}
+
+function signatureAssetName(signatureId) {
+  if (!signatureId) return "";
+  const signature = state.signatureAssets.find((item) => sameId(item.id, signatureId));
+  return signature?.name || signature?.signer_name || formatCell(signatureId);
 }
 
 function inspectionTemplateName(templateId) {
@@ -1585,13 +1635,14 @@ function populateTicketCondominiumFilter() {
 }
 
 async function ensureUserLookupsLoaded() {
-  const [companies, condominiums, roles, units, users, unitContacts, operationalStaff, inspectionTemplates, inspectionTemplateSections] = await Promise.all([
+  const [companies, condominiums, roles, units, users, unitContacts, signatureAssets, operationalStaff, inspectionTemplates, inspectionTemplateSections] = await Promise.all([
     fetchAllPages("/api/v1/companies/"),
     fetchAllPages("/api/v1/condominiums/"),
     apiFetch("/api/v1/roles/?page=1&page_size=200"),
     fetchAllPages("/api/v1/units/"),
     fetchAllPages("/api/v1/users/"),
     fetchAllPages("/api/v1/unit-contacts/"),
+    fetchAllPages("/api/v1/signature-assets/"),
     fetchAllPages("/api/v1/condominium-operational-staff/"),
     fetchAllPages("/api/v1/inspection-templates/"),
     fetchAllPages("/api/v1/inspection-template-sections/"),
@@ -1602,6 +1653,7 @@ async function ensureUserLookupsLoaded() {
   state.units = Array.isArray(units) ? units : units.items || [];
   state.usersLookup = Array.isArray(users) ? users : users.items || [];
   state.unitContacts = Array.isArray(unitContacts) ? unitContacts : unitContacts.items || [];
+  state.signatureAssets = Array.isArray(signatureAssets) ? signatureAssets : signatureAssets.items || [];
   state.operationalStaff = Array.isArray(operationalStaff) ? operationalStaff : operationalStaff.items || [];
   state.inspectionTemplates = Array.isArray(inspectionTemplates) ? inspectionTemplates : inspectionTemplates.items || [];
   state.inspectionTemplateSections = Array.isArray(inspectionTemplateSections) ? inspectionTemplateSections : inspectionTemplateSections.items || [];
@@ -1632,7 +1684,7 @@ async function openGenericForm(id = null) {
   if (!resource?.fields) return;
 
   $("#genericFormError").hidden = true;
-  if (resource.fields.some((field) => ["company", "condominium", "user", "unit", "unit_contact", "inspection_template", "inspection_template_section"].includes(field.type))) {
+  if (resource.fields.some((field) => ["company", "condominium", "user", "unit", "unit_contact", "signature_asset", "inspection_template", "inspection_template_section"].includes(field.type))) {
     await ensureUserLookupsLoaded();
   }
 
@@ -1703,6 +1755,17 @@ function renderGenericField(field, item) {
     return renderSearchableSelect(label, name, `<select data-generic-field="${name}"><option value="">Sin asignar</option>${state.usersLookup
       .map((user) => `<option value="${escapeHtml(user.id)}"${value === user.id ? " selected" : ""}>${escapeHtml(user.full_name || user.email)}</option>`)
       .join("")}</select>`, "Buscar usuario");
+  }
+
+  if (field.type === "signature_asset") {
+    return renderSearchableSelect(label, name, `<select data-generic-field="${name}"${required}><option value="">Selecciona firma</option>${state.signatureAssets
+      .map((signature) => `<option value="${escapeHtml(signature.id)}" data-company-id="${escapeHtml(signature.company_id || "")}" data-condominium-id="${escapeHtml(signature.condominium_id || "")}"${value === signature.id ? " selected" : ""}>${escapeHtml(signature.name || signature.signer_name || signature.id)}</option>`)
+      .join("")}</select>`, "Buscar firma");
+  }
+
+  if (field.type === "file") {
+    const accept = field.accept ? ` accept="${escapeHtml(field.accept)}"` : "";
+    return `<label>${label}<input data-generic-field="${name}" data-field-type="file" type="file"${accept} /></label>`;
   }
 
   if (field.type === "inspection_template") {
@@ -1781,6 +1844,7 @@ function normalizeSearch(value) {
 function buildGenericPayload(resource) {
   const payload = {};
   resource.fields.forEach((field) => {
+    if (field.type === "file") return;
     const element = $(`[data-generic-field="${field.name}"]`);
     if (!element) return;
     if (field.type === "json") {
@@ -1823,11 +1887,15 @@ async function saveGenericEntity(event) {
       });
       if (!confirmed) return;
     }
-    await apiFetch(id ? `${resource.endpoint}${id}` : resource.endpoint, {
+    const saved = await apiFetch(id ? `${resource.endpoint}${id}` : resource.endpoint, {
       method: id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (state.currentView === "signatureAssets") {
+      await uploadSignatureAssetImage(saved.id || id);
+      state.signatureAssets = [];
+    }
     await returnToGenericList();
     showToast({
       title: id ? `${capitalize(resource.singular)} actualizado` : `${capitalize(resource.singular)} creado`,
@@ -1837,6 +1905,19 @@ async function saveGenericEntity(event) {
     $("#genericFormError").textContent = readableError(error);
     $("#genericFormError").hidden = false;
   }
+}
+
+async function uploadSignatureAssetImage(signatureId) {
+  if (!signatureId) return;
+  const input = $('[data-generic-field="signature_file"]');
+  const file = input?.files?.[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  await apiFetch(`/api/v1/signature-assets/${signatureId}/image`, {
+    method: "POST",
+    body: formData,
+  });
 }
 
 async function deleteGenericEntity(id = $("#genericId").value) {
@@ -3274,7 +3355,7 @@ $("#searchInput").addEventListener("input", () => {
 $("#companyFilter").addEventListener("change", () => {
   const resource = resources[state.currentView];
   if (resource) {
-    if (["condominiums", "committeeMembers", "users", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
+    if (["condominiums", "committeeMembers", "users", "signatureAssets", "signaturePermissions", "inspectionTemplates", "inspectionTemplateSections", "inspectionTemplateItems", "aiPromptTemplates"].includes(state.currentView)) {
       state.tablePage = 1;
       loadTable();
       return;
@@ -3365,6 +3446,7 @@ function bindGenericFieldDependencies() {
   const condominiumSelect = $('[data-generic-field="condominium_id"]');
   const unitSelect = $('[data-generic-field="unit_id"]');
   const contactSelect = $('[data-generic-field="unit_contact_id"]');
+  const signatureSelect = $('[data-generic-field="signature_id"]');
   const templateSelect = $('[data-generic-field="template_id"]');
   const sectionSelect = $('[data-generic-field="section_id"]');
   const fullNameInput = $('[data-generic-field="full_name"]');
@@ -3397,6 +3479,23 @@ function bindGenericFieldDependencies() {
   templateSelect?.addEventListener("change", syncInspectionSectionOptions);
   syncInspectionTemplateOptions();
 
+  const syncSignatureOptions = () => {
+    if (!signatureSelect) return;
+    const selectedCompanyId = companySelect?.value || "";
+    const selectedCondominiumId = condominiumSelect?.value || "";
+    Array.from(signatureSelect.options).forEach((option) => {
+      const optionCompanyId = option.dataset.companyId;
+      const optionCondominiumId = option.dataset.condominiumId;
+      const hiddenByCompany = Boolean(optionCompanyId && selectedCompanyId && !sameId(optionCompanyId, selectedCompanyId));
+      const hiddenByCondominium = Boolean(optionCondominiumId && selectedCondominiumId && !sameId(optionCondominiumId, selectedCondominiumId));
+      setOptionDependencyHidden(option, hiddenByCompany || hiddenByCondominium);
+    });
+    if (signatureSelect.selectedOptions[0]?.hidden) signatureSelect.value = "";
+  };
+  companySelect?.addEventListener("change", syncSignatureOptions);
+  condominiumSelect?.addEventListener("change", syncSignatureOptions);
+  syncSignatureOptions();
+
   if (!companySelect || !condominiumSelect) return;
 
   const syncCondominiumOptions = () => {
@@ -3408,6 +3507,7 @@ function bindGenericFieldDependencies() {
     const selectedOption = condominiumSelect.selectedOptions[0];
     if (selectedOption?.hidden) condominiumSelect.value = "";
     syncUnitOptions();
+    syncSignatureOptions();
   };
 
   const syncUnitOptions = () => {

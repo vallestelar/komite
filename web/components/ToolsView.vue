@@ -69,6 +69,34 @@ type EdifitoNeighborsImportResponse = {
   }>;
 };
 
+type ResidenceNeighbor = {
+  id: string;
+  unit_id: string;
+  unit_identifier: string;
+  relationship_type: string;
+  full_name: string;
+  document_number?: string | null;
+  status: string;
+};
+
+type ResidenceCertificateResponse = {
+  filename: string;
+  content_type: string;
+  content_base64: string;
+  contact_name: string;
+  unit_identifier: string;
+  signed_by: string;
+  has_signature_image: boolean;
+};
+
+type AuthorizedSignature = {
+  id: string;
+  name: string;
+  signer_name: string;
+  signer_position?: string | null;
+  signer_document?: string | null;
+};
+
 const { request } = useApi();
 const { activeCondominium } = useAuth();
 
@@ -86,6 +114,13 @@ const tools = [
     targetView: "comunidad-feliz",
     status: "Preparado",
     copy: "Cruzar cartolas Santander, Banco de Chile o Scotiabank con gastos comunes Comunidad Feliz y generar archivos de carga automatica.",
+  },
+  {
+    title: "Certificado de residencia",
+    icon: "file-text",
+    targetView: "residence-certificate",
+    status: "Preparado",
+    copy: "Emitir certificados de residencia firmados con datos del residente, unidad y condominio activo.",
   },
   {
     title: "Procesar audio",
@@ -139,6 +174,18 @@ const importErrorMessage = ref("");
 const importResult = ref<EdifitoNeighborsImportResponse | null>(null);
 const importPreview = ref<EdifitoNeighborsImportResponse | null>(null);
 const showImportConfirm = ref(false);
+const residenceNeighbors = ref<ResidenceNeighbor[]>([]);
+const residenceSearch = ref("");
+const residenceSelectedContactId = ref("");
+const residenceNationality = ref("chilena");
+const residencePurpose = ref("");
+const residenceLoading = ref(false);
+const residenceGenerating = ref(false);
+const residenceGeneratingFormat = ref<"pdf" | "docx" | "">("");
+const residenceError = ref("");
+const residenceNotice = ref("");
+const authorizedSignatures = ref<AuthorizedSignature[]>([]);
+const selectedSignatureId = ref("");
 
 const selectedBank = computed(() => banks.value.find((bank) => bankKey(bank) === selectedBankKey.value) || null);
 const selectedBankText = computed(() => `${selectedBank.value?.name || ""} ${selectedBank.value?.code || ""}`.toLowerCase());
@@ -153,15 +200,19 @@ const bankStatementAccept = computed(() => {
 });
 const isEdifito = computed(() => props.view === "edifito");
 const isComunidadFeliz = computed(() => props.view === "comunidad-feliz");
+const isResidenceCertificate = computed(() => props.view === "residence-certificate");
 const isConciliation = computed(() => isEdifito.value || isComunidadFeliz.value);
 const isEdifitoImport = computed(() => props.view === "edifito-neighbors-import");
-const isCatalog = computed(() => !isConciliation.value && !isEdifitoImport.value);
+const isCatalog = computed(() => !isConciliation.value && !isEdifitoImport.value && !isResidenceCertificate.value);
 const canProcess = computed(() => {
   if (!selectedBank.value || !bankStatementFile.value || !assignmentsFile.value || processing.value) return false;
   return isComunidadFeliz.value || Boolean(chargeDetailFile.value);
 });
 const canImportNeighbors = computed(() => Boolean(importCondominiumId.value && importAssignmentsFile.value && !importProcessing.value));
+const canGenerateResidenceCertificate = computed(() => Boolean(residenceSelectedContactId.value && selectedSignatureId.value && !residenceGenerating.value));
 const importCondominiumOptions = computed(() => activeCondominium.value ? [activeCondominium.value] : []);
+const selectedResidenceNeighbor = computed(() => residenceNeighbors.value.find((neighbor) => neighbor.id === residenceSelectedContactId.value) || null);
+const selectedAuthorizedSignature = computed(() => authorizedSignatures.value.find((signature) => signature.id === selectedSignatureId.value) || null);
 const filteredTools = computed(() => {
   const query = toolSearch.value.trim().toLowerCase();
   if (!query) return tools;
@@ -263,6 +314,53 @@ const resetImportNeighbors = () => {
   importFileInputKey.value += 1;
 };
 
+const resetResidenceCertificate = () => {
+  residenceSearch.value = "";
+  residenceSelectedContactId.value = "";
+  selectedSignatureId.value = authorizedSignatures.value[0]?.id || "";
+  residenceNationality.value = "chilena";
+  residencePurpose.value = "";
+  residenceError.value = "";
+  residenceNotice.value = "";
+};
+
+const loadResidenceNeighbors = async () => {
+  if (!isResidenceCertificate.value) return;
+  residenceLoading.value = true;
+  residenceError.value = "";
+
+  try {
+    const params = new URLSearchParams({
+      page: "1",
+      page_size: "200",
+    });
+    const query = residenceSearch.value.trim();
+    if (query) params.set("q", query);
+    const data = await request<{ items?: ResidenceNeighbor[] }>(`/api/v1/portal/neighbors/?${params}`);
+    residenceNeighbors.value = (data.items || []).filter((neighbor) => neighbor.status === "active");
+    if (residenceSelectedContactId.value && !residenceNeighbors.value.some((neighbor) => neighbor.id === residenceSelectedContactId.value)) {
+      residenceSelectedContactId.value = "";
+    }
+  } catch (error) {
+    residenceError.value = parseError(error);
+  } finally {
+    residenceLoading.value = false;
+  }
+};
+
+const loadAuthorizedSignatures = async () => {
+  try {
+    const data = await request<{ items?: AuthorizedSignature[] }>("/api/v1/residence-certificates/available-signatures");
+    authorizedSignatures.value = data.items || [];
+    if (!selectedSignatureId.value || !authorizedSignatures.value.some((signature) => signature.id === selectedSignatureId.value)) {
+      selectedSignatureId.value = authorizedSignatures.value[0]?.id || "";
+    }
+  } catch {
+    authorizedSignatures.value = [];
+    selectedSignatureId.value = "";
+  }
+};
+
 const processConciliation = async () => {
   if (!canProcess.value || !selectedBank.value) return;
 
@@ -361,19 +459,51 @@ const downloadBlob = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-const downloadResult = () => {
-  if (!result.value) return;
-
-  const binary = atob(result.value.download_base64);
+const base64ToBlob = (content: string, contentType: string) => {
+  const binary = atob(content);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index);
   }
+  return new Blob([bytes], { type: contentType });
+};
 
-  const blob = new Blob([bytes], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
+const downloadResult = () => {
+  if (!result.value) return;
+
+  const blob = base64ToBlob(result.value.download_base64, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   downloadBlob(blob, result.value.download_filename);
+};
+
+const generateResidenceCertificate = async (format: "pdf" | "docx" = "pdf") => {
+  if (!canGenerateResidenceCertificate.value) return;
+
+  residenceGenerating.value = true;
+  residenceGeneratingFormat.value = format;
+  residenceError.value = "";
+  residenceNotice.value = "";
+
+  try {
+    const response = await request<ResidenceCertificateResponse>("/api/v1/residence-certificates/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contact_id: residenceSelectedContactId.value,
+        signature_id: selectedSignatureId.value,
+        format,
+        nationality: residenceNationality.value,
+        purpose: residencePurpose.value,
+      }),
+    });
+    const blob = base64ToBlob(response.content_base64, response.content_type || "application/pdf");
+    downloadBlob(blob, response.filename);
+    residenceNotice.value = `Certificado emitido para ${response.contact_name}, unidad ${response.unit_identifier}.`;
+  } catch (error) {
+    residenceError.value = parseError(error);
+  } finally {
+    residenceGenerating.value = false;
+    residenceGeneratingFormat.value = "";
+  }
 };
 
 const openBulkPaymentsModal = () => {
@@ -657,8 +787,27 @@ watch(isEdifitoImport, (active) => {
   if (active && !importCondominiumId.value) resetImportNeighbors();
 }, { immediate: true });
 
+watch(isResidenceCertificate, (active) => {
+  if (active) {
+    loadResidenceNeighbors();
+    loadAuthorizedSignatures();
+  }
+}, { immediate: true });
+
 watch(activeCondominium, (condominium) => {
   importCondominiumId.value = condominium?.id || "";
+  residenceSelectedContactId.value = "";
+  residenceNeighbors.value = [];
+  selectedSignatureId.value = "";
+  authorizedSignatures.value = [];
+  if (isResidenceCertificate.value) {
+    loadResidenceNeighbors();
+    loadAuthorizedSignatures();
+  }
+});
+
+watch(residenceSearch, () => {
+  if (isResidenceCertificate.value) loadResidenceNeighbors();
 });
 
 watch(toolSearch, () => {
@@ -884,6 +1033,87 @@ watch(toolsPages, (pages) => {
           </button>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section v-else-if="isResidenceCertificate" class="panel edifito-panel">
+    <div class="edifito-header">
+      <div>
+        <p class="eyebrow">Herramientas</p>
+        <h2>Certificado de residencia</h2>
+        <p class="placeholder-copy">Emite un certificado firmado con datos del residente, unidad y condominio activo.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="button ghost" type="button" @click="resetResidenceCertificate">
+          <svg class="icon" aria-hidden="true"><use href="#icon-settings" /></svg>
+          <span>Reset</span>
+        </button>
+        <button class="button ghost" type="button" :disabled="!canGenerateResidenceCertificate" @click="generateResidenceCertificate('docx')">
+          <svg class="icon" aria-hidden="true"><use href="#icon-download" /></svg>
+          <span>{{ residenceGeneratingFormat === "docx" ? "Generando" : "Descargar Word" }}</span>
+        </button>
+        <button class="button orange" type="button" :disabled="!canGenerateResidenceCertificate" @click="generateResidenceCertificate('pdf')">
+          <svg class="icon" aria-hidden="true"><use href="#icon-file-text" /></svg>
+          <span>{{ residenceGeneratingFormat === "pdf" ? "Generando" : "Emitir PDF" }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="edifito-form residence-form">
+      <label>
+        Buscar residente
+        <input v-model="residenceSearch" type="search" placeholder="Nombre, RUT, unidad o relacion" />
+      </label>
+      <label>
+        Residente
+        <select v-model="residenceSelectedContactId">
+          <option value="">{{ residenceLoading ? "Cargando residentes" : "Selecciona un residente" }}</option>
+          <option v-for="neighbor in residenceNeighbors" :key="neighbor.id" :value="neighbor.id">
+            {{ neighbor.unit_identifier }} - {{ neighbor.full_name }}{{ neighbor.document_number ? ` (${neighbor.document_number})` : "" }}
+          </option>
+        </select>
+      </label>
+      <label>
+        Nacionalidad
+        <input v-model="residenceNationality" type="text" placeholder="chilena" />
+      </label>
+      <label>
+        Uso del certificado
+        <input v-model="residencePurpose" type="text" placeholder="los fines que estime convenientes" />
+      </label>
+      <label>
+        Firma autorizada
+        <select v-model="selectedSignatureId">
+          <option value="">Sin firma autorizada</option>
+          <option v-for="signature in authorizedSignatures" :key="signature.id" :value="signature.id">
+            {{ signature.name }} - {{ signature.signer_name }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <p v-if="residenceError" class="form-error result-message">{{ residenceError }}</p>
+    <p v-if="residenceNotice" class="success-message">{{ residenceNotice }}</p>
+
+    <div class="signature-panel">
+      <div>
+        <p class="eyebrow">Firma autorizada</p>
+        <h3>{{ selectedAuthorizedSignature?.name || "Sin firma seleccionada" }}</h3>
+        <p class="placeholder-copy">
+          Las firmas se dan de alta en backoffice y se guardan en almacenamiento privado. Esta pantalla solo permite usar firmas asignadas a tu usuario.
+        </p>
+        <span v-if="selectedAuthorizedSignature" class="form-hint">
+          Firma: {{ selectedAuthorizedSignature.signer_name }}{{ selectedAuthorizedSignature.signer_position ? `, ${selectedAuthorizedSignature.signer_position}` : "" }}
+        </span>
+      </div>
+      <span class="status-pill">{{ authorizedSignatures.length }} disponibles</span>
+    </div>
+
+    <div class="edifito-summary">
+      <article><span>Condominio</span><strong>{{ activeCondominium?.name || "Sin condominio" }}</strong></article>
+      <article><span>Residentes visibles</span><strong>{{ residenceNeighbors.length }}</strong></article>
+      <article><span>Unidad</span><strong>{{ selectedResidenceNeighbor?.unit_identifier || "Sin seleccionar" }}</strong></article>
+      <article><span>Firma</span><strong>{{ selectedAuthorizedSignature ? "Imagen privada" : "Sin asignar" }}</strong></article>
     </div>
   </section>
 

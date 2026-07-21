@@ -541,6 +541,83 @@ class UnitContactPage(BaseModel):
     meta: PageMeta
 
 
+class SignatureAssetCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: str = Field(..., max_length=150)
+    signer_name: str = Field(..., max_length=150)
+    signer_document: Optional[str] = Field(default=None, max_length=40)
+    signer_position: Optional[str] = Field(default=None, max_length=120)
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SignatureAssetUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: Optional[str] = Field(default=None, max_length=150)
+    signer_name: Optional[str] = Field(default=None, max_length=150)
+    signer_document: Optional[str] = Field(default=None, max_length=40)
+    signer_position: Optional[str] = Field(default=None, max_length=120)
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class SignatureAssetOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    name: str
+    signer_name: str
+    signer_document: Optional[str] = None
+    signer_position: Optional[str] = None
+    content_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SignatureAssetPage(BaseModel):
+    items: list[SignatureAssetOut]
+    meta: PageMeta
+
+
+class SignaturePermissionCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    signature_id: UUID
+    user_id: UUID
+    can_use: bool = True
+    status: str = Field(default="active", max_length=30)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SignaturePermissionUpdate(BaseModel):
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    signature_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
+    can_use: Optional[bool] = None
+    status: Optional[str] = Field(default=None, max_length=30)
+    metadata: Optional[dict[str, Any]] = None
+
+
+class SignaturePermissionOut(AuditOut):
+    id: UUID
+    company_id: Optional[UUID] = None
+    condominium_id: Optional[UUID] = None
+    signature_id: UUID
+    user_id: UUID
+    can_use: bool
+    status: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SignaturePermissionPage(BaseModel):
+    items: list[SignaturePermissionOut]
+    meta: PageMeta
+
+
 class CommitteeMemberCreate(BaseModel):
     company_id: Optional[UUID] = None
     condominium_id: UUID

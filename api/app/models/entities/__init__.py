@@ -54,6 +54,8 @@ from app.models.entities.accounting_expense import AccountingExpense
 from app.models.entities.common_expense_run import CommonExpenseRun
 from app.models.entities.common_expense_charge import CommonExpenseCharge
 from app.models.entities.common_expense_charge_item import CommonExpenseChargeItem
+from app.models.entities.signature_asset import SignatureAsset
+from app.models.entities.signature_permission import SignaturePermission
 
 __all__ = [
     "Company",
@@ -112,4 +114,6 @@ __all__ = [
     "CommonExpenseRun",
     "CommonExpenseCharge",
     "CommonExpenseChargeItem",
+    "SignatureAsset",
+    "SignaturePermission",
 ]

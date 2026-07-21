@@ -38,7 +38,7 @@ const loadDashboard = async () => {
   const [incidents, tasks, reports, communications, ai] = await Promise.all([
     fetchPage("/api/v1/incidents/?page=1&page_size=5"),
     fetchPage("/api/v1/tasks/?page=1&page_size=5"),
-    fetchPage("/api/v1/reports/?page=1&page_size=5"),
+    fetchPage("/api/v1/portal/reports/history?page=1&page_size=5"),
     fetchPage("/api/v1/communications/?page=1&page_size=5"),
     fetchPage("/api/v1/ai-requests/?page=1&page_size=5"),
   ]);

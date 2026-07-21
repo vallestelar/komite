@@ -86,6 +86,7 @@ const menuGroups: MenuGroup[] = [
 const toolViewTitles: Record<string, string> = {
   edifito: "Edifito",
   "comunidad-feliz": "Comunidad Feliz",
+  "residence-certificate": "Certificado de residencia",
   audio: "Procesar audio",
   "spreadsheet-tools": "Importar planillas",
   "monthly-summary": "Resumen mensual",
@@ -265,9 +266,10 @@ watch([() => activeCondominium.value?.id, token], loadNotificationSummary);
       <MaintenancePlanView v-else-if="currentView === 'maintenance'" :key="`maintenance-${activeCondominiumId}-${viewRefreshKey}`" />
       <OperationalPlanView v-else-if="currentView === 'operational-plan'" :key="`operational-plan-${activeCondominiumId}-${viewRefreshKey}`" />
       <OperationalNotificationsView v-else-if="currentView === 'notifications'" :key="`notifications-${activeCondominiumId}-${viewRefreshKey}`" @changed="loadNotificationSummary" />
+      <ReportsHistoryView v-else-if="currentView === 'reports'" :key="`reports-${activeCondominiumId}-${viewRefreshKey}`" />
       <InspectionsView v-else-if="currentView === 'inspections'" :key="`inspections-${activeCondominiumId}-${viewRefreshKey}`" />
       <ComunidadFelizTool v-else-if="currentView === 'comunidad-feliz'" :key="`comunidad-feliz-${activeCondominiumId}-${viewRefreshKey}`" />
-      <ToolsView v-else-if="['tools', 'edifito'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
+      <ToolsView v-else-if="['tools', 'edifito', 'residence-certificate'].includes(currentView)" :key="`tools-${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :view="currentView" @open-view="selectView" />
       <PlaceholderView v-else :key="`${currentView}-${activeCondominiumId}-${viewRefreshKey}`" :title="currentTitle" :view="currentView" />
     </section>
 

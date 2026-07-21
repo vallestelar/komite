@@ -2296,6 +2296,33 @@ h3 {
   font-size: 22px;
 }
 
+.signature-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfe;
+}
+
+.signature-panel h3 {
+  margin: 0 0 6px;
+}
+
+.signature-upload-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.signature-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .edifito-toolbar {
   display: grid;
   grid-template-columns: minmax(170px, 220px) minmax(170px, 220px) max-content max-content;
